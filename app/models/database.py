@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Index
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Index, JSON
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -51,3 +51,28 @@ class Message(Base):
     conversation = relationship("Conversation", back_populates="messages")
 
     __table_args__ = (Index("idx_messages_conversation", "conversation_id"),)
+
+
+class GameState(Base):
+    """Game state model - tracks player state for a conversation/game session."""
+
+    __tablename__ = "game_states"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    conversation_id = Column(
+        String(36),
+        ForeignKey("conversations.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    current_location = Column(String(100), default="start")
+    inventory = Column(JSON, default=list)
+    visited_locations = Column(JSON, default=list)
+    player_stats = Column(JSON, default=dict)
+    flags = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    conversation = relationship("Conversation")
+
+    __table_args__ = (Index("idx_game_states_conversation", "conversation_id"),)

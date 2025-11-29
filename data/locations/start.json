@@ -1,0 +1,8 @@
+{
+  "id": "start",
+  "name": "West of House",
+  "description": "You are standing in an open field west of a white house, with a boarded front door. There is a small mailbox here.",
+  "interactables": ["mailbox", "front_door"],
+  "exits": {},
+  "npcs": []
+}

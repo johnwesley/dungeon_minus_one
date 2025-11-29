@@ -3,8 +3,10 @@ from dataclasses import dataclass
 
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.message_repository import MessageRepository
+from app.repositories.game_repository import GameRepository
 from app.clients.llm_client import LLMClient
 from app.models.database import Conversation, Message
+from app.services.game_tools import GameToolHandlers
 
 
 class ConversationNotFoundError(Exception):
@@ -40,10 +42,20 @@ class ConversationService:
         conversation_repo: ConversationRepository,
         message_repo: MessageRepository,
         llm_client: LLMClient,
+        game_repo: Optional[GameRepository] = None,
     ):
         self.conversation_repo = conversation_repo
         self.message_repo = message_repo
         self.llm_client = llm_client
+        self.game_repo = game_repo
+        self._tool_handlers: Optional[GameToolHandlers] = None
+
+    @property
+    def tool_handlers(self) -> Optional[GameToolHandlers]:
+        """Lazily initialize tool handlers when game_repo is available."""
+        if self._tool_handlers is None and self.game_repo is not None:
+            self._tool_handlers = GameToolHandlers(self.game_repo)
+        return self._tool_handlers
 
     def _generate_title(self, first_message: str) -> str:
         """Generate a conversation title from the first message."""
@@ -154,6 +166,111 @@ class ConversationService:
             async for chunk in self.llm_client.chat_stream(llm_messages):
                 full_content += chunk
                 yield StreamEvent(type="delta", data={"content": chunk})
+        except Exception as e:
+            yield StreamEvent(
+                type="error",
+                data={"error": str(e), "code": "LLM_ERROR"},
+            )
+            return
+
+        # Save assistant response
+        assistant_msg = await self.message_repo.create(
+            conversation_id=conversation.id,
+            role="assistant",
+            content=full_content,
+        )
+
+        # Update conversation timestamp
+        await self.conversation_repo.touch(conversation.id)
+
+        # Emit done event
+        yield StreamEvent(
+            type="done",
+            data={
+                "message": {
+                    "id": assistant_msg.id,
+                    "role": assistant_msg.role,
+                    "content": assistant_msg.content,
+                    "created_at": assistant_msg.created_at.isoformat(),
+                }
+            },
+        )
+
+    async def chat_stream_with_tools(
+        self,
+        message: str,
+        conversation_id: Optional[str] = None,
+        tenant_id: str = "default",
+        user_id: str = "default",
+    ) -> AsyncIterator[StreamEvent]:
+        """Process a chat message with tool use support.
+
+        Uses hybrid streaming: tools are resolved first (non-streaming),
+        then the final response is streamed to the client.
+        """
+        if self.tool_handlers is None:
+            # Fall back to regular streaming if no game repo configured
+            async for event in self.chat_stream(
+                message, conversation_id, tenant_id, user_id
+            ):
+                yield event
+            return
+
+        # Get or create conversation
+        if conversation_id:
+            conversation = await self.conversation_repo.get(conversation_id)
+            if not conversation:
+                yield StreamEvent(
+                    type="error",
+                    data={
+                        "error": f"Conversation not found: {conversation_id}",
+                        "code": "CONVERSATION_NOT_FOUND",
+                    },
+                )
+                return
+        else:
+            conversation = await self.conversation_repo.create(
+                tenant_id=tenant_id,
+                user_id=user_id,
+                title=self._generate_title(message),
+            )
+
+        # Save user message
+        user_msg = await self.message_repo.create(
+            conversation_id=conversation.id,
+            role="user",
+            content=message,
+        )
+
+        # Emit start event
+        yield StreamEvent(
+            type="start",
+            data={
+                "conversation_id": conversation.id,
+                "user_message_id": user_msg.id,
+            },
+        )
+
+        # Load history
+        history = await self.message_repo.list_by_conversation(conversation.id)
+        llm_messages = [{"role": m.role, "content": m.content} for m in history]
+
+        # Get tool handlers with conversation_id bound
+        handlers = self.tool_handlers.get_handlers()
+
+        try:
+            # Resolve tools and get final response (non-streaming)
+            full_content = await self.llm_client.chat_with_tools(
+                messages=llm_messages,
+                tool_handlers=handlers,
+            )
+
+            # Stream the final response in chunks for better UX
+            chunk_size = 20  # characters per chunk
+            for i in range(0, len(full_content), chunk_size):
+                chunk = full_content[i : i + chunk_size]
+                yield StreamEvent(type="delta", data={"content": chunk})
+
         except Exception as e:
             yield StreamEvent(
                 type="error",
