@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Chat</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Chats</h1>
+                <button id="new-chat-btn" class="new-chat-btn">+ New Chat</button>
+            </div>
+            <div id="conversation-list" class="conversation-list">
+                <!-- Conversations will be loaded here -->
+            </div>
+        </aside>
+
+        <!-- Main chat area -->
+        <main class="chat-main">
+            <div id="chat-messages" class="chat-messages">
+                <div class="empty-state">
+                    <p>Start a new conversation or select an existing one</p>
+                </div>
+            </div>
+
+            <form id="chat-form" class="chat-input-form">
+                <textarea
+                    id="message-input"
+                    placeholder="Type your message..."
+                    rows="1"
+                    required
+                ></textarea>
+                <button type="submit" id="send-btn">Send</button>
+            </form>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

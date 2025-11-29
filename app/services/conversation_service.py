@@ -1,0 +1,185 @@
+from typing import AsyncIterator, Optional
+from dataclasses import dataclass
+
+from app.repositories.conversation_repository import ConversationRepository
+from app.repositories.message_repository import MessageRepository
+from app.clients.llm_client import LLMClient
+from app.models.database import Conversation, Message
+
+
+class ConversationNotFoundError(Exception):
+    """Raised when a conversation is not found."""
+
+    def __init__(self, conversation_id: str):
+        self.conversation_id = conversation_id
+        super().__init__(f"Conversation not found: {conversation_id}")
+
+
+@dataclass
+class ChatResult:
+    """Result of a chat operation."""
+
+    conversation: Conversation
+    user_message: Message
+    assistant_message: Message
+
+
+@dataclass
+class StreamEvent:
+    """Event emitted during streaming."""
+
+    type: str  # "start", "delta", "done", "error"
+    data: dict
+
+
+class ConversationService:
+    """Service for handling chat conversations."""
+
+    def __init__(
+        self,
+        conversation_repo: ConversationRepository,
+        message_repo: MessageRepository,
+        llm_client: LLMClient,
+    ):
+        self.conversation_repo = conversation_repo
+        self.message_repo = message_repo
+        self.llm_client = llm_client
+
+    def _generate_title(self, first_message: str) -> str:
+        """Generate a conversation title from the first message."""
+        title = first_message[:50].strip()
+        if len(first_message) > 50:
+            title += "..."
+        return title
+
+    async def chat(
+        self,
+        message: str,
+        conversation_id: Optional[str] = None,
+        tenant_id: str = "default",
+        user_id: str = "default",
+    ) -> ChatResult:
+        """Process a chat message (non-streaming)."""
+        # Get or create conversation
+        if conversation_id:
+            conversation = await self.conversation_repo.get(conversation_id)
+            if not conversation:
+                raise ConversationNotFoundError(conversation_id)
+        else:
+            conversation = await self.conversation_repo.create(
+                tenant_id=tenant_id,
+                user_id=user_id,
+                title=self._generate_title(message),
+            )
+
+        # Save user message
+        user_msg = await self.message_repo.create(
+            conversation_id=conversation.id,
+            role="user",
+            content=message,
+        )
+
+        # Load history and call LLM
+        history = await self.message_repo.list_by_conversation(conversation.id)
+        llm_messages = [{"role": m.role, "content": m.content} for m in history]
+
+        assistant_content = await self.llm_client.chat(llm_messages)
+
+        # Save assistant response
+        assistant_msg = await self.message_repo.create(
+            conversation_id=conversation.id,
+            role="assistant",
+            content=assistant_content,
+        )
+
+        # Update conversation timestamp
+        await self.conversation_repo.touch(conversation.id)
+
+        return ChatResult(
+            conversation=conversation,
+            user_message=user_msg,
+            assistant_message=assistant_msg,
+        )
+
+    async def chat_stream(
+        self,
+        message: str,
+        conversation_id: Optional[str] = None,
+        tenant_id: str = "default",
+        user_id: str = "default",
+    ) -> AsyncIterator[StreamEvent]:
+        """Process a chat message with streaming response."""
+        # Get or create conversation
+        if conversation_id:
+            conversation = await self.conversation_repo.get(conversation_id)
+            if not conversation:
+                yield StreamEvent(
+                    type="error",
+                    data={
+                        "error": f"Conversation not found: {conversation_id}",
+                        "code": "CONVERSATION_NOT_FOUND",
+                    },
+                )
+                return
+        else:
+            conversation = await self.conversation_repo.create(
+                tenant_id=tenant_id,
+                user_id=user_id,
+                title=self._generate_title(message),
+            )
+
+        # Save user message
+        user_msg = await self.message_repo.create(
+            conversation_id=conversation.id,
+            role="user",
+            content=message,
+        )
+
+        # Emit start event
+        yield StreamEvent(
+            type="start",
+            data={
+                "conversation_id": conversation.id,
+                "user_message_id": user_msg.id,
+            },
+        )
+
+        # Load history and call LLM
+        history = await self.message_repo.list_by_conversation(conversation.id)
+        llm_messages = [{"role": m.role, "content": m.content} for m in history]
+
+        # Stream response
+        full_content = ""
+        try:
+            async for chunk in self.llm_client.chat_stream(llm_messages):
+                full_content += chunk
+                yield StreamEvent(type="delta", data={"content": chunk})
+        except Exception as e:
+            yield StreamEvent(
+                type="error",
+                data={"error": str(e), "code": "LLM_ERROR"},
+            )
+            return
+
+        # Save assistant response
+        assistant_msg = await self.message_repo.create(
+            conversation_id=conversation.id,
+            role="assistant",
+            content=full_content,
+        )
+
+        # Update conversation timestamp
+        await self.conversation_repo.touch(conversation.id)
+
+        # Emit done event
+        yield StreamEvent(
+            type="done",
+            data={
+                "message": {
+                    "id": assistant_msg.id,
+                    "role": assistant_msg.role,
+                    "content": assistant_msg.content,
+                    "created_at": assistant_msg.created_at.isoformat(),
+                }
+            },
+        )
