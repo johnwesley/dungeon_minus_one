@@ -3,6 +3,9 @@
   "name": "West of House",
   "description": "You are standing in an open field west of a white house, with a boarded front door. There is a small mailbox here.",
   "interactables": ["mailbox", "front_door"],
-  "exits": {},
+  "exits": {
+    "north": "north_of_house",
+    "south": "south_of_house"
+  },
   "npcs": []
 }

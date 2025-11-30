@@ -1,0 +1,12 @@
+{
+  "id": "clearing",
+  "name": "Clearing",
+  "description": "You are in a small clearing in a well marked forest path that extends to the east and west.",
+  "interactables": ["forest_path", "trees"],
+  "exits": {
+    "south": "forest_path",
+    "east": "forest",
+    "west": "forest"
+  },
+  "npcs": []
+}

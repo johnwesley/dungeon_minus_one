@@ -1,0 +1,10 @@
+{
+  "id": "attic",
+  "name": "Attic",
+  "description": "This is the attic. The only exit is a stairway leading down. A large coil of rope is lying in the corner. On a table is a nasty-looking knife.",
+  "interactables": ["rope", "nasty_knife", "table", "stairway"],
+  "exits": {
+    "down": "kitchen"
+  },
+  "npcs": []
+}
