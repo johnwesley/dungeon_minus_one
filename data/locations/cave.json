@@ -1,0 +1,12 @@
+{
+  "id": "cave",
+  "name": "Cave",
+  "description": "This is a tiny cave with entrances west and north, and a dark, forbidding staircase leading down.",
+  "interactables": ["staircase"],
+  "exits": {
+    "up": "altar",
+    "north": "mirror_room",
+    "down": "entrance_to_hades"
+  },
+  "npcs": []
+}

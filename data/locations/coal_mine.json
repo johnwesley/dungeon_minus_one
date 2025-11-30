@@ -1,0 +1,11 @@
+{
+  "id": "coal_mine",
+  "name": "Coal Mine",
+  "description": "This is a non-descript part of a coal mine. The walls are black with coal dust, and the air is thick with particles. Passages lead in several directions through the darkness.",
+  "interactables": ["coal_walls", "coal_dust"],
+  "exits": {
+    "west": "gas_room",
+    "down": "ladder_top"
+  },
+  "npcs": []
+}

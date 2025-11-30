@@ -1,0 +1,18 @@
+{
+  "id": "troll_room",
+  "name": "The Troll Room",
+  "description": "This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches, perhaps made by an axe, mar the walls.",
+  "interactables": ["sword", "bloody_axe", "bloodstains", "scratches"],
+  "exits": {
+    "south": "cellar",
+    "east": "east_west_passage",
+    "west": "maze_entrance"
+  },
+  "npcs": [
+    {
+      "id": "troll",
+      "name": "Troll",
+      "description": "A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room. From his state of health, and the bloodstains on the walls, you gather that he is not very friendly, though he likes people."
+    }
+  ]
+}

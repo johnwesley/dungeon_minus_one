@@ -1,0 +1,17 @@
+{
+  "id": "entrance_to_hades",
+  "name": "Entrance to Hades",
+  "description": "You are outside a large gateway, on which is inscribed 'Abandon every hope all ye who enter here!' The gate is open; through it you can see a desolation, with a pile of mangled bodies in one corner. Thousands of voices, lamenting some hideous fate, can be heard.",
+  "interactables": ["gateway", "inscription", "spirits", "bell"],
+  "exits": {
+    "up": "cave",
+    "south": "land_of_the_dead"
+  },
+  "npcs": [
+    {
+      "id": "spirits",
+      "name": "Evil Spirits",
+      "description": "The way through the gate is barred by evil spirits, who jeer at your attempts to pass."
+    }
+  ]
+}

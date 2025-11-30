@@ -5,8 +5,9 @@
   "interactables": ["forest_path", "trees"],
   "exits": {
     "south": "forest_path",
-    "east": "forest",
-    "west": "forest"
+    "east": "canyon_view",
+    "west": "behind_house",
+    "down": "grating_room"
   },
   "npcs": []
 }

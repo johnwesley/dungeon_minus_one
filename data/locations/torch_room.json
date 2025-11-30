@@ -1,0 +1,11 @@
+{
+  "id": "torch_room",
+  "name": "Torch Room",
+  "description": "This is a large room with a prominent doorway leading to a down staircase. Above you is a large dome. Up around the edge of the dome, twenty feet up, is a wooden railing. In the center of the room sits a white marble pedestal. A piece of rope descends from the railing above, ending some five feet above your head. Sitting on the pedestal is a flaming torch, made of ivory.",
+  "interactables": ["pedestal", "ivory_torch", "rope", "dome", "staircase"],
+  "exits": {
+    "up": "dome_room",
+    "south": "temple"
+  },
+  "npcs": []
+}

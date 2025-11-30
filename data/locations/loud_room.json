@@ -1,0 +1,11 @@
+{
+  "id": "loud_room",
+  "name": "Loud Room",
+  "description": "This is a large room with a ceiling which cannot be detected from the ground. There is a narrow passage from east to west and a stone stairway leading upward. The room is deafeningly loud with an undetermined rushing sound. The sound seems to reverberate from all of the walls, making it difficult even to think. On the ground is a large platinum bar.",
+  "interactables": ["platinum_bar", "stairway"],
+  "exits": {
+    "west": "round_room",
+    "up": "deep_canyon"
+  },
+  "npcs": []
+}

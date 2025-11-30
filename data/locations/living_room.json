@@ -5,7 +5,8 @@
   "interactables": ["trophy_case", "elvish_sword", "brass_lantern", "oriental_rug", "trap_door", "wooden_door", "gothic_lettering"],
   "exits": {
     "east": "kitchen",
-    "down": "cellar"
+    "down": "cellar",
+    "west": "strange_passage"
   },
   "npcs": []
 }

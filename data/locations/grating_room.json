@@ -1,0 +1,11 @@
+{
+  "id": "grating_room",
+  "name": "Grating Room",
+  "description": "You are in a small room near the maze. There are twisty passages in the immediate vicinity. Above you is a grating locked with a skull-and-crossbones lock.",
+  "interactables": ["grating", "lock"],
+  "exits": {
+    "southwest": "maze_skeleton",
+    "up": "clearing"
+  },
+  "npcs": []
+}

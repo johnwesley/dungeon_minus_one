@@ -1,0 +1,12 @@
+{
+  "id": "ladder_bottom",
+  "name": "Ladder Bottom",
+  "description": "This is a rather wide room. On one side is the bottom of a narrow wooden ladder. To the west and the south are passages leaving the room.",
+  "interactables": ["ladder"],
+  "exits": {
+    "up": "ladder_top",
+    "south": "dead_end",
+    "west": "timber_room"
+  },
+  "npcs": []
+}

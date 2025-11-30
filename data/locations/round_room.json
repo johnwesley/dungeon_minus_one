@@ -1,0 +1,12 @@
+{
+  "id": "round_room",
+  "name": "Round Room",
+  "description": "This is a circular stone room with passages in all directions. Several of them have unfortunately been blocked by cave-ins.",
+  "interactables": ["stone_walls", "cave_ins"],
+  "exits": {
+    "west": "east_west_passage",
+    "east": "loud_room",
+    "southeast": "engravings_cave"
+  },
+  "npcs": []
+}

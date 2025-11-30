@@ -1,0 +1,11 @@
+{
+  "id": "shore",
+  "name": "Shore",
+  "description": "You are on the east shore of the river. The water here seems somewhat treacherous. A path travels from north to south here, the south end quickly turning around a sharp corner.",
+  "interactables": ["water", "path"],
+  "exits": {
+    "north": "sandy_beach",
+    "south": "aragain_falls"
+  },
+  "npcs": []
+}
