@@ -25,7 +25,7 @@ class GameToolHandlers:
         if not location_id:
             return json.dumps({"error": "location_id is required"})
 
-        location = self.game_repo.get_location(location_id)
+        location = await self.game_repo.get_location(location_id)
         if not location:
             return json.dumps({"error": f"Location '{location_id}' not found"})
 

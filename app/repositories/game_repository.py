@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import GameState
-from data.locations import load_location
+from app.repositories.location_repository import LocationRepository
 
 
 class GameRepository:
@@ -76,9 +76,26 @@ class GameRepository:
         await self.session.flush()
         return state
 
-    def get_location(self, location_id: str) -> Optional[dict]:
-        """Get static location data by ID.
-
-        Note: This is synchronous as it reads from cached static files.
+    async def get_location(self, location_id: str) -> Optional[dict]:
+        """Get location data by ID from DB.
+        
+        Returns:
+            Dict with location data or None if not found
         """
-        return load_location(location_id)
+        loc_repo = LocationRepository(self.session)
+        location = await loc_repo.get(location_id)
+        
+        if not location:
+            return None
+            
+        # Format as dict to match previous interface
+        exits = {e.direction: e.target_id for e in location.exits}
+        
+        return {
+            "id": location.id,
+            "name": location.name,
+            "description": location.description,
+            "interactables": location.interactables,
+            "npcs": location.npcs,
+            "exits": exits
+        }

@@ -76,3 +76,42 @@ class GameState(Base):
     conversation = relationship("Conversation")
 
     __table_args__ = (Index("idx_game_states_conversation", "conversation_id"),)
+
+
+class Location(Base):
+    """Location model - represents a place in the game world."""
+
+    __tablename__ = "locations"
+
+    id = Column(String(36), primary_key=True)  # e.g. "start"
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False)
+    interactables = Column(JSON, default=list)
+    npcs = Column(JSON, default=list)
+
+    exits = relationship(
+        "LocationExit",
+        foreign_keys="LocationExit.source_id",
+        back_populates="source_location",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )
+
+
+class LocationExit(Base):
+    """LocationExit model - represents a connection between locations."""
+
+    __tablename__ = "location_exits"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    source_id = Column(String(36), ForeignKey("locations.id", ondelete="CASCADE"), nullable=False)
+    target_id = Column(String(36), ForeignKey("locations.id", ondelete="CASCADE"), nullable=False)
+    direction = Column(String(50), nullable=False)
+
+    source_location = relationship("Location", foreign_keys=[source_id], back_populates="exits")
+    target_location = relationship("Location", foreign_keys=[target_id])
+
+    __table_args__ = (
+        Index("idx_location_exits_source", "source_id"),
+        Index("idx_location_exits_target", "target_id"),
+    )
