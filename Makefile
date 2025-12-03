@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset help
+.PHONY: setup install run clean reset hard-reset help
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -28,8 +28,12 @@ clean:  ## Remove venv and cache files
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
 
-reset:  ## Delete the database (start fresh)
+reset:  ## Soft reset: clear game state but keep locations
+	$(PYTHON) scripts/reset_game_state.py
+
+hard-reset:  ## Hard reset: delete DB and re-seed locations
 	rm -f chat.db
-	@echo "Database deleted. A new one will be created on next server start."
+	$(PYTHON) scripts/seed_locations.py
+	@echo "Database reset and re-seeded."
 
 dev: setup run  ## Setup and run in one command
