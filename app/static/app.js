@@ -152,25 +152,26 @@ class ChatApp {
 
     startNewChat() {
         this.currentConversationId = null;
-        this.chatMessages.innerHTML = `
-            <div class="empty-state">
-                <p>Start a new conversation or select an existing one</p>
-            </div>
-        `;
+        this.chatMessages.innerHTML = '';
 
         // Remove active state from sidebar
         document.querySelectorAll('.conversation-item').forEach(item => {
             item.classList.remove('active');
         });
+
+        // Auto-send "Wake up" to start the game
+        this.sendMessage('Wake up');
     }
 
-    async sendMessage() {
-        const message = this.messageInput.value.trim();
+    async sendMessage(messageText = null) {
+        const message = messageText || this.messageInput.value.trim();
         if (!message || this.isStreaming) return;
 
-        // Clear input
-        this.messageInput.value = '';
-        this.messageInput.style.height = 'auto';
+        // Clear input only if it was the source
+        if (!messageText) {
+            this.messageInput.value = '';
+            this.messageInput.style.height = 'auto';
+        }
 
         // Remove empty state if present
         const emptyState = this.chatMessages.querySelector('.empty-state');

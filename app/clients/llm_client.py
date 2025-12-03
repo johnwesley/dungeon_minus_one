@@ -53,7 +53,14 @@ class AnthropicClient(LLMClient):
         )
         self.model = model or settings.model_name
         self.max_tokens = 4096
-        self.default_system_prompt = load_prompt(NARRATOR_PROMPT)
+        
+        # Load prompts and combine them
+        narrator_prompt = load_prompt(NARRATOR_PROMPT)
+        try:
+            premise_prompt = load_prompt("premise")
+            self.default_system_prompt = f"{narrator_prompt}\n\n## Game Premise\n{premise_prompt}"
+        except FileNotFoundError:
+            self.default_system_prompt = narrator_prompt
 
     async def chat(
         self,
