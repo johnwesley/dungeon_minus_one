@@ -146,6 +146,7 @@ body {
     padding: 1rem 1.25rem;
     border-radius: 12px;
     line-height: 1.6;
+    position: relative;
 }
 
 .message.user {
@@ -198,6 +199,29 @@ body {
     display: inline-block;
     width: 8px;
     height: 8px;
+    background-color: var(--accent);
+    border-radius: 50%;
+    animation: pulse 1s infinite;
+}
+
+.streaming-progress {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+}
+
+.streaming-progress::before {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 6px;
     background-color: var(--accent);
     border-radius: 50%;
     animation: pulse 1s infinite;

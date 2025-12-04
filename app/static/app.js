@@ -233,7 +233,15 @@ class ChatApp {
                                 contentEl.textContent = assistantContent;
                                 this.scrollToBottom();
                                 break;
+                            case 'progress':
+                                if (data.step === 'using_tool') {
+                                    this.showProgress(assistantMsgEl, `Using tool: ${data.tool}`);
+                                } else if (data.step === 'tool_done') {
+                                    this.hideProgress(assistantMsgEl);
+                                }
+                                break;
                             case 'done':
+                                this.hideProgress(assistantMsgEl); // Ensure clean up
                                 // Refresh conversation list
                                 await this.loadConversations();
                                 break;
@@ -262,6 +270,25 @@ class ChatApp {
         this.chatMessages.appendChild(messageEl);
         this.scrollToBottom();
         return messageEl;
+    }
+
+    showProgress(messageEl, text) {
+        let progressEl = messageEl.querySelector('.streaming-progress');
+        if (!progressEl) {
+            progressEl = document.createElement('div');
+            progressEl.className = 'streaming-progress';
+            // Insert before content
+            const contentEl = messageEl.querySelector('.message-content');
+            messageEl.insertBefore(progressEl, contentEl);
+        }
+        progressEl.textContent = text;
+    }
+
+    hideProgress(messageEl) {
+        const progressEl = messageEl.querySelector('.streaming-progress');
+        if (progressEl) {
+            progressEl.remove();
+        }
     }
 
     setStreaming(streaming) {

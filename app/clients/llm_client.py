@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import AsyncIterator, Optional, Callable, Any
 import anthropic
+import json
 
 from app.config import get_settings
 from prompts import load_prompt, NARRATOR_PROMPT
@@ -36,6 +37,16 @@ class LLMClient(ABC):
         system_prompt: Optional[str] = None,
     ) -> str:
         """Send messages with tool use and return the complete response."""
+        pass
+
+    @abstractmethod
+    async def chat_stream_with_tools(
+        self,
+        messages: list[dict[str, Any]],
+        tool_handlers: dict[str, Callable],
+        system_prompt: Optional[str] = None,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Send messages with tool use and yield streaming events."""
         pass
 
 
@@ -183,6 +194,88 @@ class AnthropicClient(LLMClient):
                 return block.text
 
         return ""
+
+    async def chat_stream_with_tools(
+        self,
+        messages: list[dict[str, Any]],
+        tool_handlers: dict[str, Callable],
+        system_prompt: Optional[str] = None,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Send messages with tool use and yield streaming events."""
+        working_messages = list(messages)
+
+        while True:
+            async with self.client.messages.stream(
+                model=self.model,
+                max_tokens=self.max_tokens,
+                system=system_prompt or self.default_system_prompt,
+                messages=working_messages,
+                tools=GAME_TOOLS,
+            ) as stream:
+                async for event in stream:
+                    if event.type == "content_block_start":
+                        if event.content_block.type == "tool_use":
+                            yield {
+                                "type": "tool_start",
+                                "tool": event.content_block.name
+                            }
+                    elif event.type == "content_block_delta":
+                        if event.delta.type == "text_delta":
+                            yield {"type": "text", "content": event.delta.text}
+
+            # Get the complete message from the stream accumulator
+            final_message = await stream.get_final_message()
+            
+            # Append assistant response to history
+            working_messages.append({"role": final_message.role, "content": final_message.content})
+
+            # Check if tools were used
+            if final_message.stop_reason != "tool_use":
+                break
+
+            # Extract tool uses
+            tool_uses = [
+                block for block in final_message.content if block.type == "tool_use"
+            ]
+
+            # Execute tools
+            tool_results = []
+            for tool_use in tool_uses:
+                tool_name = tool_use.name
+                tool_input = tool_use.input
+                tool_id = tool_use.id
+
+                if tool_name in tool_handlers:
+                    try:
+                        result = await tool_handlers[tool_name](tool_input)
+                    except Exception as e:
+                        result = f"Error: {str(e)}"
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": tool_id,
+                            "content": result,
+                            "is_error": True,
+                        })
+                        continue
+                else:
+                    result = f"Tool {tool_name} not implemented"
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": tool_id,
+                        "content": result,
+                        "is_error": True,
+                    })
+                    continue
+
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tool_id,
+                    "content": str(result),
+                })
+
+            # Append tool results to history
+            working_messages.append({"role": "user", "content": tool_results})
+            yield {"type": "tool_end"}
 
 
 def get_llm_client() -> LLMClient:

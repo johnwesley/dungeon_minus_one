@@ -205,8 +205,7 @@ class ConversationService:
     ) -> AsyncIterator[StreamEvent]:
         """Process a chat message with tool use support.
 
-        Uses hybrid streaming: tools are resolved first (non-streaming),
-        then the final response is streamed to the client.
+        Uses real-time streaming with tool use events.
         """
         if self.tool_handlers is None:
             # Fall back to regular streaming if no game repo configured
@@ -258,18 +257,30 @@ class ConversationService:
         # Get tool handlers with conversation_id bound
         handlers = self.tool_handlers.get_handlers()
 
+        full_content = ""
+
         try:
-            # Resolve tools and get final response (non-streaming)
-            full_content = await self.llm_client.chat_with_tools(
+            # Consume the streaming event generator
+            async for event in self.llm_client.chat_stream_with_tools(
                 messages=llm_messages,
                 tool_handlers=handlers,
-            )
-
-            # Stream the final response in chunks for better UX
-            chunk_size = 20  # characters per chunk
-            for i in range(0, len(full_content), chunk_size):
-                chunk = full_content[i : i + chunk_size]
-                yield StreamEvent(type="delta", data={"content": chunk})
+            ):
+                if event["type"] == "text":
+                    chunk = event["content"]
+                    full_content += chunk
+                    yield StreamEvent(type="delta", data={"content": chunk})
+                
+                elif event["type"] == "tool_start":
+                    yield StreamEvent(
+                        type="progress", 
+                        data={"step": "using_tool", "tool": event["tool"]}
+                    )
+                
+                elif event["type"] == "tool_end":
+                    yield StreamEvent(
+                        type="progress", 
+                        data={"step": "tool_done"}
+                    )
 
         except Exception as e:
             yield StreamEvent(
