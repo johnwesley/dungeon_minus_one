@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     default_tenant_id: str = "default"
     default_user_id: str = "default"
 
+    # Basic Auth
+    auth_username: str = "admin"
+    auth_password: str = "password"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

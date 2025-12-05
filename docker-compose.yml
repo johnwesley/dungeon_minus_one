@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    container_name: dungeon_minus_one
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./docker_data:/data
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///data/chat.db
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    env_file:
+      - .env
