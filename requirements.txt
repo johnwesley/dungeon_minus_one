@@ -10,4 +10,5 @@ pydantic-settings>=2.1.0
 python-dotenv>=1.0.0
 sse-starlette>=1.6.0
 passlib[bcrypt]>=1.7.4
+bcrypt==3.2.2
 python-jose[cryptography]>=3.3.0
