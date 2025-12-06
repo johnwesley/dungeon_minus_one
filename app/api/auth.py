@@ -105,23 +105,3 @@ async def generate_invite(data: InviteCreate, current_user: User = Depends(get_c
     
     return {"code": code}
 
-
-# Temporary bootstrap endpoint (Disable in production!)
-@router.post("/bootstrap/admin")
-async def bootstrap_admin(data: UserRegister, db: AsyncSession = Depends(get_db)):
-    """Create the first admin user without an invite code if no users exist."""
-    result = await db.execute(select(User))
-    if result.first():
-        raise HTTPException(status_code=403, detail="System already initialized")
-        
-    new_user = User(
-        username=data.username,
-        hashed_password=get_password_hash(data.password),
-        is_admin=True
-    )
-    db.add(new_user)
-    await db.commit()
-    
-    access_token = create_access_token(data={"sub": new_user.id, "username": new_user.username})
-    return {"access_token": access_token, "token_type": "bearer"}
-
