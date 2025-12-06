@@ -37,6 +37,9 @@ hard-reset:  ## Hard reset: delete DB and re-seed locations
 	$(PYTHON) scripts/seed_locations.py
 	@echo "Database reset and re-seeded."
 
+invite:  ## Generate a new invite code
+	$(PYTHON) scripts/generate_invite.py
+
 dev: setup run  ## Setup and run local dev in one command
 
 # --- Production / Staging (Docker Compose) ---
