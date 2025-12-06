@@ -264,8 +264,24 @@ class ConversationService:
         history = await self.message_repo.list_by_conversation(conversation.id)
         llm_messages = [{"role": m.role, "content": m.content} for m in history]
 
-        # Get tool handlers with conversation_id bound
-        handlers = self.tool_handlers.get_handlers()
+        # Get tool handlers
+        base_handlers = self.tool_handlers.get_handlers()
+        
+        # Wrap handlers to inject correct conversation_id
+        # The LLM often hallucinates 'default' or omits it, causing foreign key errors.
+        # We must ensure the handler receives the *actual* database conversation ID.
+        wrapped_handlers = {}
+        
+        for name, handler in base_handlers.items():
+            async def wrapped_handler(input_data: dict, handler=handler):
+                # Inject/Overwrite conversation_id if the tool expects it
+                # get_game_state and update_game_state both require it.
+                # get_location_data does not (it uses location_id).
+                if "conversation_id" in input_data or name in ["get_game_state", "update_game_state"]:
+                    input_data["conversation_id"] = conversation.id
+                return await handler(input_data)
+            
+            wrapped_handlers[name] = wrapped_handler
 
         full_content = ""
 
@@ -273,7 +289,7 @@ class ConversationService:
             # Consume the streaming event generator
             async for event in self.llm_client.chat_stream_with_tools(
                 messages=llm_messages,
-                tool_handlers=handlers,
+                tool_handlers=wrapped_handlers,
             ):
                 if event["type"] == "text":
                     chunk = event["content"]
