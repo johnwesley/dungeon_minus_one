@@ -74,9 +74,25 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ### 7. Verify Deployment
 
--   The app should be running at `http://<your_droplet_ip>:8000`.
+-   The app should be running at `http://<your_droplet_ip>:8080`.
 -   The database is now persistent in a Docker volume (`postgres_data`).
 -   The `start.sh` script runs automatically to seed the database with locations.
+
+### 8. Configure Load Balancer (Optional)
+
+If using a Digital Ocean Load Balancer for TLS termination:
+
+1.  **Forwarding Rules**:
+    -   **Entry Protocol**: HTTPS (Port 443)
+    -   **Target Protocol**: HTTP (Port 8080)
+    -   **Certificate**: Select or create your SSL certificate.
+2.  **Health Checks**:
+    -   **Protocol**: HTTP
+    -   **Port**: 8080
+    -   **Path**: `/health` (or `/` if no health endpoint exists)
+3.  **Droplet**: Add your droplet to the Load Balancer.
+
+The Load Balancer will handle HTTPS on port 443 and forward traffic to your Droplet on port 8080.
 
 ## Updating the App
 
