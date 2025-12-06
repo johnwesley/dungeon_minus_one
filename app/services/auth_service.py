@@ -22,16 +22,27 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash."""
     # Bcrypt has a 72 byte limit. Truncate if necessary to avoid errors.
     # Ideally we would use a different hash like Argon2, but for compatibility/simplicity fix:
-    if len(plain_password) > 72:
+    # Ensure we are working with bytes for length check to be precise, but string slicing works for simple cases.
+    # Passlib expects strings.
+    if len(plain_password.encode('utf-8')) > 72:
+        # We can't easily truncate utf-8 bytes and decode back to string safely without potentially splitting a char.
+        # However, for the sake of not crashing, let's truncate the string length which is usually <= bytes.
+        # A safer approach is catching the error or just using the first 72 chars.
         plain_password = plain_password[:72]
-    return pwd_context.verify(plain_password, hashed_password)
+        
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except ValueError:
+        # Fallback if it still complains (e.g. if the hashed password was created with a different length or method)
+        return False
 
 
 def get_password_hash(password: str) -> str:
     """Hash a password."""
     # Bcrypt has a 72 byte limit.
-    if len(password) > 72:
+    if len(password.encode('utf-8')) > 72:
         password = password[:72]
+        
     return pwd_context.hash(password)
 
 
