@@ -56,8 +56,7 @@ Paste the following content (replace placeholders):
 ```ini
 # App
 ANTHROPIC_API_KEY=sk-ant-...
-AUTH_USERNAME=admin
-AUTH_PASSWORD=your_secure_password
+AUTH_SECRET_KEY=change_this_to_a_secure_random_string
 
 # Database
 POSTGRES_USER=dungeon_user

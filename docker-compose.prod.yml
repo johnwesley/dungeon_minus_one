@@ -8,8 +8,7 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - AUTH_USERNAME=${AUTH_USERNAME}
-      - AUTH_PASSWORD=${AUTH_PASSWORD}
+      - AUTH_SECRET_KEY=${AUTH_SECRET_KEY}
     depends_on:
       db:
         condition: service_healthy
