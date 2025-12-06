@@ -2,9 +2,27 @@
 
 A conversational text-adventure game powered by Claude.
 
-## Deployment
+## Production Configuration
 
-For deployment instructions, see [DEPLOY_DROPLET.md](DEPLOY_DROPLET.md).
+Docker Compose is used for production deployment.
+
+**Environment Variables** (create `.env` file):
+```ini
+ANTHROPIC_API_KEY=sk-ant-...
+AUTH_SECRET_KEY=<secure_random_string>
+POSTGRES_USER=dungeon_user
+POSTGRES_PASSWORD=<your_db_password>
+POSTGRES_DB=dungeon_db
+```
+
+**Start production**:
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+- App runs on port 8080
+- Uses PostgreSQL (not SQLite)
+- Database persisted via Docker volume (`postgres_data`)
 
 ## User Management & Invites
 
@@ -52,4 +70,3 @@ To let friends play, you need to generate invite codes for them.
 
 Once registered, users can log in at:
 `http://<your_droplet_ip>:8000/static/login.html`
-
