@@ -227,6 +227,16 @@ class ConversationService:
                     },
                 )
                 return
+            # Additional security check: ensure conversation belongs to user_id
+            if conversation.user_id != user_id:
+                 yield StreamEvent(
+                    type="error",
+                    data={
+                        "error": "Unauthorized access to conversation",
+                        "code": "UNAUTHORIZED",
+                    },
+                )
+                 return
         else:
             conversation = await self.conversation_repo.create(
                 tenant_id=tenant_id,

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Index, JSON
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Index, JSON, Boolean
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -11,6 +11,35 @@ def generate_uuid() -> str:
     return str(uuid.uuid4())
 
 
+class User(Base):
+    """User model - represents a registered player."""
+    
+    __tablename__ = "users"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    username = Column(String(50), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=True)
+    hashed_password = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    conversations = relationship("Conversation", back_populates="user")
+
+
+class InviteCode(Base):
+    """InviteCode model - controls registration access."""
+    
+    __tablename__ = "invite_codes"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    code = Column(String(50), unique=True, nullable=False, index=True)
+    is_used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    used_at = Column(DateTime, nullable=True)
+    used_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+
+
 class Conversation(Base):
     """Conversation model - represents a chat session."""
 
@@ -18,11 +47,13 @@ class Conversation(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     tenant_id = Column(String(36), nullable=False, default="default")
-    user_id = Column(String(36), nullable=False, default="default")
+    # Changed user_id to be a Foreign Key
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     title = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    user = relationship("User", back_populates="conversations")
     messages = relationship(
         "Message",
         back_populates="conversation",

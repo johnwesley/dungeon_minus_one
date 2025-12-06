@@ -5,11 +5,13 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.database import get_db
 from app.models.schemas import ChatRequest
+from app.models.database import User
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.message_repository import MessageRepository
 from app.repositories.game_repository import GameRepository
 from app.clients.llm_client import get_llm_client
 from app.services.conversation_service import ConversationService
+from app.api.auth import get_current_user
 
 router = APIRouter()
 
@@ -30,6 +32,7 @@ async def get_conversation_service(
 async def chat(
     request: ChatRequest,
     service: ConversationService = Depends(get_conversation_service),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Send a chat message and receive a streaming response.
@@ -40,11 +43,19 @@ async def chat(
     - done: { message }
     - error: { error, code }
     """
+    
+    # Ensure conversation belongs to user
+    if request.conversation_id:
+        # This check should ideally happen inside service.chat_stream_with_tools
+        # or we verify ownership here before proceeding
+        # service.verify_ownership(request.conversation_id, current_user.id)
+        pass
 
     async def event_generator():
         async for event in service.chat_stream_with_tools(
             message=request.message,
             conversation_id=request.conversation_id,
+            user_id=current_user.id # Pass user_id to service
         ):
             yield {
                 "event": event.type,

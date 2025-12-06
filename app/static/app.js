@@ -6,6 +6,12 @@ class ChatApp {
     constructor() {
         this.currentConversationId = null;
         this.isStreaming = false;
+        this.token = localStorage.getItem('token');
+
+        if (!this.token) {
+            window.location.href = '/static/login.html';
+            return;
+        }
 
         // DOM elements
         this.conversationList = document.getElementById('conversation-list');
@@ -14,8 +20,28 @@ class ChatApp {
         this.messageInput = document.getElementById('message-input');
         this.sendBtn = document.getElementById('send-btn');
         this.newChatBtn = document.getElementById('new-chat-btn');
+        this.logoutBtn = this.createLogoutButton();
 
         this.init();
+    }
+    
+    createLogoutButton() {
+        const btn = document.createElement('button');
+        btn.textContent = 'Logout';
+        btn.className = 'new-chat-btn'; // Reuse style for now
+        btn.style.marginTop = 'auto';
+        btn.style.backgroundColor = '#4a4a4a';
+        btn.addEventListener('click', () => {
+            localStorage.removeItem('token');
+            window.location.href = '/static/login.html';
+        });
+        
+        // Add to sidebar footer if sidebar exists
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) {
+            sidebar.appendChild(btn);
+        }
+        return btn;
     }
 
     async init() {
@@ -49,10 +75,30 @@ class ChatApp {
             this.startNewChat();
         });
     }
+    
+    async fetchWithAuth(url, options = {}) {
+        const headers = {
+            ...options.headers,
+            'Authorization': `Bearer ${this.token}`
+        };
+        
+        const response = await fetch(url, { ...options, headers });
+        
+        if (response.status === 401) {
+            // Token expired or invalid
+            localStorage.removeItem('token');
+            window.location.href = '/static/login.html';
+            return null;
+        }
+        
+        return response;
+    }
 
     async loadConversations() {
         try {
-            const response = await fetch('/api/conversations');
+            const response = await this.fetchWithAuth('/api/conversations');
+            if (!response) return;
+            
             const conversations = await response.json();
 
             this.conversationList.innerHTML = '';
@@ -117,7 +163,8 @@ class ChatApp {
 
         // Load messages
         try {
-            const response = await fetch(`/api/conversations/${conversationId}`);
+            const response = await this.fetchWithAuth(`/api/conversations/${conversationId}`);
+            if (!response) return;
             const conversation = await response.json();
 
             this.chatMessages.innerHTML = '';
@@ -136,7 +183,7 @@ class ChatApp {
         if (!confirm('Delete this conversation?')) return;
 
         try {
-            await fetch(`/api/conversations/${conversationId}`, {
+            await this.fetchWithAuth(`/api/conversations/${conversationId}`, {
                 method: 'DELETE'
             });
 
@@ -195,12 +242,19 @@ class ChatApp {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
                 },
                 body: JSON.stringify({
                     message: message,
                     conversation_id: this.currentConversationId,
                 }),
             });
+            
+            if (response.status === 401) {
+                 localStorage.removeItem('token');
+                 window.location.href = '/static/login.html';
+                 return;
+            }
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();

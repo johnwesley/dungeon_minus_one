@@ -8,8 +8,10 @@ from app.models.schemas import (
     CreateConversationRequest,
     MessageResponse,
 )
+from app.models.database import User
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.message_repository import MessageRepository
+from app.api.auth import get_current_user
 
 router = APIRouter()
 
@@ -17,10 +19,12 @@ router = APIRouter()
 @router.get("/conversations", response_model=list[ConversationResponse])
 async def list_conversations(
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """List all conversations for the current user."""
     repo = ConversationRepository(db)
-    conversations = await repo.list_all()
+    # Filter by user_id
+    conversations = await repo.list_all(user_id=current_user.id)
 
     # Get message counts for each conversation
     result = []
@@ -43,10 +47,11 @@ async def list_conversations(
 async def create_conversation(
     request: CreateConversationRequest,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Create a new conversation."""
     repo = ConversationRepository(db)
-    conversation = await repo.create(title=request.title)
+    conversation = await repo.create(title=request.title, user_id=current_user.id)
 
     return ConversationResponse(
         id=conversation.id,
@@ -61,13 +66,16 @@ async def create_conversation(
 async def get_conversation(
     conversation_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Get a conversation with all its messages."""
     conv_repo = ConversationRepository(db)
     msg_repo = MessageRepository(db)
 
     conversation = await conv_repo.get(conversation_id)
-    if not conversation:
+    
+    # Ensure ownership
+    if not conversation or conversation.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     messages = await msg_repo.list_by_conversation(conversation_id)
@@ -93,9 +101,16 @@ async def get_conversation(
 async def delete_conversation(
     conversation_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Delete a conversation."""
     repo = ConversationRepository(db)
+    
+    # Check ownership first
+    conversation = await repo.get(conversation_id)
+    if not conversation or conversation.user_id != current_user.id:
+         raise HTTPException(status_code=404, detail="Conversation not found")
+         
     deleted = await repo.delete(conversation_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Conversation not found")
