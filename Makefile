@@ -1,8 +1,9 @@
-.PHONY: setup install run clean reset hard-reset help
+.PHONY: setup install run clean reset hard-reset help prod-up prod-down prod-logs prod-restart prod-rebuild
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
+DOCKER_COMPOSE_PROD := docker compose -f docker-compose.prod.yml
 
 help:  ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -20,7 +21,7 @@ $(VENV)/bin/activate: requirements.txt
 install:  ## Install dependencies (requires existing venv)
 	$(PIP) install -r requirements.txt
 
-run:  ## Start the development server
+run:  ## Start the local development server (FastAPI only)
 	$(PYTHON) -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 clean:  ## Remove venv and cache files
@@ -36,4 +37,21 @@ hard-reset:  ## Hard reset: delete DB and re-seed locations
 	$(PYTHON) scripts/seed_locations.py
 	@echo "Database reset and re-seeded."
 
-dev: setup run  ## Setup and run in one command
+dev: setup run  ## Setup and run local dev in one command
+
+# --- Production / Staging (Docker Compose) ---
+
+prod-up:  ## Start production containers detached
+	$(DOCKER_COMPOSE_PROD) up -d
+
+prod-down:  ## Stop and remove production containers
+	$(DOCKER_COMPOSE_PROD) down
+
+prod-logs:  ## Follow production logs
+	$(DOCKER_COMPOSE_PROD) logs -f
+
+prod-restart:  ## Restart production containers
+	$(DOCKER_COMPOSE_PROD) restart
+
+prod-rebuild:  ## Rebuild and restart production containers
+	$(DOCKER_COMPOSE_PROD) up -d --build
