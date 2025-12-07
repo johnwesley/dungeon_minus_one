@@ -244,10 +244,11 @@ class DungeonApp {
   }
 
   appendMessage(role, content) {
+    const displayNames = { user: 'Burglar', assistant: 'Narrator' };
     const messageEl = document.createElement('div');
     messageEl.className = `message ${role}`;
     messageEl.innerHTML = `
-      <div class="message-role">${role}</div>
+      <div class="message-role">${displayNames[role] || role}</div>
       <div class="message-content">${this.escapeHtml(content)}</div>
     `;
     this.chatMessages.appendChild(messageEl);
