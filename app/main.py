@@ -59,10 +59,11 @@ legacy_static = Path(__file__).parent / "static"
 
 if frontend_dist.exists():
     static_path = frontend_dist
+    # Vite builds assets to /assets/ directory
+    app.mount("/assets", StaticFiles(directory=static_path / "assets"), name="assets")
 else:
     static_path = legacy_static
-
-app.mount("/static", StaticFiles(directory=static_path), name="static")
+    app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 
 @app.get("/")
