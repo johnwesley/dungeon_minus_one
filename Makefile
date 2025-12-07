@@ -1,9 +1,10 @@
-.PHONY: setup install run clean reset hard-reset help prod-up prod-down prod-logs prod-restart prod-rebuild
+.PHONY: setup install run clean reset hard-reset help prod-up prod-down prod-logs prod-restart prod-rebuild frontend-install frontend-dev frontend-build
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 DOCKER_COMPOSE_PROD := docker compose -f docker-compose.prod.yml
+FRONTEND := frontend
 
 help:  ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -58,3 +59,14 @@ prod-restart:  ## Restart production containers
 
 prod-rebuild:  ## Rebuild and restart production containers
 	$(DOCKER_COMPOSE_PROD) up -d --build
+
+# --- Frontend (Vite) ---
+
+frontend-install:  ## Install frontend dependencies
+	cd $(FRONTEND) && npm ci
+
+frontend-dev:  ## Start Vite dev server (port 5173)
+	cd $(FRONTEND) && npm run dev
+
+frontend-build:  ## Build frontend for production
+	cd $(FRONTEND) && npm run build

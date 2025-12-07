@@ -1,0 +1,247 @@
+/* Main CSS entry point */
+@import './variables.css';
+@import './bbs-base.css';
+@import './box-drawing.css';
+@import './scanlines.css';
+
+/* App-specific layout */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 280px;
+  background: var(--panel-bg);
+  border-right: 1px solid var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--text-dim);
+}
+
+.sidebar-title {
+  font-size: 1.25rem;
+  color: var(--text-bright);
+  margin: 0;
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-sm) 0;
+}
+
+.sidebar-footer {
+  padding: var(--space-md);
+  border-top: 1px solid var(--text-dim);
+}
+
+/* Main content area */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Chat area */
+.chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  padding: var(--space-md);
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md) 0;
+}
+
+/* Message styling */
+.message {
+  margin-bottom: var(--space-md);
+  padding: var(--space-md);
+  border-left: 2px solid var(--text-dim);
+}
+
+.message.user {
+  border-left-color: var(--user-color);
+}
+
+.message.user .message-role {
+  color: var(--user-color);
+}
+
+.message.assistant {
+  border-left-color: var(--text-primary);
+}
+
+.message-role {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  margin-bottom: var(--space-xs);
+  color: var(--text-dim);
+}
+
+.message-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Progress/tool indicator */
+.progress-indicator {
+  color: var(--text-dim);
+  font-style: italic;
+  padding: var(--space-sm);
+}
+
+/* Input area */
+.input-area {
+  padding: var(--space-md);
+  border-top: 1px solid var(--text-dim);
+  background: var(--panel-bg);
+}
+
+.input-form {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-end;
+}
+
+.input-form .bbs-textarea {
+  flex: 1;
+  max-height: 200px;
+}
+
+/* Conversation list item */
+.conversation-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: all var(--transition-fast);
+}
+
+.conversation-item:hover {
+  background: var(--panel-bg-hover);
+  border-left-color: var(--text-dim);
+}
+
+.conversation-item.active {
+  background: var(--panel-bg-hover);
+  border-left-color: var(--text-bright);
+}
+
+.conversation-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversation-delete {
+  opacity: 0;
+  background: none;
+  border: none;
+  color: var(--error);
+  cursor: pointer;
+  padding: var(--space-xs);
+  font-family: var(--font-mono);
+  transition: opacity var(--transition-fast);
+}
+
+.conversation-item:hover .conversation-delete {
+  opacity: 1;
+}
+
+.conversation-delete:hover {
+  color: var(--error);
+  text-shadow: 0 0 5px var(--error);
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: var(--space-xl);
+  color: var(--text-dim);
+}
+
+/* Auth pages */
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+}
+
+.auth-box {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-xl);
+  background: var(--panel-bg);
+  border: 1px solid var(--text-dim);
+}
+
+.auth-title {
+  font-size: 1.5rem;
+  color: var(--text-bright);
+  margin-bottom: var(--space-lg);
+  text-align: center;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.auth-link {
+  text-align: center;
+  margin-top: var(--space-md);
+  color: var(--text-dim);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    max-height: 40vh;
+    border-right: none;
+    border-bottom: 1px solid var(--text-dim);
+  }
+
+  .chat-container {
+    padding: var(--space-sm);
+  }
+
+  .message {
+    padding: var(--space-sm);
+  }
+
+  /* Larger touch targets */
+  .bbs-btn,
+  .conversation-item {
+    min-height: 44px;
+  }
+
+  .conversation-delete {
+    opacity: 1;
+  }
+}

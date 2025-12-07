@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dungeon Minus 1</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body class="scanlines crt-vignette">
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="sidebar-title glow">Dungeon Minus 1</h1>
+      </div>
+
+      <div class="sidebar-content">
+        <div id="conversation-list">
+          <div class="empty-state">Loading...</div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button id="logout-btn" class="bbs-btn" style="width: 100%;">Logout</button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="chat-container">
+        <div id="chat-messages" class="chat-messages">
+          <!-- Messages will be inserted here -->
+        </div>
+
+        <div class="input-area">
+          <form id="chat-form" class="input-form">
+            <textarea
+              id="message-input"
+              class="bbs-textarea"
+              placeholder="What do you do?"
+              rows="1"
+            ></textarea>
+            <button id="send-btn" type="submit" class="bbs-btn">Send</button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="../js/main.js"></script>
+</body>
+</html>

@@ -1,3 +1,12 @@
+# Stage 1: Build frontend
+FROM node:20-alpine AS frontend-builder
+WORKDIR /frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2: Python app
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -13,7 +22,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY app/ ./app/
+COPY prompts/ ./prompts/
+COPY scripts/ ./scripts/
+COPY start.sh .
+
+# Copy built frontend
+COPY --from=frontend-builder /frontend/dist ./frontend/dist
 
 RUN chmod +x start.sh
 

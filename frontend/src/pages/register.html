@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - Dungeon Minus 1</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body class="scanlines crt-vignette">
+  <div class="auth-container">
+    <div class="auth-box">
+      <h1 class="auth-title glow">Dungeon Minus 1</h1>
+
+      <div id="error-msg"></div>
+
+      <form id="register-form" class="auth-form"
+            hx-post="/api/auth/register"
+            hx-target="#error-msg"
+            hx-swap="innerHTML">
+        <div>
+          <label class="bbs-label" for="invite_code">Invite Code</label>
+          <input type="text"
+                 id="invite_code"
+                 name="invite_code"
+                 class="bbs-input"
+                 required
+                 autocomplete="off">
+        </div>
+
+        <div>
+          <label class="bbs-label" for="username">Username</label>
+          <input type="text"
+                 id="username"
+                 name="username"
+                 class="bbs-input"
+                 required
+                 autocomplete="username">
+        </div>
+
+        <div>
+          <label class="bbs-label" for="password">Password</label>
+          <input type="password"
+                 id="password"
+                 name="password"
+                 class="bbs-input"
+                 required
+                 autocomplete="new-password">
+        </div>
+
+        <button type="submit" class="bbs-btn">Create Account</button>
+      </form>
+
+      <p class="auth-link">
+        Already have an account? <a href="/login.html">Login</a>
+      </p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { redirectIfAuthenticated, setToken } from '../js/auth.js';
+
+    // Redirect if already logged in
+    redirectIfAuthenticated();
+
+    // Handle successful registration
+    document.body.addEventListener('htmx:afterRequest', (event) => {
+      if (event.detail.target.id === 'error-msg' && event.detail.successful) {
+        const xhr = event.detail.xhr;
+        if (xhr.status === 200) {
+          try {
+            const data = JSON.parse(xhr.response);
+            if (data.access_token) {
+              setToken(data.access_token);
+              window.location.href = '/';
+              return;
+            }
+          } catch (e) {
+            // Not JSON, show as error
+          }
+        }
+      }
+    });
+
+    // Handle errors - wrap in error styling
+    document.body.addEventListener('htmx:beforeSwap', (event) => {
+      if (event.detail.target.id === 'error-msg') {
+        const xhr = event.detail.xhr;
+        if (xhr.status !== 200) {
+          try {
+            const data = JSON.parse(xhr.response);
+            event.detail.serverResponse = `<div class="bbs-error">${data.detail || 'Registration failed'}</div>`;
+          } catch (e) {
+            event.detail.serverResponse = `<div class="bbs-error">Registration failed</div>`;
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

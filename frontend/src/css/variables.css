@@ -1,0 +1,46 @@
+:root {
+  /* CRT Phosphor Colors */
+  --phosphor-green: #33ff33;
+  --phosphor-green-dim: #1a661a;
+  --phosphor-green-bright: #66ff66;
+  --phosphor-amber: #ffb000;
+  --phosphor-amber-dim: #664400;
+
+  /* Background */
+  --terminal-bg: #0a0a0a;
+  --panel-bg: #111111;
+  --panel-bg-hover: #1a1a1a;
+
+  /* Text */
+  --text-primary: var(--phosphor-green);
+  --text-dim: var(--phosphor-green-dim);
+  --text-bright: var(--phosphor-green-bright);
+  --text-muted: #446644;
+
+  /* Accent */
+  --accent: #ff6600;
+  --accent-hover: #ff8833;
+  --error: #ff3333;
+  --error-dim: #661111;
+
+  /* User messages */
+  --user-color: var(--phosphor-amber);
+  --user-color-dim: var(--phosphor-amber-dim);
+
+  /* Fonts */
+  --font-mono: 'IBM Plex Mono', 'Courier New', 'Consolas', monospace;
+
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  /* Border radius (minimal for retro feel) */
+  --radius-sm: 2px;
+
+  /* Transitions */
+  --transition-fast: 0.1s ease;
+  --transition-normal: 0.2s ease;
+}

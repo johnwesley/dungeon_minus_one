@@ -1,0 +1,195 @@
+/* Reset and base styles */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-mono);
+  background: var(--terminal-bg);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* Phosphor text glow */
+.glow {
+  text-shadow:
+    0 0 5px var(--phosphor-green),
+    0 0 10px var(--phosphor-green);
+}
+
+.glow-strong {
+  text-shadow:
+    0 0 5px var(--phosphor-green),
+    0 0 10px var(--phosphor-green),
+    0 0 20px var(--phosphor-green);
+}
+
+/* Links */
+a {
+  color: var(--text-bright);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--phosphor-green-bright);
+  text-shadow: 0 0 5px var(--phosphor-green);
+}
+
+/* Typing cursor */
+.cursor::after {
+  content: '\2588'; /* Full block █ */
+  animation: blink 1s step-end infinite;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* ANSI color classes */
+.ansi-black { color: #000000; }
+.ansi-red { color: #aa0000; }
+.ansi-green { color: #00aa00; }
+.ansi-yellow { color: #aa5500; }
+.ansi-blue { color: #0000aa; }
+.ansi-magenta { color: #aa00aa; }
+.ansi-cyan { color: #00aaaa; }
+.ansi-white { color: #aaaaaa; }
+
+/* Bright ANSI variants */
+.ansi-bright-black { color: #555555; }
+.ansi-bright-red { color: #ff5555; }
+.ansi-bright-green { color: #55ff55; }
+.ansi-bright-yellow { color: #ffff55; }
+.ansi-bright-blue { color: #5555ff; }
+.ansi-bright-magenta { color: #ff55ff; }
+.ansi-bright-cyan { color: #55ffff; }
+.ansi-bright-white { color: #ffffff; }
+
+/* BBS-style button */
+.bbs-btn {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  background: var(--terminal-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--text-primary);
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all var(--transition-fast);
+}
+
+.bbs-btn:hover {
+  background: var(--text-primary);
+  color: var(--terminal-bg);
+}
+
+.bbs-btn:active {
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.bbs-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bbs-btn:disabled:hover {
+  background: var(--terminal-bg);
+  color: var(--text-primary);
+}
+
+/* BBS-style input */
+.bbs-input {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  background: var(--terminal-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--text-dim);
+  padding: var(--space-sm);
+  caret-color: var(--text-primary);
+  transition: border-color var(--transition-fast);
+  width: 100%;
+}
+
+.bbs-input:focus {
+  border-color: var(--text-primary);
+  outline: none;
+  box-shadow: 0 0 5px var(--phosphor-green);
+}
+
+.bbs-input::placeholder {
+  color: var(--text-dim);
+}
+
+/* BBS-style textarea */
+.bbs-textarea {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  background: var(--terminal-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--text-dim);
+  padding: var(--space-sm);
+  caret-color: var(--text-primary);
+  resize: none;
+  width: 100%;
+  min-height: 3rem;
+}
+
+.bbs-textarea:focus {
+  border-color: var(--text-primary);
+  outline: none;
+  box-shadow: 0 0 5px var(--phosphor-green);
+}
+
+/* Form labels */
+.bbs-label {
+  display: block;
+  margin-bottom: var(--space-xs);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-size: 0.875rem;
+}
+
+/* Error messages */
+.bbs-error {
+  color: var(--error);
+  background: var(--error-dim);
+  border: 1px solid var(--error);
+  padding: var(--space-sm);
+  margin: var(--space-sm) 0;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--terminal-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-dim);
+  border: 1px solid var(--terminal-bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-primary);
+}
+
+/* Selection */
+::selection {
+  background: var(--text-primary);
+  color: var(--terminal-bg);
+}

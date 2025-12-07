@@ -1,0 +1,138 @@
+/* Box-drawing character utilities
+   Uses Unicode box-drawing characters: ─│┌┐└┘├┤┬┴┼
+*/
+
+.bbs-panel {
+  position: relative;
+  background: var(--panel-bg);
+  padding: var(--space-md);
+}
+
+/* Panel with box-drawing border */
+.bbs-box {
+  border: 1px solid var(--text-dim);
+  position: relative;
+}
+
+.bbs-box::before {
+  content: '┌' attr(data-title) '┐';
+  position: absolute;
+  top: -0.75em;
+  left: var(--space-sm);
+  background: var(--terminal-bg);
+  padding: 0 var(--space-xs);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+/* Titled panel with box-drawing header */
+.bbs-titled-box {
+  position: relative;
+  margin-top: var(--space-md);
+}
+
+.bbs-titled-box::before {
+  content: '┌─[ ' attr(data-title) ' ]─────────────────────────────────┐';
+  display: block;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.bbs-titled-box-content {
+  border-left: 1px solid var(--text-dim);
+  border-right: 1px solid var(--text-dim);
+  padding: var(--space-md);
+  background: var(--panel-bg);
+}
+
+.bbs-titled-box::after {
+  content: '└──────────────────────────────────────────────┘';
+  display: block;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+/* Simple bordered box */
+.bbs-border {
+  border: 1px solid var(--text-dim);
+  padding: var(--space-md);
+}
+
+.bbs-border:hover {
+  border-color: var(--text-primary);
+}
+
+/* Horizontal rule with box-drawing */
+.bbs-hr {
+  border: none;
+  color: var(--text-dim);
+  text-align: center;
+  margin: var(--space-md) 0;
+}
+
+.bbs-hr::before {
+  content: '────────────────────────────────────────────────';
+  display: block;
+  overflow: hidden;
+}
+
+/* List with box-drawing bullets */
+.bbs-list {
+  list-style: none;
+  padding-left: var(--space-md);
+}
+
+.bbs-list li::before {
+  content: '├─ ';
+  color: var(--text-dim);
+}
+
+.bbs-list li:last-child::before {
+  content: '└─ ';
+}
+
+/* Sidebar/menu style */
+.bbs-menu-item {
+  display: block;
+  padding: var(--space-sm) var(--space-md);
+  color: var(--text-primary);
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.bbs-menu-item:hover {
+  background: var(--panel-bg-hover);
+  border-left-color: var(--text-primary);
+}
+
+.bbs-menu-item.active {
+  background: var(--panel-bg-hover);
+  border-left-color: var(--text-bright);
+  color: var(--text-bright);
+}
+
+/* Decorative corners for special elements */
+.bbs-corners {
+  position: relative;
+}
+
+.bbs-corners::before {
+  content: '┌';
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: var(--text-dim);
+}
+
+.bbs-corners::after {
+  content: '┐';
+  position: absolute;
+  top: 0;
+  right: 0;
+  color: var(--text-dim);
+}

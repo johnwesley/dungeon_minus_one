@@ -53,8 +53,15 @@ app.add_middleware(
 # API routes
 app.include_router(api_router)
 
-# Static files
-static_path = Path(__file__).parent / "static"
+# Static files - prefer frontend/dist (production), fall back to app/static (legacy)
+frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
+legacy_static = Path(__file__).parent / "static"
+
+if frontend_dist.exists():
+    static_path = frontend_dist
+else:
+    static_path = legacy_static
+
 app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 
@@ -62,6 +69,18 @@ app.mount("/static", StaticFiles(directory=static_path), name="static")
 async def serve_index():
     """Serve the main HTML page."""
     return FileResponse(static_path / "index.html")
+
+
+@app.get("/login.html")
+async def serve_login():
+    """Serve the login page."""
+    return FileResponse(static_path / "login.html")
+
+
+@app.get("/register.html")
+async def serve_register():
+    """Serve the registration page."""
+    return FileResponse(static_path / "register.html")
 
 
 if __name__ == "__main__":
