@@ -6,8 +6,9 @@
   <title>Register - Dungeon Minus 1</title>
   <link rel="stylesheet" href="/css/main.css">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
 </head>
-<body class="scanlines crt-vignette">
+<body class="scanlines crt-vignette" hx-ext="json-enc">
   <div class="auth-container">
     <div class="auth-box">
       <h1 class="auth-title glow">Dungeon Minus 1</h1>
@@ -17,7 +18,8 @@
       <form id="register-form" class="auth-form"
             hx-post="/api/auth/register"
             hx-target="#error-msg"
-            hx-swap="innerHTML">
+            hx-swap="innerHTML"
+            hx-headers='{"Content-Type": "application/json"}'>
         <div>
           <label class="bbs-label" for="invite_code">Invite Code</label>
           <input type="text"
