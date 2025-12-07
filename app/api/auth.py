@@ -7,6 +7,7 @@ from app.database import get_db
 from app.models.database import User, InviteCode
 from app.models.auth_schemas import UserLogin, UserRegister, Token, InviteCreate
 from app.services.auth_service import verify_password, get_password_hash, create_access_token, decode_access_token
+from app.config import get_settings
 from fastapi.security import OAuth2PasswordBearer
 import uuid
 
@@ -22,16 +23,23 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     user_id: str = payload.get("sub")
     if user_id is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
-        
+
     user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-        
+
     return user
+
+
+@router.get("/dev-mode")
+async def check_dev_mode():
+    """Check if dev mode is enabled (for pre-filling login form)."""
+    settings = get_settings()
+    return {"enabled": settings.dev_auth_bypass}
 
 
 @router.post("/register", response_model=Token)

@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     auth_password: Optional[str] = "password"
     auth_secret_key: Optional[str] = "dev_secret_key_change_me_in_prod"
 
+    # Development mode: bypass login when True
+    dev_auth_bypass: bool = False
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

@@ -22,7 +22,7 @@ install:  ## Install dependencies (requires existing venv)
 	$(PIP) install -r requirements.txt
 
 run:  ## Start the local development server (FastAPI only)
-	$(PYTHON) -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	DEV_AUTH_BYPASS=true $(PYTHON) -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 clean:  ## Remove venv and cache files
 	rm -rf $(VENV)

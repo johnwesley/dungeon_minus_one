@@ -4,9 +4,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
+from sqlalchemy import select
 
 from app.api.router import api_router
-from app.database import init_db
+from app.database import init_db, async_session_factory
+from app.config import get_settings
+from app.models.database import User
+from app.services.auth_service import get_password_hash
 
 
 @asynccontextmanager
@@ -14,6 +18,18 @@ async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup: initialize database
     await init_db()
+
+    # Create dev user with password "dev" if dev mode is enabled
+    settings = get_settings()
+    if settings.dev_auth_bypass:
+        async with async_session_factory() as session:
+            result = await session.execute(select(User).where(User.username == "dev"))
+            dev_user = result.scalar_one_or_none()
+            if not dev_user:
+                dev_user = User(username="dev", hashed_password=get_password_hash("dev"))
+                session.add(dev_user)
+                await session.commit()
+
     yield
     # Shutdown: cleanup if needed
 

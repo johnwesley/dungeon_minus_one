@@ -110,12 +110,28 @@
     <script>
         const form = document.getElementById('login-form');
         const errorMsg = document.getElementById('error-msg');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+
+        // Check if dev mode is enabled and pre-fill credentials
+        (async function checkDevMode() {
+            try {
+                const response = await fetch('/api/auth/dev-mode');
+                const data = await response.json();
+                if (data.enabled) {
+                    usernameInput.value = 'dev';
+                    passwordInput.value = 'dev';
+                }
+            } catch (err) {
+                // Ignore errors, just don't pre-fill
+            }
+        })();
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
+            const username = usernameInput.value;
+            const password = passwordInput.value;
+
             errorMsg.style.display = 'none';
             errorMsg.textContent = '';
 
