@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset help prod-up prod-down prod-logs prod-restart prod-rebuild frontend-install frontend-dev frontend-build dev-full
+.PHONY: setup install run clean reset hard-reset help prod-up prod-down prod-logs prod-restart prod-rebuild prod-invite frontend-install frontend-dev frontend-build dev-full
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -59,6 +59,9 @@ prod-restart:  ## Restart production containers
 
 prod-rebuild:  ## Rebuild and restart production containers
 	$(DOCKER_COMPOSE_PROD) up -d --build
+
+prod-invite:  ## Generate invite code in production
+	$(DOCKER_COMPOSE_PROD) exec app python scripts/generate_invite.py
 
 # --- Frontend (Vite) ---
 
