@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset help prod-up prod-down prod-logs prod-restart prod-rebuild frontend-install frontend-dev frontend-build
+.PHONY: setup install run clean reset hard-reset help prod-up prod-down prod-logs prod-restart prod-rebuild frontend-install frontend-dev frontend-build dev-full
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -70,3 +70,9 @@ frontend-dev:  ## Start Vite dev server (port 5173)
 
 frontend-build:  ## Build frontend for production
 	cd $(FRONTEND) && npm run build
+
+dev-full:  ## Start backend + frontend dev servers (access at localhost:5173)
+	@echo "Starting backend on :8000 and frontend on :5173..."
+	@echo "Access the app at http://localhost:5173"
+	@DEV_AUTH_BYPASS=true $(PYTHON) -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
+	cd $(FRONTEND) && npm run dev
