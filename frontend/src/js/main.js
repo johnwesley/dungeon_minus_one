@@ -19,6 +19,8 @@ class DungeonApp {
     this.messageInput = document.getElementById('message-input');
     this.sendBtn = document.getElementById('send-btn');
     this.logoutBtn = document.getElementById('logout-btn');
+    this.currentLocationEl = document.getElementById('current-location');
+    this.inventoryListEl = document.getElementById('inventory-list');
 
     this.init();
   }
@@ -139,6 +141,7 @@ class DungeonApp {
       });
 
       this.scrollToBottom();
+      await this.loadGameState();
     } catch (error) {
       console.error('Failed to load conversation:', error);
     }
@@ -225,6 +228,7 @@ class DungeonApp {
       onDone: async () => {
         this.hideProgress(assistantMsgEl);
         await this.loadConversations();
+        await this.loadGameState();
       },
       onError: (error) => {
         contentEl.textContent = `Error: ${error}`;
@@ -288,6 +292,38 @@ class DungeonApp {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  async loadGameState() {
+    if (!this.currentConversationId) return;
+
+    try {
+      const response = await fetchWithAuth(`/api/conversations/${this.currentConversationId}/game-state`);
+      if (!response) return;
+
+      const state = await response.json();
+      this.renderGameState(state);
+    } catch (error) {
+      console.error('Failed to load game state:', error);
+    }
+  }
+
+  renderGameState(state) {
+    // Update location
+    if (this.currentLocationEl) {
+      this.currentLocationEl.textContent = state.current_location || 'Unknown';
+    }
+
+    // Update inventory
+    if (this.inventoryListEl) {
+      if (!state.inventory || state.inventory.length === 0) {
+        this.inventoryListEl.innerHTML = '<li class="empty-inventory">Empty</li>';
+      } else {
+        this.inventoryListEl.innerHTML = state.inventory
+          .map(item => `<li>${this.escapeHtml(item)}</li>`)
+          .join('');
+      }
+    }
   }
 }
 

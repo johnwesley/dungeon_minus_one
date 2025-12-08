@@ -42,6 +42,67 @@
   border-top: 1px solid var(--text-dim);
 }
 
+/* Right panel (game state) */
+.right-panel {
+  width: 220px;
+  background: var(--panel-bg);
+  border-left: 1px solid var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  padding: var(--space-md);
+  gap: var(--space-lg);
+}
+
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.panel-title {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--text-dim);
+  padding-bottom: var(--space-xs);
+}
+
+.panel-content {
+  color: var(--text-bright);
+}
+
+.inventory-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.inventory-list li {
+  color: var(--text-primary);
+  padding-left: var(--space-sm);
+  position: relative;
+}
+
+.inventory-list li::before {
+  content: ">";
+  position: absolute;
+  left: 0;
+  color: var(--text-dim);
+}
+
+.inventory-list li.empty-inventory {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.inventory-list li.empty-inventory::before {
+  content: none;
+}
+
 /* Main content area */
 .main-content {
   flex: 1;
@@ -227,6 +288,10 @@
     max-height: 40vh;
     border-right: none;
     border-bottom: 1px solid var(--text-dim);
+  }
+
+  .right-panel {
+    display: none;
   }
 
   .chat-container {
