@@ -21,6 +21,9 @@ class DungeonApp {
     this.logoutBtn = document.getElementById('logout-btn');
     this.currentLocationEl = document.getElementById('current-location');
     this.inventoryListEl = document.getElementById('inventory-list');
+    this.treasuresSectionEl = document.getElementById('treasures-section');
+    this.treasuresListEl = document.getElementById('treasures-list');
+    this.treasureCountEl = document.getElementById('treasure-count');
 
     this.init();
   }
@@ -323,6 +326,21 @@ class DungeonApp {
         this.inventoryListEl.innerHTML = '<li class="empty-inventory">Empty</li>';
       } else {
         this.inventoryListEl.innerHTML = state.inventory
+          .map(item => `<li>${this.escapeHtml(item)}</li>`)
+          .join('');
+      }
+    }
+
+    // Update treasures (show section only if treasures found)
+    if (this.treasuresSectionEl && this.treasuresListEl) {
+      const treasures = state.treasures_found || [];
+
+      if (treasures.length === 0) {
+        this.treasuresSectionEl.style.display = 'none';
+      } else {
+        this.treasuresSectionEl.style.display = '';
+        this.treasureCountEl.textContent = treasures.length;
+        this.treasuresListEl.innerHTML = treasures
           .map(item => `<li>${this.escapeHtml(item)}</li>`)
           .join('');
       }

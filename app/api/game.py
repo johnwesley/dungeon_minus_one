@@ -10,10 +10,20 @@ from app.api.auth import get_current_user
 
 router = APIRouter()
 
+# Treasure IDs required for victory (from narrator.md)
+TREASURE_IDS = {
+    "platinum_bar", "gold_coffin", "ivory_torch", "crystal_trident",
+    "trunk_of_jewels", "bag_of_coins", "pot_of_gold", "jade_figurine",
+    "chalice", "jeweled_egg", "sapphire_bracelet", "crystal_skull", "scarab"
+}
+TOTAL_TREASURES = 13
+
 
 class GameStateResponse(BaseModel):
     current_location: str
     inventory: list[str]
+    treasures_found: list[str]
+    total_treasures: int = TOTAL_TREASURES
 
 
 @router.get("/conversations/{conversation_id}/game-state", response_model=GameStateResponse)
@@ -35,9 +45,30 @@ async def get_game_state(
     state = await game_repo.get_state(conversation_id)
 
     if not state:
-        return GameStateResponse(current_location="Unknown", inventory=[])
+        return GameStateResponse(
+            current_location="Unknown",
+            inventory=[],
+            treasures_found=[],
+        )
+
+    # Get inventory and separate treasures from regular items
+    inventory = state.inventory or []
+    treasures_in_inventory = [item for item in inventory if item in TREASURE_IDS]
+    regular_inventory = [item for item in inventory if item not in TREASURE_IDS]
+
+    # Get treasures deposited in living room (trophy case)
+    living_room = await game_repo.get_location("living_room")
+    treasures_in_living_room = []
+    if living_room and living_room.get("interactables"):
+        treasures_in_living_room = [
+            item for item in living_room["interactables"] if item in TREASURE_IDS
+        ]
+
+    # Combine all found treasures (no duplicates)
+    treasures_found = list(set(treasures_in_inventory + treasures_in_living_room))
 
     return GameStateResponse(
         current_location=state.current_location or "Unknown",
-        inventory=state.inventory or [],
+        inventory=regular_inventory,
+        treasures_found=treasures_found,
     )
