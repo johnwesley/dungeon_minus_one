@@ -282,6 +282,9 @@ class DungeonApp {
     this.isStreaming = streaming;
     this.sendBtn.disabled = streaming;
     this.messageInput.disabled = streaming;
+    if (!streaming) {
+      this.messageInput.focus();
+    }
   }
 
   scrollToBottom() {
