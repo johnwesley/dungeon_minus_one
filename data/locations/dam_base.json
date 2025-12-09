@@ -1,0 +1,16 @@
+{
+  "id": "dam_base",
+  "name": "Dam Base",
+  "description": "You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream. There is a folded pile of plastic here which has a small valve attached.",
+  "interactables": [
+    "plastic_boat",
+    "valve",
+    "cliffs",
+    "river"
+  ],
+  "npcs": [],
+  "exits": {
+    "up": "dam",
+    "south": "sandy_beach"
+  }
+}

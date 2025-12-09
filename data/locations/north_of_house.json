@@ -1,0 +1,16 @@
+{
+  "id": "north_of_house",
+  "name": "North of House",
+  "description": "You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.",
+  "interactables": [
+    "boarded_windows",
+    "white_house",
+    "narrow_path"
+  ],
+  "npcs": [],
+  "exits": {
+    "south": "start",
+    "east": "behind_house",
+    "north": "forest_path"
+  }
+}

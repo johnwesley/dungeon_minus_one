@@ -1,0 +1,14 @@
+{
+  "id": "south_of_house",
+  "name": "South of House",
+  "description": "You are facing the south side of a white house. There is no door here, and all the windows are boarded.",
+  "interactables": [
+    "boarded_windows",
+    "white_house"
+  ],
+  "npcs": [],
+  "exits": {
+    "north": "start",
+    "east": "behind_house"
+  }
+}

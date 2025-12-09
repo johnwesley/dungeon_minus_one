@@ -1,0 +1,11 @@
+{
+  "id": "victory",
+  "name": "The Treasure Vault (Victory)",
+  "description": "You stand in a secret vault beneath the trophy case, now overflowing with the lost treasures of the Great Underground Empire. The spirits of the Flatheads seem to applaud (or perhaps mock) your greed. You have conquered the dungeon, solved its riddles, and survived its traps. You are the Master Adventurer. The game is over. Thank you for playing!",
+  "interactables": [
+    "treasures",
+    "trophy_case"
+  ],
+  "npcs": [],
+  "exits": {}
+}

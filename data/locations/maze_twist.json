@@ -1,0 +1,14 @@
+{
+  "id": "maze_twist",
+  "name": "Maze (Twisted Junction)",
+  "description": "This is part of a maze of twisty little passages, all alike. The passage here twists sharply, and ancient cobwebs hang from the ceiling corners.",
+  "interactables": [
+    "cobwebs"
+  ],
+  "npcs": [],
+  "exits": {
+    "north": "maze_entrance",
+    "east": "maze_bones",
+    "up": "maze_skeleton"
+  }
+}

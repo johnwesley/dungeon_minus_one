@@ -1,0 +1,15 @@
+{
+  "id": "forest",
+  "name": "Forest",
+  "description": "This is a dimly lit forest, with large trees all around. To the east, there appears to be sunlight.",
+  "interactables": [
+    "trees",
+    "undergrowth"
+  ],
+  "npcs": [],
+  "exits": {
+    "north": "clearing",
+    "south": "clearing",
+    "west": "forest_path"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "id": "sandy_cave",
+  "name": "Sandy Cave",
+  "description": "This is a sand-filled cave whose exit is to the southwest. The sand here is deep and loose, perfect for digging.",
+  "interactables": [
+    "sand",
+    "scarab"
+  ],
+  "npcs": [],
+  "exits": {
+    "southwest": "sandy_beach"
+  }
+}

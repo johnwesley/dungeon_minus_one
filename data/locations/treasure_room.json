@@ -1,0 +1,20 @@
+{
+  "id": "treasure_room",
+  "name": "Treasure Room",
+  "description": "This is a large room, whose east wall is solid granite. A number of discarded bags, which crumble at your touch, are scattered about on the floor. There is an exit down a staircase. There is a silver chalice, intricately engraved, here.",
+  "interactables": [
+    "chalice",
+    "bags",
+    "staircase"
+  ],
+  "npcs": [
+    {
+      "id": "thief",
+      "name": "Thief",
+      "description": "There is a suspicious-looking individual, holding a large bag, leaning against one wall. He is armed with a deadly stiletto."
+    }
+  ],
+  "exits": {
+    "down": "cyclops_room"
+  }
+}

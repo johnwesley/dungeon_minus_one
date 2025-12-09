@@ -1,0 +1,14 @@
+{
+  "id": "engravings_cave",
+  "name": "Engravings Cave",
+  "description": "You have entered a low cave with passages leading northwest and east. There are old engravings on the walls here.",
+  "interactables": [
+    "engravings",
+    "walls"
+  ],
+  "npcs": [],
+  "exits": {
+    "northwest": "round_room",
+    "east": "dome_room"
+  }
+}

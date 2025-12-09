@@ -1,0 +1,15 @@
+{
+  "id": "mirror_room",
+  "name": "Mirror Room",
+  "description": "You are in a large square room with tall ceilings. On the south wall is an enormous mirror which fills the entire wall. There are exits on the other three sides of the room.",
+  "interactables": [
+    "mirror"
+  ],
+  "npcs": [],
+  "exits": {
+    "south": "cave",
+    "north": "cold_passage",
+    "east": "cave",
+    "west": "cave"
+  }
+}

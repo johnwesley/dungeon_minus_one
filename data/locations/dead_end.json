@@ -1,0 +1,12 @@
+{
+  "id": "dead_end",
+  "name": "Dead End",
+  "description": "You have come to a dead end in the mine. There is a small pile of coal here.",
+  "interactables": [
+    "coal_pile"
+  ],
+  "npcs": [],
+  "exits": {
+    "north": "ladder_bottom"
+  }
+}

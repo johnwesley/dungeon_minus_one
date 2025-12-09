@@ -1,0 +1,14 @@
+{
+  "id": "gallery",
+  "name": "Gallery",
+  "description": "This is an art gallery. Most of the paintings have been stolen by vandals with exceptional taste. The vandals left through either the north or west exits. Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.",
+  "interactables": [
+    "painting",
+    "walls"
+  ],
+  "npcs": [],
+  "exits": {
+    "west": "east_of_chasm",
+    "north": "studio"
+  }
+}

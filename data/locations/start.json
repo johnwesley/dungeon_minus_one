@@ -1,0 +1,23 @@
+{
+  "id": "start",
+  "name": "West of House",
+  "description": "You are standing in an open field west of a white house, with a boarded front door. There is a small mailbox here.",
+  "interactables": [
+    {
+      "id": "mailbox",
+      "name": "mailbox",
+      "description": "It is a small mailbox."
+    },
+    {
+      "id": "leaflet",
+      "name": "leaflet",
+      "description": "**WELCOME TO DUNGEON-1**\n\n*CONGRATULATIONS. You are now a participant in a text-based treasure hunt through the ruins of a collapsed underground empire. Your goal: collect treasures, deposit them in the trophy case inside the house, and try not to die in ways that are embarrassing to describe.*\n\n*There is no help line. There is no hint system. There is only you, the parser, and whatever terrible decisions you make next.*\n\n*Good luck. You'll need it.*"
+    },
+    "front_door"
+  ],
+  "npcs": [],
+  "exits": {
+    "north": "north_of_house",
+    "south": "south_of_house"
+  }
+}
