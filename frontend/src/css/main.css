@@ -291,6 +291,14 @@
   color: var(--text-dim);
 }
 
+.auth-version {
+  text-align: center;
+  margin-top: var(--space-sm);
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  width: 100%;
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
   .app-container {
