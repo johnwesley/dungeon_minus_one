@@ -266,21 +266,32 @@ class ConversationService:
 
         # Get tool handlers
         base_handlers = self.tool_handlers.get_handlers()
-        
+
+        # Track if restart was triggered during this request
+        restart_triggered = False
+
         # Wrap handlers to inject correct conversation_id
         # The LLM often hallucinates 'default' or omits it, causing foreign key errors.
         # We must ensure the handler receives the *actual* database conversation ID.
         wrapped_handlers = {}
-        
+
         for name, handler in base_handlers.items():
-            async def wrapped_handler(input_data: dict, handler=handler):
+            async def wrapped_handler(input_data: dict, handler=handler, tool_name=name):
+                nonlocal restart_triggered
                 # Inject/Overwrite conversation_id if the tool expects it
-                # get_game_state and update_game_state both require it.
+                # get_game_state, update_game_state, and restart_game all require it.
                 # get_location_data does not (it uses location_id).
-                if "conversation_id" in input_data or name in ["get_game_state", "update_game_state"]:
+                if "conversation_id" in input_data or tool_name in ["get_game_state", "update_game_state", "restart_game"]:
                     input_data["conversation_id"] = conversation.id
-                return await handler(input_data)
-            
+
+                result = await handler(input_data)
+
+                # Check if this was a restart_game call
+                if tool_name == "restart_game":
+                    restart_triggered = True
+
+                return result
+
             wrapped_handlers[name] = wrapped_handler
 
         full_content = ""
@@ -304,7 +315,7 @@ class ConversationService:
                 
                 elif event["type"] == "tool_end":
                     yield StreamEvent(
-                        type="progress", 
+                        type="progress",
                         data={"step": "tool_done"}
                     )
 
@@ -337,3 +348,10 @@ class ConversationService:
                 }
             },
         )
+
+        # If restart was triggered, emit restart event after done
+        if restart_triggered:
+            yield StreamEvent(
+                type="restart",
+                data={"conversation_id": conversation.id},
+            )

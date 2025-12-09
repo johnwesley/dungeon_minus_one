@@ -90,10 +90,29 @@ class GameToolHandlers:
             "flags": state.flags or {},
         })
 
+    async def restart_game(self, input_data: dict[str, Any]) -> str:
+        """Signal that the game should restart.
+
+        Args:
+            input_data: {"conversation_id": "..."}
+
+        Returns:
+            JSON string with restart signal (actual deletion happens client-side)
+        """
+        conversation_id = input_data.get("conversation_id")
+        if not conversation_id:
+            return json.dumps({"error": "conversation_id is required"})
+
+        return json.dumps({
+            "restart": True,
+            "message": "Game restart initiated. The world fades to black...",
+        })
+
     def get_handlers(self) -> dict[str, Callable]:
         """Return mapping of tool names to handler methods."""
         return {
             "get_location_data": self.get_location_data,
             "get_game_state": self.get_game_state,
             "update_game_state": self.update_game_state,
+            "restart_game": self.restart_game,
         }

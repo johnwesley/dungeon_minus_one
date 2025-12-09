@@ -9,6 +9,7 @@ export class SSEHandler {
     this.onProgress = options.onProgress || (() => {});
     this.onDone = options.onDone || (() => {});
     this.onError = options.onError || (() => {});
+    this.onRestart = options.onRestart || (() => {});
   }
 
   async sendMessage(message, conversationId = null) {
@@ -89,6 +90,9 @@ export class SSEHandler {
         break;
       case 'done':
         this.onDone();
+        break;
+      case 'restart':
+        this.onRestart(data.conversation_id);
         break;
       case 'error':
         this.onError(data.error);

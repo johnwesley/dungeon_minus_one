@@ -49,5 +49,19 @@ GAME_TOOLS = [
             },
             "required": ["conversation_id", "changes"]
         }
+    },
+    {
+        "name": "restart_game",
+        "description": "Restart the game from the beginning. Clears all progress including chat history, inventory, and location. Use when the player explicitly asks to restart or start over.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "conversation_id": {
+                    "type": "string",
+                    "description": "The conversation/game session ID"
+                }
+            },
+            "required": ["conversation_id"]
+        }
     }
 ]

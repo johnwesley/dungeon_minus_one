@@ -19,6 +19,7 @@ class DungeonApp {
     this.messageInput = document.getElementById('message-input');
     this.sendBtn = document.getElementById('send-btn');
     this.logoutBtn = document.getElementById('logout-btn');
+    this.restartBtn = document.getElementById('restart-btn');
     this.currentLocationEl = document.getElementById('current-location');
     this.inventoryListEl = document.getElementById('inventory-list');
     this.treasuresSectionEl = document.getElementById('treasures-section');
@@ -63,6 +64,11 @@ class DungeonApp {
     // Logout button
     if (this.logoutBtn) {
       this.logoutBtn.addEventListener('click', logout);
+    }
+
+    // Restart button
+    if (this.restartBtn) {
+      this.restartBtn.addEventListener('click', () => this.restartGame());
     }
   }
 
@@ -189,6 +195,19 @@ class DungeonApp {
     this.sendMessage('Wake up');
   }
 
+  async restartGame() {
+    if (!this.currentConversationId) {
+      // No conversation to restart, just start a new game
+      this.startNewGame();
+      return;
+    }
+
+    if (!confirm('Restart the game? All progress will be lost.')) return;
+
+    // Send restart request to narrator - they'll generate a farewell and trigger the restart
+    this.sendMessage('[RESTART]');
+  }
+
   async sendMessage(messageText = null) {
     const message = messageText || this.messageInput.value.trim();
     if (!message || this.isStreaming) return;
@@ -232,6 +251,20 @@ class DungeonApp {
         this.hideProgress(assistantMsgEl);
         await this.loadConversations();
         await this.loadGameState();
+      },
+      onRestart: async (conversationId) => {
+        // Narrator triggered restart - delete conversation and start fresh
+        try {
+          await fetchWithAuth(`/api/conversations/${conversationId}`, {
+            method: 'DELETE',
+          });
+          this.currentConversationId = null;
+          this.chatMessages.innerHTML = '';
+          await this.loadConversations();
+          this.startNewGame();
+        } catch (error) {
+          console.error('Failed to restart game:', error);
+        }
       },
       onError: (error) => {
         contentEl.textContent = `Error: ${error}`;
