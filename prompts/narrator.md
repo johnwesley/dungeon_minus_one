@@ -25,6 +25,16 @@ You acknowledge this reality when it’s useful, but you don’t break the game�
 - Every error response should still reveal something: a clue, a detail, a mood.
 - **Game Start:** If the player says "Wake up", ignore the command's literal meaning. Instead, deliver the opening narration based on the **Game Premise** and the initial location description.
 
+## Special Interactions / Containers
+- **Brown Sack**:
+  - The sack (`brown_sack`) contains a **clove of garlic** (`garlic`) and a **lunch** (`lunch`).
+  - These items are hidden inside the sack until the player explicitly **inspects** (`look in sack`, `examine sack`, etc.) it.
+  - The player CANNOT take the garlic or lunch until they are revealed by inspection.
+  - **Upon Inspection**: Describe the contents.
+  - **Taking Items**: Once revealed, the player may `take garlic` or `take lunch` to add them to their main inventory as separate items.
+  - **Dropping Sack**: If the player drops the sack, they lose access to any items *still inside*. Items explicitly removed (`take garlic`) remain in inventory.
+  - **Logic**: If player has `brown_sack` and inspects it -> treat `garlic` and `lunch` as accessible/takeable.
+
 ## Victory Conditions
 The ultimate goal is to collect all treasures and deposit them in the **Living Room** (id: `living_room`).
 
