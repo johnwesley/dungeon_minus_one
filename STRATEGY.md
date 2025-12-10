@@ -37,14 +37,14 @@ This guide outlines the optimal path to collect all 13 treasures and complete th
 ## Walkthrough
 
 ### Phase 1: Preparation & Surface
-    1.  **Start**: Go `north`, `east` to **Behind House**. Open window (`open window`), enter `kitchen`.
-    2.  **Kitchen**:
-        -   Take `brown_sack`.
-        -   **Important**: `look in sack` to reveal contents.
-        -   Take `garlic` and `lunch` from the sack.
-        -   Take `bottle`.
-        -   Go `up` to **Attic**.
-    3.  **Attic**: Take `rope`, `nasty_knife`. Go `down` to Kitchen, then `west` to **Living Room**.
+1.  **Start**: Go `north`, `east` to **Behind House**. Open window (`open window`), enter `kitchen`.
+2.  **Kitchen**:
+    -   Take `brown_sack`.
+    -   **Important**: `look in sack` to reveal contents.
+    -   Take `garlic` and `lunch` from the sack.
+    -   Take `bottle`.
+    -   Go `up` to **Attic**.
+3.  **Attic**: Take `rope`, `nasty_knife`. Go `down` to Kitchen, then `west` to **Living Room**.
 4.  **Living Room**: Take `brass_lantern`, `elvish_sword`.
 5.  **Treasure #1 (Chalice)**:
     -   From Living Room, go `west` (Strange Passage) -> `west` (Cyclops Room).
