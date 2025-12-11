@@ -49,10 +49,10 @@ This guide outlines the optimal path to collect all 13 treasures and complete th
 5.  **Treasure #1 (Chalice)**:
     -   From Living Room, go `down` (Cellar) -> `north` (Troll Room).
     -   Go `west` (Maze Entrance).
-    -   Navigate Maze to **Cyclops Room** (or pass through to Strange Passage if already open).
-    -   *Strategy update*: The wooden door in the Living Room is nailed shut. You must go via Cellar/Troll to reach the Cyclops area first.
+    -   **Maze Path**: Go `south` (Maze Twist) -> `east` (Maze Bones) -> `southeast` (Cyclops Room).
+    -   *Note*: The wooden door in the Living Room is nailed shut, forcing this route.
     -   From Cyclops Room, go `up` to **Treasure Room**. Take `chalice`.
-    -   Return via Maze/Cellar or break door if possible.
+    -   Return via Maze/Cellar.
 6.  **Treasure #2 (Jeweled Egg)**:
     -   From Living Room, `east` -> `out` (Behind House) -> `north` (North of House) -> `north` (Forest Path).
     -   Go `up` to **Up a Tree**. Take `jeweled_egg`.
