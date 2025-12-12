@@ -101,6 +101,7 @@ class GameState(Base):
     visited_locations = Column(JSON, default=list)
     player_stats = Column(JSON, default=dict)
     flags = Column(JSON, default=dict)
+    dev_snapshot = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

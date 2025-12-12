@@ -196,6 +196,117 @@ class ConversationService:
             },
         )
 
+    async def handle_dev_commands(self, message: str, conversation_id: str, user_id: str) -> Optional[str]:
+        """Handle dev-only slash commands like /teleport, /save, /load."""
+        # Simple dev check: requires user to be an admin or specific environment logic
+        # For now, we'll check if the user is_admin.
+        # This requires fetching the user, which we might not have handy here without a DB call.
+        # However, conversation ownership check implies we have access.
+        
+        if not message.startswith("/"):
+            return None
+
+        parts = message.split()
+        command = parts[0].lower()
+        args = parts[1:]
+
+        # TODO: Ideally check user.is_admin or settings.environment == "development"
+        # Since this service doesn't have the user object, we rely on the repo or just assume caller checked.
+        # Let's verify admin status via DB.
+        from app.models.database import User
+        from sqlalchemy import select
+        
+        # Check admin status
+        result = await self.conversation_repo.session.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
+        if not user or not user.is_admin:
+            return None
+
+        if command == "/teleport" and args and self.game_repo:
+            target_id = args[0]
+            # Verify location exists
+            loc = await self.game_repo.get_location(target_id)
+            if not loc:
+                return f"Error: Location '{target_id}' not found."
+            
+            await self.game_repo.update_state(conversation_id, {"current_location": target_id})
+            return f"WARP SPEED: Teleported to {loc['name']} ({target_id})."
+
+        elif command == "/save" and self.game_repo:
+            state = await self.game_repo.get_state(conversation_id)
+            if not state:
+                return "Error: No game state found."
+            
+            # Get latest message ID to handle chat history rewind
+            from app.models.database import Message
+            from sqlalchemy import select, desc
+            result = await self.conversation_repo.session.execute(
+                select(Message.id).where(Message.conversation_id == conversation_id).order_by(desc(Message.created_at)).limit(1)
+            )
+            last_message_id = result.scalar_one_or_none()
+
+            snapshot = {
+                "current_location": state.current_location,
+                "inventory": state.inventory,
+                "visited_locations": state.visited_locations,
+                "player_stats": state.player_stats,
+                "flags": state.flags,
+                "last_message_id": last_message_id
+            }
+            # Save to DB column
+            state.dev_snapshot = snapshot
+            await self.game_repo.session.flush()
+            return "CHECKPOINT SAVED."
+
+        elif command == "/load" and self.game_repo:
+            state = await self.game_repo.get_state(conversation_id)
+            if not state or not state.dev_snapshot:
+                return "Error: No checkpoint found. Use /save first."
+            
+            snapshot = state.dev_snapshot
+            
+            # Restore Game State
+            await self.game_repo.update_state(conversation_id, snapshot)
+            
+            # Rewind Chat History
+            last_message_id = snapshot.get("last_message_id")
+            if last_message_id:
+                from app.models.database import Message
+                from sqlalchemy import delete
+                
+                # Get timestamp of the snapshot message
+                msg_result = await self.conversation_repo.session.execute(
+                    select(Message.created_at).where(Message.id == last_message_id)
+                )
+                cutoff_time = msg_result.scalar_one_or_none()
+                
+                if cutoff_time:
+                    # Delete all messages created AFTER the snapshot message
+                    await self.conversation_repo.session.execute(
+                        delete(Message).where(
+                            Message.conversation_id == conversation_id,
+                            Message.created_at > cutoff_time
+                        )
+                    )
+                    await self.conversation_repo.session.flush()
+
+            return "TIME REWIND: Checkpoint restored. Chat history truncated."
+            
+        elif command == "/reset" and self.game_repo:
+             # Reset state to initial
+             await self.game_repo.update_state(conversation_id, {
+                 "current_location": "start",
+                 "inventory": [],
+                 "visited_locations": [],
+                 "player_stats": {},
+                 "flags": {},
+             })
+             return "SYSTEM RESET: Game restarted."
+
+        return None
+
     async def chat_stream_with_tools(
         self,
         message: str,
@@ -207,6 +318,7 @@ class ConversationService:
 
         Uses real-time streaming with tool use events.
         """
+        # ... (rest of method)
         if self.tool_handlers is None:
             # Fall back to regular streaming if no game repo configured
             async for event in self.chat_stream(
@@ -243,6 +355,14 @@ class ConversationService:
                 user_id=user_id,
                 title=self._generate_title(message),
             )
+
+        # Handle Dev Commands (intercept before saving message or calling LLM)
+        if message.startswith("/"):
+            dev_response = await self.handle_dev_commands(message, conversation.id, user_id)
+            if dev_response:
+                yield StreamEvent(type="delta", data={"content": dev_response})
+                yield StreamEvent(type="done", data={"message": {}}) # Dummy done
+                return
 
         # Save user message
         user_msg = await self.message_repo.create(
