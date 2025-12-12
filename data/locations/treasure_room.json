@@ -12,7 +12,7 @@
       "id": "thief",
       "name": "Thief",
       "description": "There is a suspicious-looking individual, holding a large bag, leaning against one wall. He is armed with a deadly stiletto.",
-      "behavior": "The Thief guards the Chalice. If the player tries to take the Chalice or attacks without success, the Thief strikes with his stiletto. Unless the player distracts him or defeats him (using the Elvish Sword or Nasty Knife), the Thief WILL KILL the player. If the player dies, announce the death clearly and offer to restart."
+      "behavior": "The Thief guards the Chalice. If the player tries to take the Chalice or attacks without success, the Thief strikes with his stiletto. Unless the player distracts him or defeats him (using the Elvish Sword or Nasty Knife), the Thief WILL KILL the player. If the player dies, announce the death clearly."
     }
   ],
   "exits": {
