@@ -4,28 +4,17 @@ This guide covers the deployment steps for the v0.2.0 release, specifically addr
 
 ## 1. Database Schema Update
 
-We have added a new column `dev_snapshot` (JSON) to the `game_states` table to support development testing features.
+We have added a new column `dev_snapshot` (JSON) to the `game_states` table. We use **Alembic** for migrations.
 
-### Option A: Clean Rebuild (Recommended for v0.2.0)
-Since we are in early development, the simplest way to apply the schema change is to wipe the production database and let it rebuild.
-
-**Warning: This deletes all existing production game data.**
+### Automated Migration (Recommended)
+This will upgrade the database schema while **preserving all existing data**.
 
 ```bash
 # On the production server:
-docker compose down -v
-docker compose up -d --build
-make prod-seed  # Re-seed location data
+docker compose exec app alembic upgrade head
 ```
 
-### Option B: Manual Migration (Preserve Data)
-If you need to preserve existing user data, you must manually alter the database table because we are not using an automated migration tool (like Alembic) yet.
-
-```bash
-# On the production server:
-docker compose exec db psql -U postgres -d chat_db -c "ALTER TABLE game_states ADD COLUMN dev_snapshot JSONB;"
-```
-*(Replace `postgres`, `chat_db` with your actual POSTGRES_USER/DB env vars if different).*
+*(Note: If this is the very first deploy with Alembic, and you have existing tables, Alembic might try to create them again. In that case, you may need to 'stamp' the current state first, but since this is v0.2.0, assuming a fresh or compatible state is safer. If tables exist, run `alembic stamp head` locally first to verify).*
 
 ## 2. Environment Variables
 
