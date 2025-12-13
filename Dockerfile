@@ -25,6 +25,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 COPY prompts/ ./prompts/
 COPY scripts/ ./scripts/
+COPY data/ ./data/
+COPY alembic.ini .
+COPY alembic/ ./alembic/
 COPY start.sh .
 
 # Copy built frontend
