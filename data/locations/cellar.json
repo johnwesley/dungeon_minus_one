@@ -12,5 +12,6 @@
   "exits": {
     "up": "living_room",
     "north": "troll_room"
-  }
+  },
+  "requires_light": true
 }

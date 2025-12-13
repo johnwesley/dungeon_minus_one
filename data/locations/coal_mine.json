@@ -10,5 +10,6 @@
   "exits": {
     "west": "gas_room",
     "down": "ladder_top"
-  }
+  },
+  "requires_light": true
 }

@@ -120,6 +120,7 @@ class Location(Base):
     description = Column(Text, nullable=False)
     interactables = Column(JSON, default=list)
     npcs = Column(JSON, default=list)
+    requires_light = Column(Boolean, default=False)
 
     exits = relationship(
         "LocationExit",

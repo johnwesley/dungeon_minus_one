@@ -9,5 +9,6 @@
   "npcs": [],
   "exits": {
     "southwest": "sandy_beach"
-  }
+  },
+  "requires_light": true
 }

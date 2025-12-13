@@ -16,5 +16,6 @@
     "northwest": "maze_bones",
     "east": "strange_passage",
     "up": "treasure_room"
-  }
+  },
+  "requires_light": true
 }

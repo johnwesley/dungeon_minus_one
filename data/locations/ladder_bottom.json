@@ -10,5 +10,6 @@
     "up": "ladder_top",
     "south": "dead_end",
     "west": "timber_room"
-  }
+  },
+  "requires_light": true
 }

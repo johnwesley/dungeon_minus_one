@@ -10,5 +10,6 @@
   "exits": {
     "west": "east_of_chasm",
     "north": "studio"
-  }
+  },
+  "requires_light": true
 }

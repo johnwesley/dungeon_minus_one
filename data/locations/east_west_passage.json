@@ -10,5 +10,6 @@
     "west": "troll_room",
     "east": "round_room",
     "north": "chasm"
-  }
+  },
+  "requires_light": true
 }

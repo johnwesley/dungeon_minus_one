@@ -18,5 +18,6 @@
   "exits": {
     "up": "cave",
     "south": "land_of_the_dead"
-  }
+  },
+  "requires_light": true
 }

@@ -19,5 +19,6 @@
     "south": "cellar",
     "east": "east_west_passage",
     "west": "maze_entrance"
-  }
+  },
+  "requires_light": true
 }

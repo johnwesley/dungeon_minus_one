@@ -10,5 +10,6 @@
   "exits": {
     "northwest": "round_room",
     "east": "dome_room"
-  }
+  },
+  "requires_light": true
 }

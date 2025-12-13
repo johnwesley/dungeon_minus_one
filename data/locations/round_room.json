@@ -11,5 +11,6 @@
     "west": "east_west_passage",
     "east": "loud_room",
     "southeast": "engravings_cave"
-  }
+  },
+  "requires_light": true
 }

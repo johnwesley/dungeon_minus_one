@@ -1,39 +1,68 @@
-# Production Deployment Guide (v0.2.0)
+# Production Deployment Guide (v0.3.0)
 
-This guide covers the deployment steps for the v0.2.0 release, specifically addressing new features and database schema changes.
+This guide covers the deployment steps for the v0.3.0 release, which adds the lantern/grue darkness mechanic.
 
-## 1. Database Schema Update
-
-We have added a new column `dev_snapshot` (JSON) to the `game_states` table. We use **Alembic** for migrations.
-
-### Automated Migration (Recommended)
-This will upgrade the database schema while **preserving all existing data**.
+## 1. Rebuild and Deploy
 
 ```bash
-# On the production server:
+make prod-rebuild
+```
+
+This rebuilds the container with:
+- Updated Python code (models, repositories)
+- New Alembic migration
+- Updated narrator prompt with grue rules
+- Location fixtures with `requires_light` flags
+
+## 2. Database Schema Update
+
+A new column `requires_light` (Boolean) has been added to the `locations` table.
+
+```bash
 docker compose exec app alembic upgrade head
 ```
 
-*(Note: If this is the very first deploy with Alembic, and you have existing tables, Alembic might try to create them again. In that case, you may need to 'stamp' the current state first, but since this is v0.2.0, assuming a fresh or compatible state is safer. If tables exist, run `alembic stamp head` locally first to verify).*
+This applies migration `d9e5f6a7b8c9` which adds the `requires_light` column.
 
-## 2. Environment Variables
+## 3. Sync Location Fixtures
 
-Ensure your production `.env` file is up to date.
+The location fixtures now include `requires_light: true` for ~22 dark underground locations. Sync these to the database:
 
--   **`GAME_ENV`**: Set to `production` (optional, but good practice if we add strict environment gating later).
--   **`AUTH_SECRET_KEY`**: Ensure this is a strong, random string.
+```bash
+make prod-seed
+```
 
-## 3. Post-Deployment Verification
+This updates the `requires_light` values for all locations and verifies the sync.
 
-1.  **Health Check**: Ensure the app is running (`curl http://localhost:8080/health` or check logs).
-2.  **Seed Data**: Verify locations are loaded.
-3.  **Admin Access**: If you need to use `/teleport` or `/save` in production (not recommended, but possible), you must explicitly create an admin user:
-    ```bash
-    docker compose exec app python scripts/create_admin.py <username> <password>
-    ```
+## 4. Post-Deployment Verification
 
-## 4. Troubleshooting
+1. **Health Check**: `curl http://localhost:8080/health`
+2. **Verify Migration**: Check that locations have the new column:
+   ```bash
+   docker compose exec app python -c "
+   from app.database import async_session_factory
+   from app.models.database import Location
+   from sqlalchemy import select
+   import asyncio
 
--   **"Internal Server Error" on Chat**: Likely a schema mismatch. Check logs for `UndefinedColumn: column game_states.dev_snapshot does not exist`. Run the migration steps above.
--   **"Unauthorized" on Dev Commands**: Ensure the user has `is_admin=True` in the database.
+   async def check():
+       async with async_session_factory() as s:
+           loc = (await s.execute(select(Location).where(Location.id == 'cellar'))).scalar_one()
+           print(f'cellar.requires_light = {loc.requires_light}')
 
+   asyncio.run(check())
+   "
+   ```
+   Should print `cellar.requires_light = True`
+
+## 5. Gameplay Impact
+
+- Players entering dark locations (cellar, maze, caves, etc.) without a lit lantern will receive a grue warning
+- On their next action without light, they die and the game restarts
+- Light sources: `brass_lantern` (must be turned on) or `ivory_torch` (always lit)
+
+## 6. Troubleshooting
+
+- **"column locations.requires_light does not exist"**: Run `alembic upgrade head`
+- **Dark locations not marked correctly**: Run `sync_locations.py --verify`
+- **Grue not triggering**: Check `prompts/narrator.md` has the Light and Darkness section

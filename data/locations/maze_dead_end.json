@@ -8,5 +8,6 @@
   "npcs": [],
   "exits": {
     "east": "maze_entrance"
-  }
+  },
+  "requires_light": true
 }

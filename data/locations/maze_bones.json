@@ -10,5 +10,6 @@
     "west": "maze_twist",
     "down": "grating_room",
     "southeast": "cyclops_room"
-  }
+  },
+  "requires_light": true
 }

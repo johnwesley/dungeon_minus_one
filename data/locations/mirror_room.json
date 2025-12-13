@@ -11,5 +11,6 @@
     "north": "cold_passage",
     "east": "cave",
     "west": "cave"
-  }
+  },
+  "requires_light": true
 }

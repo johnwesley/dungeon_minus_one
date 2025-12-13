@@ -8,5 +8,6 @@
   "npcs": [],
   "exits": {
     "north": "ladder_bottom"
-  }
+  },
+  "requires_light": true
 }

@@ -10,5 +10,6 @@
   "exits": {
     "up": "coal_mine",
     "down": "ladder_bottom"
-  }
+  },
+  "requires_light": true
 }

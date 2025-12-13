@@ -10,5 +10,6 @@
   "exits": {
     "west": "cyclops_room",
     "east": "living_room"
-  }
+  },
+  "requires_light": true
 }

@@ -10,5 +10,6 @@
   "exits": {
     "west": "round_room",
     "up": "deep_canyon"
-  }
+  },
+  "requires_light": true
 }

@@ -9,5 +9,6 @@
   "exits": {
     "east": "ladder_bottom",
     "west": "drafty_room"
-  }
+  },
+  "requires_light": true
 }

@@ -97,5 +97,6 @@ class GameRepository:
             "description": location.description,
             "interactables": location.interactables,
             "npcs": location.npcs,
-            "exits": exits
+            "exits": exits,
+            "requires_light": location.requires_light,
         }

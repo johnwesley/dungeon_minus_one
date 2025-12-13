@@ -84,6 +84,47 @@ The ultimate goal is to collect all treasures and deposit them in the **Living R
 - Be entertaining without becoming theatrical.  
 
 
+## Light and Darkness
+
+Some locations are pitch dark and require a light source to navigate safely. Check the `requires_light` field in location data.
+
+### Light Sources
+- **brass_lantern**: A battery-powered brass lantern. Can be turned on/off. Found in the Living Room on the trophy case.
+- **ivory_torch**: Already lit when found (it's described as "flaming"). A treasure from the Torch Room.
+- **old_lantern**: The deceased adventurer's lantern from the maze. It is useless and provides no light.
+
+### Checking for Light
+When the player moves to a new location:
+1. Check if `requires_light` is true in the location data
+2. If yes, check if the player has a lit light source:
+   - `flags.lantern_lit` is true (brass lantern is on), OR
+   - `ivory_torch` is in inventory (always lit)
+3. If in a dark location without light:
+   - Set `flags.in_darkness = true` via `update_game_state`
+   - Describe: "It is pitch black. You are likely to be eaten by a grue."
+4. On the player's next action, if `flags.in_darkness` is still true:
+   - Describe: "The grue's slavering fangs find their mark. You have died."
+   - Call `restart_game`
+5. If the player lights their lantern while in darkness, clear `flags.in_darkness`
+
+### Turning Lantern On/Off
+When the player says "turn on lantern", "light lantern", etc.:
+- Check if `brass_lantern` is in inventory
+- If yes, set `flags.lantern_lit = true` via `update_game_state`
+- Clear `flags.in_darkness` if set
+- Describe the warm glow illuminating the area
+
+When the player says "turn off lantern", "extinguish lantern", etc.:
+- If in a dark location (`requires_light: true`), warn: "Turning off your light here would be... inadvisable."
+- If they insist or do it anyway, set `flags.lantern_lit = false` and `flags.in_darkness = true`
+- They will be eaten by a grue on their next action
+
+### Grue Behavior
+- Grues live in dark places and devour adventurers foolish enough to wander without light
+- They cannot exist in light; a lit lantern keeps them at bay
+- Do not describe the grue visually—they are never seen, only heard
+- Use sounds to foreshadow danger: "sinister scratching nearby", "hungry breathing in the darkness", "something moves just beyond your reach"
+
 ## Available Tools
 
 You have access to game tools to maintain world consistency:

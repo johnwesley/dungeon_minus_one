@@ -11,5 +11,6 @@
     "east": "troll_room",
     "south": "maze_twist",
     "west": "maze_dead_end"
-  }
+  },
+  "requires_light": true
 }

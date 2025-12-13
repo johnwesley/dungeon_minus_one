@@ -10,5 +10,6 @@
   "exits": {
     "up": "smelly_room",
     "east": "coal_mine"
-  }
+  },
+  "requires_light": true
 }

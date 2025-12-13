@@ -26,6 +26,7 @@ class FixtureLocation:
     interactables: list[Any]
     npcs: list[Any]
     exits: dict[str, str]
+    requires_light: bool
 
 
 def load_location_fixtures(locations_dir: Path) -> tuple[dict[str, FixtureLocation], dict[tuple[str, str], str]]:
@@ -59,6 +60,7 @@ def load_location_fixtures(locations_dir: Path) -> tuple[dict[str, FixtureLocati
             interactables=data.get("interactables", []) or [],
             npcs=data.get("npcs", []) or [],
             exits={str(direction): str(target_id) for direction, target_id in exits.items()},
+            requires_light=bool(data.get("requires_light", False)),
         )
         fixtures[loc_id] = fixture
 
@@ -136,6 +138,8 @@ async def verify_db_matches_fixtures(
                 location_mismatches.append(f"{loc_id}.interactables")
             if (db_loc.npcs or []) != fixture.npcs:
                 location_mismatches.append(f"{loc_id}.npcs")
+            if bool(db_loc.requires_light) != fixture.requires_light:
+                location_mismatches.append(f"{loc_id}.requires_light")
         if location_mismatches:
             problems.append(
                 "Location field mismatches: "
@@ -258,6 +262,7 @@ async def sync_locations(
                     existing.description = fixture.description
                     existing.interactables = fixture.interactables
                     existing.npcs = fixture.npcs
+                    existing.requires_light = fixture.requires_light
                 else:
                     session.add(
                         Location(
@@ -266,6 +271,7 @@ async def sync_locations(
                             description=fixture.description,
                             interactables=fixture.interactables,
                             npcs=fixture.npcs,
+                            requires_light=fixture.requires_light,
                         )
                     )
 

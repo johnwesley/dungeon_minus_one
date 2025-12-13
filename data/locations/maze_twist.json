@@ -10,5 +10,6 @@
     "north": "maze_entrance",
     "east": "maze_bones",
     "up": "maze_skeleton"
-  }
+  },
+  "requires_light": true
 }

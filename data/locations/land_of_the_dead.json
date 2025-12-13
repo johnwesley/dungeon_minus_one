@@ -10,5 +10,6 @@
   "npcs": [],
   "exits": {
     "north": "entrance_to_hades"
-  }
+  },
+  "requires_light": true
 }

@@ -8,5 +8,6 @@
     "south": "mirror_room",
     "west": "slide_room",
     "east": "mine_entrance"
-  }
+  },
+  "requires_light": true
 }

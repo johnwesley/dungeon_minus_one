@@ -10,5 +10,6 @@
     "up": "altar",
     "north": "mirror_room",
     "down": "entrance_to_hades"
-  }
+  },
+  "requires_light": true
 }
