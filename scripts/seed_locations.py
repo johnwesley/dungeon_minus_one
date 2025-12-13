@@ -56,18 +56,19 @@ async def seed_locations():
                 })
         
         print(f"Found {len(locations_data)} locations.")
-        
-        # Upsert Locations
-        for loc in locations_data:
-            existing = await session.get(Location, loc.id)
-            if existing:
-                existing.name = loc.name
-                existing.description = loc.description
-                existing.interactables = loc.interactables
-                existing.npcs = loc.npcs
-            else:
-                session.add(loc)
-        
+
+        # Upsert Locations (use no_autoflush to prevent premature flush)
+        async with session.no_autoflush:
+            for loc in locations_data:
+                existing = await session.get(Location, loc.id)
+                if existing:
+                    existing.name = loc.name
+                    existing.description = loc.description
+                    existing.interactables = loc.interactables
+                    existing.npcs = loc.npcs
+                else:
+                    session.add(loc)
+
         await session.flush()
         
         print("Processing exits...")
