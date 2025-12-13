@@ -58,7 +58,7 @@ async def seed_locations():
         print(f"Found {len(locations_data)} locations.")
 
         # Upsert Locations (use no_autoflush to prevent premature flush)
-        async with session.no_autoflush:
+        with session.no_autoflush:
             for loc in locations_data:
                 existing = await session.get(Location, loc.id)
                 if existing:
