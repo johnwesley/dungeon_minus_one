@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset help prod-up prod-down prod-logs prod-restart prod-rebuild prod-invite prod-notify frontend-install frontend-dev frontend-build dev-full notify
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help prod-up prod-down prod-logs prod-restart prod-rebuild prod-seed prod-seed-prune prod-seed-check prod-invite prod-notify frontend-install frontend-dev frontend-build dev-full notify
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -23,7 +23,7 @@ install:  ## Install dependencies (requires existing venv)
 	$(PIP) install -r requirements.txt
 
 run:  ## Start the local development server (FastAPI only)
-	$(PYTHON) scripts/seed_locations.py
+	$(PYTHON) scripts/sync_locations.py
 	DEV_AUTH_BYPASS=true $(PYTHON) -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 clean:  ## Remove venv and cache files
@@ -36,8 +36,17 @@ reset:  ## Soft reset: clear game state but keep locations
 
 hard-reset:  ## Hard reset: delete DB and re-seed locations
 	rm -f chat.db
-	$(PYTHON) scripts/seed_locations.py
+	$(PYTHON) scripts/sync_locations.py --prune
 	@echo "Database reset and re-seeded."
+
+sync-locations:  ## Sync static location fixtures into DB (non-destructive)
+	$(PYTHON) scripts/sync_locations.py
+
+sync-locations-prune:  ## Sync + prune static location fixtures (deletes missing locations/exits; repairs current_location)
+	$(PYTHON) scripts/sync_locations.py --prune
+
+sync-locations-check:  ## Check DB matches fixtures (no writes; expects exact match)
+	$(PYTHON) scripts/sync_locations.py --dry-run --prune
 
 invite:  ## Generate a new invite code
 	$(PYTHON) scripts/generate_invite.py
@@ -67,7 +76,13 @@ prod-rebuild:  ## Rebuild and restart production containers
 	@$(MAKE) prod-seed
 
 prod-seed:  ## Seed/Update production database locations
-	$(DOCKER_COMPOSE_PROD) exec -T app python scripts/seed_locations.py
+	$(DOCKER_COMPOSE_PROD) exec -T app python scripts/sync_locations.py
+
+prod-seed-prune:  ## Seed/Update production database locations and prune missing (use for staging/dev only)
+	$(DOCKER_COMPOSE_PROD) exec -T app python scripts/sync_locations.py --prune
+
+prod-seed-check:  ## Check production DB matches fixtures (no writes; expects exact match)
+	$(DOCKER_COMPOSE_PROD) exec -T app python scripts/sync_locations.py --dry-run --prune
 
 prod-invite:  ## Generate invite code in production
 	$(DOCKER_COMPOSE_PROD) exec app python scripts/generate_invite.py

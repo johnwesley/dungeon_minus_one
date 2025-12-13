@@ -7,7 +7,7 @@ set -e
 
 # Seeding database (locations)
 echo "Seeding database..."
-python scripts/seed_locations.py
+python scripts/sync_locations.py
 
 # Start the application
 echo "Starting server..."

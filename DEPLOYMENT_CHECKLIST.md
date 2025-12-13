@@ -78,12 +78,12 @@ docker compose restart app
 **Cause:** Locations not seeded or seed script failed.
 **Solution:**
 ```bash
-docker compose exec app python scripts/seed_locations.py
+docker compose exec app python scripts/sync_locations.py
 ```
 
 ### Seed script duplicate key error
 **Cause:** SQLAlchemy autoflush during upsert loop.
-**Solution:** Ensure `seed_locations.py` uses `with session.no_autoflush:` block.
+**Solution:** Ensure `sync_locations.py` uses `with session.no_autoflush:` block.
 
 ## Future Improvements
 
