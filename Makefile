@@ -102,6 +102,7 @@ frontend-build:  ## Build frontend for production
 	cd $(FRONTEND) && npm run build
 
 dev-full:  ## Start backend + frontend dev servers (access at localhost:5173)
+	$(PYTHON) scripts/sync_locations.py
 	@echo "Starting backend on :8000 and frontend on :5173..."
 	@echo "Access the app at http://localhost:5173"
 	@DEV_AUTH_BYPASS=true $(PYTHON) -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
