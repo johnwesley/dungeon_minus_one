@@ -18,6 +18,21 @@ export function isAuthenticated() {
   return !!getToken();
 }
 
+export function getUsername() {
+  const token = getToken();
+  if (!token) return null;
+
+  try {
+    // JWT format: header.payload.signature
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload));
+    return decoded.username || null;
+  } catch (e) {
+    console.error('Failed to decode token:', e);
+    return null;
+  }
+}
+
 // Check if dev mode is enabled (for auto-login)
 export async function checkDevMode() {
   try {

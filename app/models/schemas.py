@@ -70,3 +70,27 @@ class ErrorResponse(BaseModel):
     error: str
     detail: Optional[str] = None
     code: str
+
+
+# Notification schemas
+class NotificationCreate(BaseModel):
+    """Request body for creating a notification."""
+
+    title: str = Field(..., min_length=1, max_length=255)
+    message: str = Field(..., min_length=1, max_length=2000)
+    notification_type: str = Field(default="info")
+    ttl_hours: int = Field(default=168, ge=1, le=8760)  # Default 7 days, max 1 year
+
+
+class NotificationResponse(BaseModel):
+    """Response schema for a notification."""
+
+    id: str
+    title: str
+    message: str
+    notification_type: str
+    created_at: datetime
+    expires_at: datetime
+
+    class Config:
+        from_attributes = True

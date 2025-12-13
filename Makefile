@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset help prod-up prod-down prod-logs prod-restart prod-rebuild prod-invite frontend-install frontend-dev frontend-build dev-full
+.PHONY: setup install run clean reset hard-reset help prod-up prod-down prod-logs prod-restart prod-rebuild prod-invite prod-notify frontend-install frontend-dev frontend-build dev-full notify
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -42,6 +42,9 @@ hard-reset:  ## Hard reset: delete DB and re-seed locations
 invite:  ## Generate a new invite code
 	$(PYTHON) scripts/generate_invite.py
 
+notify:  ## Create a notification (usage: make notify TITLE="title" MSG="message")
+	$(PYTHON) scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)
+
 dev: setup run  ## Setup and run local dev in one command
 
 # --- Production / Staging (Docker Compose) ---
@@ -68,6 +71,9 @@ prod-seed:  ## Seed/Update production database locations
 
 prod-invite:  ## Generate invite code in production
 	$(DOCKER_COMPOSE_PROD) exec app python scripts/generate_invite.py
+
+prod-notify:  ## Create notification in production (usage: make prod-notify TITLE="title" MSG="message")
+	$(DOCKER_COMPOSE_PROD) exec app python scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)
 
 # --- Frontend (Vite) ---
 

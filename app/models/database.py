@@ -147,3 +147,51 @@ class LocationExit(Base):
         Index("idx_location_exits_source", "source_id"),
         Index("idx_location_exits_target", "target_id"),
     )
+
+
+class Notification(Base):
+    """Notification model - system notifications with TTL."""
+
+    __tablename__ = "notifications"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    notification_type = Column(String(50), default="info")  # info, warning, success, error
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+
+    dismissals = relationship(
+        "NotificationDismissal",
+        back_populates="notification",
+        cascade="all, delete-orphan",
+    )
+
+    __table_args__ = (Index("idx_notifications_expires", "expires_at"),)
+
+
+class NotificationDismissal(Base):
+    """Tracks which users have dismissed which notifications."""
+
+    __tablename__ = "notification_dismissals"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    notification_id = Column(
+        String(36),
+        ForeignKey("notifications.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id = Column(
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    dismissed_at = Column(DateTime, default=datetime.utcnow)
+
+    notification = relationship("Notification", back_populates="dismissals")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("idx_dismissals_user", "user_id"),
+        Index("idx_dismissals_notification", "notification_id"),
+    )

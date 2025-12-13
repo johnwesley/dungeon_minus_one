@@ -200,52 +200,95 @@
   max-height: 200px;
 }
 
-/* Conversation list item */
-.conversation-item {
+/* User handle in header */
+.user-handle-line {
+  margin-top: var(--space-sm);
+  font-size: 0.85rem;
+}
+
+.user-label {
+  color: var(--text-dim);
+}
+
+.user-handle {
+  color: var(--text-bright);
+  margin-left: var(--space-xs);
+}
+
+/* Notifications panel */
+.notifications-panel {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+}
+
+.notification {
+  padding: var(--space-sm);
+  border: 1px solid var(--text-dim);
+  background: var(--terminal-bg);
+  font-size: 0.85rem;
+}
+
+.notification-header {
+  display: flex;
   justify-content: space-between;
-  padding: var(--space-sm) var(--space-md);
-  cursor: pointer;
-  border-left: 2px solid transparent;
-  transition: all var(--transition-fast);
+  align-items: flex-start;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
 }
 
-.conversation-item:hover {
-  background: var(--panel-bg-hover);
-  border-left-color: var(--text-dim);
+.notification-title {
+  font-weight: bold;
+  color: var(--text-bright);
 }
 
-.conversation-item.active {
-  background: var(--panel-bg-hover);
-  border-left-color: var(--text-bright);
-}
-
-.conversation-title {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.conversation-delete {
-  opacity: 0;
+.notification-dismiss {
   background: none;
   border: none;
-  color: var(--error);
+  color: var(--text-dim);
   cursor: pointer;
-  padding: var(--space-xs);
-  font-family: var(--font-mono);
-  transition: opacity var(--transition-fast);
+  font-size: 1rem;
+  padding: 0;
+  line-height: 1;
 }
 
-.conversation-item:hover .conversation-delete {
-  opacity: 1;
-}
-
-.conversation-delete:hover {
+.notification-dismiss:hover {
   color: var(--error);
-  text-shadow: 0 0 5px var(--error);
+}
+
+.notification-message {
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+/* Notification types */
+.notification-info {
+  border-color: var(--text-primary);
+}
+
+.notification-warning {
+  border-color: var(--warning, #ffb000);
+}
+
+.notification-warning .notification-title {
+  color: var(--warning, #ffb000);
+}
+
+.notification-error {
+  border-color: var(--error);
+}
+
+.notification-error .notification-title {
+  color: var(--error);
+}
+
+.notification-success {
+  border-color: var(--success, #33ff33);
+}
+
+.notification-success .notification-title {
+  color: var(--success, #33ff33);
 }
 
 /* Empty state */
@@ -325,12 +368,7 @@
   }
 
   /* Larger touch targets */
-  .bbs-btn,
-  .conversation-item {
+  .bbs-btn {
     min-height: 44px;
-  }
-
-  .conversation-delete {
-    opacity: 1;
   }
 }

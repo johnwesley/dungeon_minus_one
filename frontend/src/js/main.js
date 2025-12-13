@@ -1,6 +1,6 @@
 // Main App Entry Point
 
-import { requireAuth, fetchWithAuth, logout, setupHTMXAuth } from './auth.js';
+import { requireAuth, fetchWithAuth, logout, setupHTMXAuth, getUsername } from './auth.js';
 import { SSEHandler } from './sse-handler.js';
 
 class DungeonApp {
@@ -13,7 +13,7 @@ class DungeonApp {
     this.conversations = [];
 
     // DOM elements
-    this.conversationList = document.getElementById('conversation-list');
+    this.userHandleEl = document.getElementById('user-handle');
     this.chatMessages = document.getElementById('chat-messages');
     this.chatForm = document.getElementById('chat-form');
     this.messageInput = document.getElementById('message-input');
@@ -25,6 +25,7 @@ class DungeonApp {
     this.treasuresSectionEl = document.getElementById('treasures-section');
     this.treasuresListEl = document.getElementById('treasures-list');
     this.treasureCountEl = document.getElementById('treasure-count');
+    this.notificationsPanelEl = document.getElementById('notifications-panel');
 
     this.init();
   }
@@ -32,11 +33,75 @@ class DungeonApp {
   async init() {
     setupHTMXAuth();
     this.bindEvents();
+    this.displayUserHandle();
+    await this.loadNotifications();
     await this.loadConversations();
 
     // Auto-start if no conversations
     if (this.conversations.length === 0) {
       this.startNewGame();
+    }
+  }
+
+  displayUserHandle() {
+    const username = getUsername();
+    if (this.userHandleEl) {
+      this.userHandleEl.textContent = username || 'Unknown';
+    }
+  }
+
+  async loadNotifications() {
+    if (!this.notificationsPanelEl) return;
+
+    try {
+      const response = await fetchWithAuth('/api/notifications');
+      if (!response) return;
+
+      const notifications = await response.json();
+      this.renderNotifications(notifications);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    }
+  }
+
+  renderNotifications(notifications) {
+    if (!this.notificationsPanelEl) return;
+
+    if (!notifications || notifications.length === 0) {
+      this.notificationsPanelEl.innerHTML = '';
+      this.notificationsPanelEl.style.display = 'none';
+      return;
+    }
+
+    this.notificationsPanelEl.style.display = '';
+    this.notificationsPanelEl.innerHTML = notifications.map(notif => `
+      <div class="notification notification-${this.escapeHtml(notif.notification_type)}" data-id="${this.escapeHtml(notif.id)}">
+        <div class="notification-header">
+          <span class="notification-title">${this.escapeHtml(notif.title)}</span>
+          <button class="notification-dismiss" title="Dismiss">&times;</button>
+        </div>
+        <div class="notification-message">${this.escapeHtml(notif.message)}</div>
+      </div>
+    `).join('');
+
+    // Bind dismiss buttons
+    this.notificationsPanelEl.querySelectorAll('.notification-dismiss').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const notificationEl = e.target.closest('.notification');
+        const notificationId = notificationEl.dataset.id;
+        this.dismissNotification(notificationId);
+      });
+    });
+  }
+
+  async dismissNotification(notificationId) {
+    try {
+      await fetchWithAuth(`/api/notifications/${notificationId}/dismiss`, {
+        method: 'POST',
+      });
+      await this.loadNotifications();
+    } catch (error) {
+      console.error('Failed to dismiss notification:', error);
     }
   }
 
@@ -78,7 +143,6 @@ class DungeonApp {
       if (!response) return;
 
       this.conversations = await response.json();
-      this.renderConversationList();
 
       // Auto-select most recent if we have conversations but none selected
       if (this.conversations.length > 0 && !this.currentConversationId) {
@@ -89,54 +153,8 @@ class DungeonApp {
     }
   }
 
-  renderConversationList() {
-    this.conversationList.innerHTML = '';
-
-    if (this.conversations.length === 0) {
-      this.conversationList.innerHTML = '<div class="empty-state">No adventures yet</div>';
-      return;
-    }
-
-    this.conversations.forEach(conv => {
-      const item = this.createConversationItem(conv);
-      this.conversationList.appendChild(item);
-    });
-  }
-
-  createConversationItem(conversation) {
-    const item = document.createElement('div');
-    item.className = 'conversation-item';
-    item.dataset.id = conversation.id;
-
-    if (this.currentConversationId === conversation.id) {
-      item.classList.add('active');
-    }
-
-    item.innerHTML = `
-      <span class="conversation-title">${this.escapeHtml(conversation.title || 'Untitled')}</span>
-      <button class="conversation-delete" title="Delete">x</button>
-    `;
-
-    // Click to select
-    item.addEventListener('click', (e) => {
-      if (!e.target.classList.contains('conversation-delete')) {
-        this.selectConversation(conversation.id);
-      }
-    });
-
-    // Delete button
-    const deleteBtn = item.querySelector('.conversation-delete');
-    deleteBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.deleteConversation(conversation.id);
-    });
-
-    return item;
-  }
-
   async selectConversation(conversationId) {
     this.currentConversationId = conversationId;
-    this.updateActiveConversation();
 
     try {
       const response = await fetchWithAuth(`/api/conversations/${conversationId}`);
@@ -156,40 +174,9 @@ class DungeonApp {
     }
   }
 
-  updateActiveConversation() {
-    document.querySelectorAll('.conversation-item').forEach(item => {
-      item.classList.toggle('active', item.dataset.id === String(this.currentConversationId));
-    });
-  }
-
-  async deleteConversation(conversationId) {
-    if (!confirm('Delete this adventure?')) return;
-
-    try {
-      await fetchWithAuth(`/api/conversations/${conversationId}`, {
-        method: 'DELETE',
-      });
-
-      if (this.currentConversationId === conversationId) {
-        this.currentConversationId = null;
-        this.chatMessages.innerHTML = '';
-      }
-
-      await this.loadConversations();
-
-      // Start new game if no conversations left
-      if (this.conversations.length === 0) {
-        this.startNewGame();
-      }
-    } catch (error) {
-      console.error('Failed to delete conversation:', error);
-    }
-  }
-
   startNewGame() {
     this.currentConversationId = null;
     this.chatMessages.innerHTML = '';
-    this.updateActiveConversation();
 
     // Auto-send "Wake up" to start the game
     this.sendMessage('Wake up');
