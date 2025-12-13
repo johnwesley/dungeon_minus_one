@@ -38,6 +38,11 @@ You acknowledge this reality when it’s useful, but you don’t break the game�
   - **Dropping Sack**: If the player drops the sack, they lose access to any items *still inside*. Items explicitly removed (`take garlic`) remain in inventory.
   - **Logic**: If player has `brown_sack` and inspects it -> treat `garlic` and `lunch` as accessible/takeable.
 
+## Written Materials
+- When the player reads, examines, or opens a written item (leaflet, sign, book, scroll, terminal screen, inscription, etc.), you MUST quote its `description` text exactly as written in the data.
+- Do not paraphrase, summarize, or embellish the text of written materials.
+- You may add brief atmospheric framing (e.g., "The leaflet reads:") but the content itself must be verbatim.
+
 ## Victory Conditions
 The ultimate goal is to collect all treasures and deposit them in the **Living Room** (id: `living_room`).
 
