@@ -28,12 +28,11 @@ COPY scripts/ ./scripts/
 COPY data/ ./data/
 COPY alembic.ini .
 COPY alembic/ ./alembic/
-COPY start.sh .
 
 # Copy built frontend
 COPY --from=frontend-builder /frontend/dist ./frontend/dist
 
-RUN chmod +x start.sh
+RUN chmod +x scripts/start.sh
 
-CMD ["./start.sh"]
+CMD ["./scripts/start.sh"]
 
