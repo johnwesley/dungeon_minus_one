@@ -1,7 +1,7 @@
 {
   "id": "start",
   "name": "West of House",
-  "description": "You are standing in an open field west of a white house, with a boarded front door. There is a small mailbox here.",
+  "description": "You are standing in an open field west of a dilapidated red house that looks like it has survived several regrettable decisions and learned nothing from them. The paint peels in long strips, revealing older, angrier layers beneath. The front door is boarded shut with uneven planks, as if the house itself requested boundaries. The grass around it is suspiciously well-kept, which only makes the structure seem more judgmental. A small mailbox nearby regards you with quiet disappointment, as though it had higher hopes for who would eventually show up.",
   "interactables": [
     {
       "id": "mailbox",
