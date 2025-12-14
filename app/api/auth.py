@@ -16,6 +16,20 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> User:
+    settings = get_settings()
+    
+    # Dev bypass logic
+    if settings.dev_auth_bypass and token == "dev_secret_key_change_me_in_prod":
+        # Return a dummy or admin user if bypassing
+        # Ideally, we should fetch a real user or mock one. 
+        # For simplicity, let's try to get the first user or create a temp one.
+        result = await db.execute(select(User).limit(1))
+        user = result.scalar_one_or_none()
+        if user:
+            return user
+        # Fallback if no users exist yet (shouldn't happen if setup ran)
+        return User(id="dev_user", username="dev", is_admin=True)
+
     payload = decode_access_token(token)
     if payload is None:
         raise HTTPException(

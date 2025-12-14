@@ -15,7 +15,7 @@ class LLMClient(ABC):
     async def chat(
         self,
         messages: list[dict[str, str]],
-        system_prompt: Optional[str] = None,
+        system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> str:
         """Send messages and return the complete response."""
         pass
@@ -24,7 +24,7 @@ class LLMClient(ABC):
     async def chat_stream(
         self,
         messages: list[dict[str, str]],
-        system_prompt: Optional[str] = None,
+        system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> AsyncIterator[str]:
         """Send messages and yield response chunks."""
         pass
@@ -34,7 +34,7 @@ class LLMClient(ABC):
         self,
         messages: list[dict[str, Any]],
         tool_handlers: dict[str, Callable],
-        system_prompt: Optional[str] = None,
+        system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> str:
         """Send messages with tool use and return the complete response."""
         pass
@@ -44,7 +44,7 @@ class LLMClient(ABC):
         self,
         messages: list[dict[str, Any]],
         tool_handlers: dict[str, Callable],
-        system_prompt: Optional[str] = None,
+        system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> AsyncIterator[dict[str, Any]]:
         """Send messages with tool use and yield streaming events."""
         pass
@@ -69,14 +69,23 @@ class AnthropicClient(LLMClient):
         narrator_prompt = load_prompt(NARRATOR_PROMPT)
         try:
             premise_prompt = load_prompt("premise")
-            self.default_system_prompt = f"{narrator_prompt}\n\n## Game Premise\n{premise_prompt}"
+            full_system_text = f"{narrator_prompt}\n\n## Game Premise\n{premise_prompt}"
         except FileNotFoundError:
-            self.default_system_prompt = narrator_prompt
+            full_system_text = narrator_prompt
+
+        # Enable Prompt Caching
+        self.default_system_prompt = [
+            {
+                "type": "text",
+                "text": full_system_text,
+                "cache_control": {"type": "ephemeral"}
+            }
+        ]
 
     async def chat(
         self,
         messages: list[dict[str, str]],
-        system_prompt: Optional[str] = None,
+        system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> str:
         """Send messages and return the complete response."""
         response = await self.client.messages.create(
@@ -90,7 +99,7 @@ class AnthropicClient(LLMClient):
     async def chat_stream(
         self,
         messages: list[dict[str, str]],
-        system_prompt: Optional[str] = None,
+        system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> AsyncIterator[str]:
         """Send messages and yield response chunks."""
         async with self.client.messages.stream(
@@ -106,7 +115,7 @@ class AnthropicClient(LLMClient):
         self,
         messages: list[dict[str, Any]],
         tool_handlers: dict[str, Callable],
-        system_prompt: Optional[str] = None,
+        system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> str:
         """Send messages with tool use support.
 
@@ -199,7 +208,7 @@ class AnthropicClient(LLMClient):
         self,
         messages: list[dict[str, Any]],
         tool_handlers: dict[str, Callable],
-        system_prompt: Optional[str] = None,
+        system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> AsyncIterator[dict[str, Any]]:
         """Send messages with tool use and yield streaming events."""
         working_messages = list(messages)
