@@ -21,8 +21,8 @@ TOTAL_TREASURES = 13
 
 class GameStateResponse(BaseModel):
     current_location: str
-    inventory: list[str]
-    treasures_found: list[str]
+    inventory: list[str]           # All items including treasures
+    trophy_case: list[str]         # Deposited treasures from flags.trophy_case
     total_treasures: int = TOTAL_TREASURES
 
 
@@ -48,27 +48,18 @@ async def get_game_state(
         return GameStateResponse(
             current_location="Unknown",
             inventory=[],
-            treasures_found=[],
+            trophy_case=[],
         )
 
-    # Get inventory and separate treasures from regular items
+    # Get full inventory (including treasures player is carrying)
     inventory = state.inventory or []
-    treasures_in_inventory = [item for item in inventory if item in TREASURE_IDS]
-    regular_inventory = [item for item in inventory if item not in TREASURE_IDS]
 
-    # Get treasures deposited in living room (trophy case)
-    living_room = await game_repo.get_location("living_room")
-    treasures_in_living_room = []
-    if living_room and living_room.get("interactables"):
-        treasures_in_living_room = [
-            item for item in living_room["interactables"] if item in TREASURE_IDS
-        ]
-
-    # Combine all found treasures (no duplicates)
-    treasures_found = list(set(treasures_in_inventory + treasures_in_living_room))
+    # Get trophy case contents from flags
+    flags = state.flags or {}
+    trophy_case = flags.get("trophy_case", [])
 
     return GameStateResponse(
         current_location=state.current_location or "Unknown",
-        inventory=regular_inventory,
-        treasures_found=treasures_found,
+        inventory=inventory,
+        trophy_case=trophy_case,
     )

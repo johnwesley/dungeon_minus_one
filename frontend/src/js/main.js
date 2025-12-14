@@ -22,9 +22,9 @@ class DungeonApp {
     this.restartBtn = document.getElementById('restart-btn');
     this.currentLocationEl = document.getElementById('current-location');
     this.inventoryListEl = document.getElementById('inventory-list');
-    this.treasuresSectionEl = document.getElementById('treasures-section');
-    this.treasuresListEl = document.getElementById('treasures-list');
-    this.treasureCountEl = document.getElementById('treasure-count');
+    this.trophyCaseSectionEl = document.getElementById('trophy-case-section');
+    this.trophyCaseListEl = document.getElementById('trophy-case-list');
+    this.trophyCountEl = document.getElementById('trophy-count');
     this.notificationsPanelEl = document.getElementById('notifications-panel');
 
     this.init();
@@ -351,16 +351,16 @@ class DungeonApp {
       }
     }
 
-    // Update treasures (show section only if treasures found)
-    if (this.treasuresSectionEl && this.treasuresListEl) {
-      const treasures = state.treasures_found || [];
+    // Update trophy case (show section only if treasures deposited)
+    if (this.trophyCaseSectionEl && this.trophyCaseListEl) {
+      const trophyCase = state.trophy_case || [];
 
-      if (treasures.length === 0) {
-        this.treasuresSectionEl.style.display = 'none';
+      if (trophyCase.length === 0) {
+        this.trophyCaseSectionEl.style.display = 'none';
       } else {
-        this.treasuresSectionEl.style.display = '';
-        this.treasureCountEl.textContent = treasures.length;
-        this.treasuresListEl.innerHTML = treasures
+        this.trophyCaseSectionEl.style.display = '';
+        this.trophyCountEl.textContent = trophyCase.length;
+        this.trophyCaseListEl.innerHTML = trophyCase
           .map(item => `<li>${this.escapeHtml(item)}</li>`)
           .join('');
       }

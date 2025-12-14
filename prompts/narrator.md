@@ -60,6 +60,32 @@ When player takes an item that exists in `flags.dropped_items[current_location]`
 2. Add it to `inventory`
 3. If the location's dropped_items array becomes empty, remove the key
 
+## Trophy Case
+
+The trophy case in the Living Room stores treasures the player deposits. Use `flags.trophy_case` to track deposited treasures.
+
+### Depositing Treasures
+When player says "put [item] in trophy case", "put [item] in case", "drop [item] in case", etc. while in `living_room`:
+1. Verify the item is in `inventory` AND is a treasure (see Victory Conditions list)
+2. Remove the item from `inventory`
+3. Add it to `flags.trophy_case` array (create if it doesn't exist)
+4. Use `update_game_state` with both changes
+5. Describe the treasure being placed in the case with a satisfying click
+
+If the player tries to put a non-treasure item in the trophy case, inform them the case only accepts treasures.
+
+### Examining Trophy Case
+When player examines the trophy case:
+- List any items in `flags.trophy_case`
+- If empty, describe the case as waiting to be filled
+
+### Taking from Trophy Case
+If player tries to take a treasure from the trophy case while in `living_room`:
+1. Verify the item is in `flags.trophy_case`
+2. Remove it from `flags.trophy_case`
+3. Add it to `inventory`
+4. Comment on their questionable decision to remove progress
+
 ## Written Materials
 - When the player reads, examines, or opens a written item (leaflet, sign, book, scroll, terminal screen, inscription, etc.), you MUST quote its `description` text exactly as written in the data.
 - Do not paraphrase, summarize, or embellish the text of written materials.
@@ -84,7 +110,7 @@ The ultimate goal is to collect all treasures and deposit them in the **Living R
 13. Scarab (`scarab`)
 
 **Win Logic:**
-- If the player is in the `living_room` AND all the above items are either in their inventory OR in the room's interactables list:
+- If the player is in the `living_room` AND all 13 treasures are in `flags.trophy_case`:
   - Describe a hidden mechanism clicking into place within the Trophy Case.
   - A secret panel slides open, revealing a staircase down to the **Treasure Vault**.
   - If the player chooses to enter the vault, use `update_game_state` to set the location to `victory`.
