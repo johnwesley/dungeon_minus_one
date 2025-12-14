@@ -60,7 +60,6 @@ dev: setup run  ## Setup and run local dev in one command
 
 prod-up:  ## Start production containers detached
 	$(DOCKER_COMPOSE_PROD) up -d
-	@$(MAKE) prod-seed
 
 prod-down:  ## Stop and remove production containers
 	$(DOCKER_COMPOSE_PROD) down
@@ -73,7 +72,6 @@ prod-restart:  ## Restart production containers
 
 prod-rebuild:  ## Rebuild and restart production containers
 	$(DOCKER_COMPOSE_PROD) up -d --build
-	@$(MAKE) prod-seed
 
 prod-seed:  ## Seed/Update production database locations
 	$(DOCKER_COMPOSE_PROD) exec -T app python scripts/sync_locations.py
