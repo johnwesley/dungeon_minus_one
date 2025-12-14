@@ -44,7 +44,7 @@ GAME_TOOLS = [
                 },
                 "changes": {
                     "type": "object",
-                    "description": "Object containing state fields to update. Valid fields: current_location (string), inventory (array of strings), visited_locations (array of strings), player_stats (object), flags (object)"
+                    "description": "Object containing state fields to update. Valid fields: current_location (string), inventory (array of strings or objects {id, name, description}), visited_locations (array of strings), player_stats (object), flags (object)"
                 }
             },
             "required": ["conversation_id", "changes"]

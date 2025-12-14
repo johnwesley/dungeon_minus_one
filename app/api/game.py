@@ -1,3 +1,4 @@
+from typing import Union, Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
@@ -21,7 +22,7 @@ TOTAL_TREASURES = 13
 
 class GameStateResponse(BaseModel):
     current_location: str
-    inventory: list[str]           # All items including treasures
+    inventory: list[Union[str, dict[str, Any]]]  # All items including treasures (strings or objects)
     trophy_case: list[str]         # Deposited treasures from flags.trophy_case
     total_treasures: int = TOTAL_TREASURES
 

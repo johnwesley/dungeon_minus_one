@@ -346,7 +346,10 @@ class DungeonApp {
         this.inventoryListEl.innerHTML = '<li class="empty-inventory">Empty</li>';
       } else {
         this.inventoryListEl.innerHTML = state.inventory
-          .map(item => `<li>${this.escapeHtml(item)}</li>`)
+          .map(item => {
+            const displayName = typeof item === 'object' && item !== null ? item.name : item;
+            return `<li>${this.escapeHtml(displayName)}</li>`;
+          })
           .join('');
       }
     }
