@@ -65,13 +65,21 @@ This is useful for ensuring all players start fresh with the new mechanics (e.g.
    ```
    Should print `cellar.requires_light = True`
 
-## 6. Gameplay Impact
+## 6. Send Release Notification
+
+Notify players of the update and the session reset:
+
+```bash
+make prod-notify TITLE="Update v0.3.0: Darkness & Personalities" MSG="Darkness has fallen deep underground—bring a light or face the Grue! Also, some dungeon inhabitants seem to have developed... strong opinions about game design. Your session has been reset." TTL=48
+```
+
+## 7. Gameplay Impact
 
 - Players entering dark locations (cellar, maze, caves, etc.) without a lit lantern will receive a grue warning
 - On their next action without light, they die and the game restarts
 - Light sources: `brass_lantern` (must be turned on) or `ivory_torch` (always lit)
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 - **"column locations.requires_light does not exist"**: Run `alembic upgrade head`
 - **Dark locations not marked correctly**: Run `sync_locations.py --verify`
