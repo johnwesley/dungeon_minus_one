@@ -1,105 +1,100 @@
-# Production Deployment Guide (v0.3.0)
+# Deployment Guide
 
-This guide covers the deployment steps for the v0.3.0 release, which adds the lantern/grue darkness mechanic.
+This guide covers the standard deployment process for Dungeon Minus One, using a release-branch workflow for Staging and Production.
 
-## 0. Prerequisite: Environment Variables
+## 1. Release Strategy
 
-Before running any deployment commands, ensure your `.env` file is sourced or that your environment variables are correctly loaded. The deployment commands rely on these variables (like `POSTGRES_DB` and `POSTGRES_USER`).
+We use a standard Git flow for releases:
+
+1.  **Development**: All new features are merged into `main`.
+2.  **Release Branch**: When feature-complete, create a branch `release/X.Y.Z` from `main`.
+3.  **Staging (Beta)**:
+    -   Create tags on the release branch: `vX.Y.Z-beta.1`, `vX.Y.Z-beta.2`, etc.
+    -   Deploy these tags to the **Staging Environment** for testing.
+4.  **Production**:
+    -   Once stable, create the final tag `vX.Y.Z` on the release branch.
+    -   Deploy this tag to the **Production Environment**.
+    -   Merge the release branch back into `main`.
+
+## 2. Prerequisites
+
+Before running any deployment commands, ensure your `.env` file is present and valid. The deployment commands rely on these variables (e.g., `POSTGRES_DB`, `POSTGRES_USER`).
 
 ```bash
 # Check your .env file
 cat .env
 
-# Source it if necessary
+# Source it if necessary (though Make usually handles env vars for docker-compose)
 source .env
 ```
 
-## 1. Checkout Release
+## 3. Deployment Steps
 
-Ensure you are on the correct release tag:
+Perform these steps on the server for every release.
+
+### Step 1: Checkout Release Tag
+
+Fetch the latest tags and checkout the specific version you are deploying (e.g., `v0.4.0` or `v0.4.0-beta.1`).
 
 ```bash
 git fetch --tags
-git checkout v0.3.0
+git checkout vX.Y.Z
 ```
 
-## 2. Rebuild and Deploy
+### Step 2: Rebuild Containers
+
+Rebuild the application container with the updated code and assets.
 
 ```bash
 make prod-rebuild
 ```
 
-This rebuilds the container with updated code/assets.
 **Note**: The container may crash or restart immediately after this step if the database schema is not yet updated. This is normal; proceed to the next step.
 
-## 3. Database Schema Update
+### Step 3: Database Schema Update
 
-A new column `requires_light` (Boolean) has been added to the `locations` table.
+Run database migrations to ensure the schema matches the code.
 
 ```bash
 docker compose exec app alembic upgrade head
 ```
 
-**Troubleshooting**: If the `app` container is in a restart loop (preventing `exec`), use `run --rm` to apply the migration in a fresh, one-off container:
-```bash
-docker compose -f docker-compose.prod.yml run --rm app alembic upgrade head
-```
+*   **Note**: This command is **idempotent**. It is safe to run even if there are no schema changes in this release; Alembic will simply do nothing.
+*   **Troubleshooting**: If the `app` container is in a restart loop (preventing `exec`), use `run --rm` to apply the migration in a temporary container:
+    ```bash
+    docker compose -f docker-compose.prod.yml run --rm app alembic upgrade head
+    ```
 
-This applies migration `d9e5f6a7b8c9`.
+### Step 4: Sync Location Fixtures
 
-## 4. Sync Location Fixtures
-
-The location fixtures now include `requires_light: true` for ~22 dark underground locations. Sync these to the database:
+Sync static location data (JSON files) into the database. This updates descriptions, exits, and item placements.
 
 ```bash
 make prod-seed
 ```
 
-This updates the `requires_light` values for all locations.
+### Step 5: Reset Player Sessions (Optional)
 
-## 5. Reset Player Sessions
-
-To clear all active game sessions (conversations, messages, inventory) while preserving registered users:
+**Only performs this if the release requires it.**
+Major gameplay changes (e.g., new mechanics, map restructuring) may require resetting active sessions to prevent broken states. This clears conversations and inventories but preserves user accounts.
 
 ```bash
 make prod-reset
 ```
 
-This is necessary for ensuring all players start fresh with the new mechanics (e.g. grue/light rules) and updated world state.
+## 4. Post-Deployment Verification
 
-## 6. Post-Deployment Verification
+1.  **Health Check**: Ensure the service is responding.
+    ```bash
+    curl http://localhost:8080/health
+    ```
+2.  **Send Notification**: Notify players of the update.
+    ```bash
+    make prod-notify TITLE="Update vX.Y.Z" MSG="A new update has been deployed. Check the changelog!" TTL=48
+    ```
 
-1. **Health Check**: `curl http://localhost:8080/health`
-2. **Verify Migration**: Run a direct SQL query to check the `cellar` location.
+## 5. Troubleshooting
 
-   ```bash
-   # Use the user/db from your .env (e.g., -U dungeon_user -d dungeon_db)
-   docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT id, requires_light FROM locations WHERE id = 'cellar';"
-   ```
-
-   **Expected Output**:
-   ```
-      id   | requires_light
-   --------+----------------
-    cellar | t
-   ```
-
-## 7. Send Release Notification
-
-Notify players of the update and the session reset:
-
-```bash
-make prod-notify TITLE="Update v0.3.0: Darkness & Personalities" MSG="Darkness has fallen deep underground—bring a light or face the Grue! Also, some dungeon inhabitants seem to have developed... strong opinions about game design. Your session has been reset." TTL=48
-```
-
-## 8. Gameplay Impact
-
-- Players entering dark locations (cellar, maze, caves, etc.) without a lit lantern will receive a grue warning
-- On their next action without light, they die and the game restarts
-- Light sources: `brass_lantern` (must be turned on) or `ivory_torch` (always lit)
-
-## 9. Troubleshooting
-
-- **Container Restart Loop**: If `prod-rebuild` leaves the app container restarting, it likely means the DB schema is mismatched. Run the migration step (Step 3) using `docker compose run --rm ...`.
-- **"database does not exist"**: Check your `.env` file (`POSTGRES_DB` vs `POSTGRES_USER`). If you changed the DB name after initial creation, you may need to update `.env` to match the existing volume's DB name.
-- **"column locations.requires_light does not exist"**: Run `alembic upgrade head`.
+*   **Container Restart Loop**: If `prod-rebuild` leaves the app container restarting, it likely means the DB schema is mismatched. Run the migration step (Step 3) using `docker compose run --rm ...`.
+*   **"database does not exist"**: Check your `.env` file (`POSTGRES_DB` vs `POSTGRES_USER`).
+*   **"column does not exist"**: You skipped Step 3. Run `alembic upgrade head`.
