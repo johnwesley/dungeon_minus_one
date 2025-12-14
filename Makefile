@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help prod-up prod-down prod-logs prod-restart prod-rebuild prod-seed prod-seed-prune prod-seed-check prod-invite prod-notify frontend-install frontend-dev frontend-build dev-full notify
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help prod-up prod-down prod-logs prod-restart prod-rebuild prod-seed prod-seed-prune prod-seed-check prod-invite prod-reset prod-notify frontend-install frontend-dev frontend-build dev-full notify
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -86,6 +86,9 @@ prod-seed-check:  ## Check production DB matches fixtures (no writes; expects ex
 
 prod-invite:  ## Generate invite code in production
 	$(DOCKER_COMPOSE_PROD) exec app python scripts/generate_invite.py
+
+prod-reset:  ## Reset game sessions in production (keeps users)
+	$(DOCKER_COMPOSE_PROD) exec app python scripts/reset_game_state.py
 
 prod-notify:  ## Create notification in production (usage: make prod-notify TITLE="title" MSG="message")
 	$(DOCKER_COMPOSE_PROD) exec app python scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)

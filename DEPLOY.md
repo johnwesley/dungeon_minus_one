@@ -34,7 +34,17 @@ make prod-seed
 
 This updates the `requires_light` values for all locations and verifies the sync.
 
-## 4. Post-Deployment Verification
+## 4. Reset Player Sessions
+
+To clear all active game sessions (conversations, messages, inventory) while preserving registered users:
+
+```bash
+make prod-reset
+```
+
+This is useful for ensuring all players start fresh with the new mechanics (e.g. grue/light rules) and updated world state.
+
+## 5. Post-Deployment Verification
 
 1. **Health Check**: `curl http://localhost:8080/health`
 2. **Verify Migration**: Check that locations have the new column:
@@ -55,13 +65,13 @@ This updates the `requires_light` values for all locations and verifies the sync
    ```
    Should print `cellar.requires_light = True`
 
-## 5. Gameplay Impact
+## 6. Gameplay Impact
 
 - Players entering dark locations (cellar, maze, caves, etc.) without a lit lantern will receive a grue warning
 - On their next action without light, they die and the game restarts
 - Light sources: `brass_lantern` (must be turned on) or `ivory_torch` (always lit)
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 - **"column locations.requires_light does not exist"**: Run `alembic upgrade head`
 - **Dark locations not marked correctly**: Run `sync_locations.py --verify`
