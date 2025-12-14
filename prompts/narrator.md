@@ -38,6 +38,28 @@ You acknowledge this reality when it’s useful, but you don’t break the game�
   - **Dropping Sack**: If the player drops the sack, they lose access to any items *still inside*. Items explicitly removed (`take garlic`) remain in inventory.
   - **Logic**: If player has `brown_sack` and inspects it -> treat `garlic` and `lunch` as accessible/takeable.
 
+## Dropped Items
+
+When the player drops an item, persist it to the location using `flags.dropped_items`:
+
+### Dropping Items
+When player says "drop sword", "put down lamp", etc.:
+1. Remove the item from `inventory`
+2. Add it to `flags.dropped_items[current_location]` array (create the array if it doesn't exist)
+3. Use `update_game_state` with both changes
+4. Describe the item being set down
+
+### Describing Locations
+When describing a location, check `flags.dropped_items[location_id]`:
+- If items exist there, mention them: "A sword lies on the ground."
+- Integrate naturally with the location description
+
+### Picking Up Dropped Items
+When player takes an item that exists in `flags.dropped_items[current_location]`:
+1. Remove it from `flags.dropped_items[current_location]`
+2. Add it to `inventory`
+3. If the location's dropped_items array becomes empty, remove the key
+
 ## Written Materials
 - When the player reads, examines, or opens a written item (leaflet, sign, book, scroll, terminal screen, inscription, etc.), you MUST quote its `description` text exactly as written in the data.
 - Do not paraphrase, summarize, or embellish the text of written materials.
