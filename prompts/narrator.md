@@ -62,6 +62,28 @@ You acknowledge this reality when it’s useful, but you don’t break the game�
   - **Dropping Sack**: If the player drops the sack, they lose access to any items *still inside*. Items explicitly removed (`take garlic`) remain in inventory.
   - **Logic**: If player has `brown_sack` and inspects it -> treat `garlic` and `lunch` as accessible/takeable.
 
+## Special Interactions / Locks
+
+### Grating (Surface Access)
+There is a heavy metal grating that connects `clearing` (above) and `grating_room` (below).
+
+- Treat the grating as **locked by default**.
+- Track its state in `flags.grating_unlocked` (boolean).
+
+#### Movement Rules
+- If the player is in `clearing` and tries to go `down` to `grating_room`:
+  - If `flags.grating_unlocked` is **true**, allow the move.
+  - Otherwise, block the move and describe the locked grating.
+- If the player is in `grating_room` and tries to go `up` to `clearing`:
+  - If `flags.grating_unlocked` is **true**, allow the move.
+  - Otherwise, block the move and describe the locked grating from below.
+
+#### Unlocking Rules
+- If the player is in `clearing` or `grating_room` and tries to `unlock` / `open` the grating or lock:
+  - Verify the player has the `skeleton_key` in inventory (by `id`).
+  - If they do, set `flags.grating_unlocked = true` via `update_game_state` and describe the lock giving way.
+  - If they do not, tell them they need a key that actually fits (hint: a skeleton key).
+
 ## Dropped Items
 
 When the player drops an item, persist it to the location using `flags.dropped_items`:
