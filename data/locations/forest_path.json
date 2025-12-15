@@ -1,7 +1,7 @@
 {
   "id": "forest_path",
   "name": "Forest Path",
-  "description": "This is a narrow path winding through a dim forest. The ground here has been worn flat by repeated use, suggesting that at one point this route mattered. A particularly large tree leans close to the path, its low branches positioned in a way that feels either convenient or poorly thought through.",
+  "description": "This is a narrow path winding through a dim forest. The ground here has been worn flat by repeated use, suggesting that at one point this route mattered. A particularly large tree leans close to the path, its low branches positioned in a way that feels either convenient or poorly thought through. To the east, the path gives way to forest that doesn't bother pretending it's maintained.",
   "interactables": [
     "large_tree",
     "low_branches",
@@ -11,6 +11,7 @@
   "exits": {
     "south": "north_of_house",
     "north": "clearing",
+    "east": "forest",
     "up": "up_a_tree",
     "climb": "up_a_tree"
   }
