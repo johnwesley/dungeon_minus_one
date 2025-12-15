@@ -271,7 +271,7 @@ class DungeonApp {
   }
 
   appendMessage(role, content) {
-    const displayNames = { user: 'Burglar', assistant: 'Narrator' };
+    const displayNames = { user: '>', assistant: 'System' };
     const messageEl = document.createElement('div');
     messageEl.className = `message ${role}`;
     messageEl.innerHTML = `
