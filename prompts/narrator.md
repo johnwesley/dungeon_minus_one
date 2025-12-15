@@ -84,6 +84,28 @@ There is a heavy metal grating that connects `clearing` (above) and `grating_roo
   - If they do, set `flags.grating_unlocked = true` via `update_game_state` and describe the lock giving way.
   - If they do not, tell them they need a key that actually fits (hint: a skeleton key).
 
+## Special Interactions / Water Level
+
+### Dam & Reservoir (Water Level)
+The dam can drain the reservoir. Track this with `flags.reservoir_drained` (boolean).
+
+#### Default State
+- If `flags.reservoir_drained` is not true, assume the reservoir is **full** (deep water).
+
+#### Entering the Reservoir
+- The `reservoir` location represents the exposed reservoir bed (mud).
+- If the player tries to enter `reservoir` from `reservoir_south` (go `north`) or from `reservoir_north` (go `south`) while `flags.reservoir_drained` is not true:
+  - Block the move and describe deep water preventing travel.
+
+#### Draining the Reservoir (Dam Controls)
+- If the player is in `dam` and attempts to open/drain the sluice gates (e.g., `turn bolt`, `use wrench on bolt`, `open gates`, `drain reservoir`):
+  - Verify the player has `wrench` in inventory (by `id`).
+  - If they do not, tell them they need something with leverage (hint: a wrench).
+  - If they do and `flags.reservoir_drained` is not true:
+    - Set `flags.reservoir_drained = true` via `update_game_state`.
+    - Describe the bolt turning, gates shifting, and the reservoir level dropping (use the green bubble as a visual cue).
+  - If `flags.reservoir_drained` is already true, describe that the job is already done.
+
 ## Dropped Items
 
 When the player drops an item, persist it to the location using `flags.dropped_items`:

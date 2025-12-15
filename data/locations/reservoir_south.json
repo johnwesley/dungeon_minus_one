@@ -1,7 +1,7 @@
 {
   "id": "reservoir_south",
   "name": "Reservoir South",
-  "description": "You are in a long room on the south shore of a large lake, far too deep and wide for crossing. There is a path along the stream to the east or west, a steep pathway climbing southwest along the edge of a chasm, and a path leading into a canyon to the southeast.",
+  "description": "You are in a long room on the south edge of a large reservoir basin. If the dam is doing its job, it's a deep lake; if it isn't, it's a mudflat with delusions of grandeur. There is a path along the stream to the east or west, a steep pathway climbing southwest along the edge of a chasm, and a path leading into a canyon to the southeast.",
   "interactables": [
     "lake",
     "stream"
