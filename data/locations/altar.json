@@ -4,8 +4,16 @@
   "description": "This is the south end of a large temple. In front of you is what appears to be an altar. In one corner is a small hole in the floor which leads into darkness. You probably could not get back up it. On the two ends of the altar are burning candles. On the altar is a large black book, open to page 569.",
   "interactables": [
     "altar",
-    "candles",
-    "black_book",
+    {
+      "id": "candles",
+      "name": "candles",
+      "description": "Two thick candles burn at either end of the altar, steady and stubborn. The wax has pooled into shapes that look like failed signatures."
+    },
+    {
+      "id": "black_book",
+      "name": "black book",
+      "description": "PAGE 569\n\nHADES GATE PROCEDURE:\n1. Ring the bell.\n2. Light the candles.\n3. Read from this book.\n\nIf you do it correctly, the spirits will stop pretending they have jurisdiction."
+    },
     "hole"
   ],
   "npcs": [],

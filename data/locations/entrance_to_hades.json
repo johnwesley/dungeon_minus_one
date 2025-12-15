@@ -4,15 +4,20 @@
   "description": "You are outside a large gateway, on which is inscribed 'Abandon every hope all ye who enter here!' The gate is open; through it you can see a desolation, with a pile of mangled bodies in one corner. Thousands of voices, lamenting some hideous fate, can be heard.",
   "interactables": [
     "gateway",
-    "inscription",
+    {
+      "id": "inscription",
+      "name": "inscription",
+      "description": "Abandon every hope all ye who enter here!"
+    },
     "spirits",
-    "bell"
+    "gate"
   ],
   "npcs": [
     {
       "id": "spirits",
       "name": "Evil Spirits",
-      "description": "The way through the gate is barred by evil spirits, who jeer at your attempts to pass."
+      "description": "The way through the gate is barred by evil spirits, who jeer at your attempts to pass.",
+      "behavior": "The Evil Spirits bar passage through the gate. They are incorporeal, bored, and utterly certain the rules still apply. They block the `south` exit unless they have been driven off.\n\nBLOCKING:\n- If the player tries to go `south` while `flags.spirits_banished` is not true, block the move. The spirits jeer and the gateway might as well be a wall.\n- Once `flags.spirits_banished = true`, the spirits no longer block passage.\n\nRITUAL (Bell / Book / Candle):\nThe spirits can be driven off by performing the ritual described in the black book.\n\nTrack progress with these flags:\n- `flags.hades_bell_rung`\n- `flags.hades_book_read`\n- `flags.hades_candles_lit`\n\nACTIONS:\n- If the player tries to `ring` the bell (\"ring bell\", \"ring brass bell\"):\n  - If they have `brass_bell` in inventory, set `flags.hades_bell_rung = true` via `update_game_state`.\n  - Otherwise, tell them there is no bell here worth ringing.\n- If the player tries to `read` the book (\"read book\", \"read black book\"):\n  - If they have `black_book` in inventory, set `flags.hades_book_read = true` via `update_game_state`.\n  - Otherwise, tell them they are missing the one piece of documentation that matters.\n- If the player tries to `light` the candles (\"light candles\", \"light candle\"):\n  - If they have `candles` in inventory, set `flags.hades_candles_lit = true` via `update_game_state`.\n  - Otherwise, tell them candlelight is not a philosophical concept.\n\nCOMPLETION:\n- If all three ritual flags are true, set `flags.spirits_banished = true` via `update_game_state` and describe the spirits recoiling and dissipating. From then on, the `south` exit is usable."
     }
   ],
   "exits": {

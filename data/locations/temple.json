@@ -1,9 +1,13 @@
 {
   "id": "temple",
   "name": "Temple",
-  "description": "This is the north end of a large temple. On the east wall is an ancient inscription, probably a prayer in a long-forgotten language. Below the prayer is a staircase leading down. The west wall is solid granite. The exit to the north end of the room is through huge marble pillars.",
+  "description": "This is the north end of a large temple. On the east wall is an ancient inscription, probably a prayer in a long-forgotten language. Below the prayer is a staircase leading down. The west wall is solid granite. The exit to the north end of the room is through huge marble pillars. A small brass bell sits where someone clearly expected it to be used.",
   "interactables": [
-    "brass_bell",
+    {
+      "id": "brass_bell",
+      "name": "brass bell",
+      "description": "A small brass bell, tarnished but intact. It looks like it has been rung in places where sound was the polite option."
+    },
     "marble_pillars",
     "inscription",
     "prayer",
