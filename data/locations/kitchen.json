@@ -1,7 +1,7 @@
 {
   "id": "kitchen",
   "name": "Kitchen",
-  "description": "You are in the kitchen of the white house. A table seems to have been used recently for the preparation of food. A passage leads to the west and a dark staircase can be seen leading upward. A dark chimney leads down and to the east is a small window which is open. On the table is an elongated brown sack, smelling of hot peppers. A bottle is sitting on the table containing a quantity of water.",
+  "description": "You are in a kitchen that appears functional in a strictly technical sense. A table bears signs of recent food preparation, though nothing here suggests anyone lingered afterward. A passage leads west back toward the living room, while a dark staircase rises upward without commentary. A narrow chimney descends into shadow, and a small window to the east stands open, apparently left that way on purpose. On the table rests an elongated brown sack smelling strongly of hot peppers, beside a bottle containing water, placed with the quiet confidence of a default provision.",
   "interactables": [
     "table",
     "brown_sack",

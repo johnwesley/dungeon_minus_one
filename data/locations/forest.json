@@ -1,7 +1,7 @@
 {
   "id": "forest",
   "name": "Forest",
-  "description": "This is a dimly lit forest, with large trees all around. To the east, there appears to be sunlight.",
+  "description": "This is a dimly lit forest with tall trees and uneven ground. The path here looks older than its surroundings, worn smooth by use that eventually stopped. To the east, there is a break in the trees where light still bothers to show up.",
   "interactables": [
     "trees",
     "undergrowth"

@@ -1,10 +1,10 @@
 {
   "id": "south_of_house",
   "name": "South of House",
-  "description": "You are facing the south side of a white house. There is no door here, and all the windows are boarded.",
+  "description": "You are facing the south side of the house. There is no door here, and the boarded windows offer no explanation. The structure feels maintained just enough to remain standing, as if collapse would be inconvenient paperwork.",
   "interactables": [
     "boarded_windows",
-    "white_house"
+    "house_exterior"
   ],
   "npcs": [],
   "exits": {

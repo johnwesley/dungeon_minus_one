@@ -1,17 +1,17 @@
 {
   "id": "start",
-  "name": "West of House",
-  "description": "You are standing in an open field west of a dilapidated red house that looks like it has survived several regrettable decisions and learned nothing from them. The paint peels in long strips, revealing older, angrier layers beneath. The front door is boarded shut with uneven planks, as if the house itself requested boundaries. The grass around it is suspiciously well-kept, which only makes the structure seem more judgmental. A small mailbox nearby regards you with quiet disappointment, as though it had higher hopes for who would eventually show up.",
+  "name": "Deferred Intake Zone",
+  "description": "You are standing in a broad, neglected approach area that looks like it once expected visitors and never got around to telling them to stop coming. The ground is uneven but maintained just enough to suggest someone gave up halfway through caring. Ahead sits a modest house, aggressively unremarkable, as if designed to avoid drawing attention and succeeded far too well. A mailbox nearby waits with the kind of patience that implies paperwork.",
   "interactables": [
     {
       "id": "mailbox",
       "name": "mailbox",
-      "description": "It is a small mailbox."
+      "description": "It is a small mailbox. It looks newer than the surrounding area, which raises questions no one is prepared to answer."
     },
     {
       "id": "leaflet",
       "name": "leaflet",
-      "description": "**WELCOME TO DUNGEON-1**\n\n*CONGRATULATIONS. You are now a participant in a text-based treasure hunt through the ruins of a collapsed underground empire. Your goal: collect treasures, deposit them in the trophy case inside the house, and try not to die in ways that are embarrassing to describe.*\n\n*There is no help line. There is no hint system. There is only you, the parser, and whatever terrible decisions you make next.*\n\n*Good luck. You'll need it.*"
+      "description": "**WELCOME TO DUNGEON -1**\n\n*You are now participating in a legacy recovery exercise.*\n\n*Objective: Locate items of residual value and place them in the designated trophy case inside the house.*\n\n*Note: Several subsystems remain active despite the absence of oversight, documentation, or clear intent.*\n\n*There is no help line. There is no appeals process. The parser is final.*\n\n*Proceed at your own risk.*"
     },
     "front_door"
   ],

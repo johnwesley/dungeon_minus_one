@@ -1,7 +1,7 @@
 {
   "id": "grating_room",
   "name": "Grating Room",
-  "description": "You are in a small room near the maze. There are twisty passages in the immediate vicinity. Above you is a grating locked with a skull-and-crossbones lock.",
+  "description": "You are in a cramped stone room where several narrow passages converge without agreement. The walls are worn smooth in places, as if people once passed through here frequently and then reconsidered. Set into the ceiling above you is a heavy metal grating secured with a skull-and-crossbones lock, helpfully clarifying that whatever lies beyond was not meant to be accessed casually.",
   "interactables": [
     "grating",
     "lock"

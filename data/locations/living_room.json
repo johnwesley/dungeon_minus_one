@@ -1,7 +1,7 @@
 {
   "id": "living_room",
   "name": "Living Room",
-  "description": "You are in the living room. There is a doorway to the east, a wooden door with strange gothic lettering to the west, which appears to be nailed shut, a trophy case, and a large oriental rug in the center of the room. Above the trophy case hangs an elvish sword of great antiquity. A battery-powered brass lantern is on the trophy case.",
+  "description": "You are in a living room that looks staged for occupancy rather than actual living. A doorway leads east, while a wooden door to the west, carved with ornate gothic lettering, has been decisively nailed shut. A trophy case stands against one wall, empty but expectant, and a large oriental rug occupies the center of the room with unnecessary confidence. Above the trophy case hangs an elvish sword of considerable age, displayed more like a credential than a weapon. A battery-powered brass lantern rests on the case, apparently included as a courtesy.",
   "interactables": [
     "trophy_case",
     "elvish_sword",

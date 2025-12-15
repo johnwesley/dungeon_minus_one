@@ -1,7 +1,7 @@
 {
   "id": "up_a_tree",
   "name": "Up a Tree",
-  "description": "You are about 10 feet above the ground nestled among some large branches. The nearest branch above you is above your reach. Beside you on the branch is a small bird's nest. In the bird's nest is a large egg encrusted with precious jewels, apparently scavenged by a childless songbird. The egg is covered with fine gold inlay, and ornamented in lapis lazuli and mother-of-pearl. Unlike most eggs, this one is hinged and closed with a delicate looking clasp. The egg appears extremely fragile.",
+  "description": "You are about ten feet above the ground, balanced among thick branches that creak under the assumption you know what you’re doing. The branch above you is just out of reach, which feels deliberate. Nearby sits a bird’s nest containing a large, jeweled egg that looks wildly out of place in a forest canopy. The egg is hinged, delicately clasped, and constructed with far more care than any reasonable bird would bother with. It appears extremely fragile.",
   "interactables": [
     "birds_nest",
     "jeweled_egg",

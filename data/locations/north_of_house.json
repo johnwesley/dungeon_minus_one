@@ -1,10 +1,10 @@
 {
   "id": "north_of_house",
   "name": "North of House",
-  "description": "You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.",
+  "description": "You are facing the north side of the house. There is no door here, and the windows are boarded with the kind of efficiency that suggests policy rather than panic. The siding is intact but tired. A narrow path leads north into the trees, apparently unconcerned with whether it is still relevant.",
   "interactables": [
     "boarded_windows",
-    "white_house",
+    "house_exterior",
     "narrow_path"
   ],
   "npcs": [],

@@ -1,11 +1,11 @@
 {
   "id": "behind_house",
   "name": "Behind House",
-  "description": "You are behind the white house. A path leads into the forest to the east. In one corner of the house there is a small window which is slightly ajar.",
+  "description": "You are behind the house. A narrow path runs east into the forest, apparently confident in its purpose. Near one corner of the building, a small window sits slightly ajar, as if someone once needed access and never followed up.",
   "interactables": [
     "small_window",
     "path",
-    "white_house"
+    "house_exterior"
   ],
   "npcs": [],
   "exits": {

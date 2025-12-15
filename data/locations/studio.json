@@ -1,7 +1,7 @@
 {
   "id": "studio",
   "name": "Studio",
-  "description": "This appears to have been an artist's studio. The walls and floors are splattered with paints of 69 different colors. Strangely enough, nothing of value is hanging here. At the south end of the room is an open door, also covered with paint. A dark and narrow chimney leads up from a fireplace; although you might be able to get up it, it seems unlikely you could get back down.",
+  "description": "This room appears to have once been used as a workspace for creative production. The walls and floor are splattered with layers of dried paint in more colors than seem strictly necessary, suggesting sustained effort without a clear stopping point. Nothing of obvious value remains on display. At the south end of the room, an open door stands coated in paint like everything else. A narrow, soot-darkened chimney rises from a fireplace; while it may be possible to climb, the route looks poorly planned for return.",
   "interactables": [
     "paper",
     "fireplace",
