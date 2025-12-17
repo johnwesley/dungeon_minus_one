@@ -14,6 +14,7 @@ It is not the shortest route. It is the one that touches everything.
   - Troll: `throw lunch at troll` (incapacitates her)
   - Cyclops: `attack cyclops with elvish sword`
   - Thief: `attack thief with elvish sword`
+  - Bat: `tell bat you’re removing the figurine for mitigation` (do NOT use garlic)
   - Spirits at Hades: complete the bell/candle/book ritual
 
 ## Treasure Checklist (13/13)
@@ -247,14 +248,15 @@ up
 ### 11) Mine Loop (Jade Figurine + Bracelet + Every Mine Location) + Slide Back Home
 
 ```text
-north
-north
-east
-west
-north
-take jade figurine
-east
-north
+	north
+	north
+	east
+	west
+	north
+	tell bat you're removing the jade figurine for mitigation
+	take jade figurine
+	east
+	north
 down
 take sapphire bracelet
 east
