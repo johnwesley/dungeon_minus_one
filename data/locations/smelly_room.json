@@ -1,16 +1,11 @@
 {
-  "id": "slide_room",
-  "name": "Slide Room",
-  "description": "This small chamber appears to have once been part of a coal mining operation. Etched into the south wall are the words 'Granite Wall', recorded with the confidence of someone closing an issue rather than solving it. A long passage extends to the east, while a steep metal slide twists downward, offering a one-way solution to vertical movement. A small opening to the north provides an alternative route, less efficient but easier to reconsider.",
-  "interactables": [
-    "metal_slide",
-    "granite_wall",
-    "etching"
-  ],
+  "id": "smelly_room",
+  "name": "Smelly Room",
+  "description": "You are in a small room. The air here is stale and carries a faint, unpleasant odor. To the south, the passage widens towards a larger shaft, while a narrow opening leads downward into what looks like a gas-filled chamber.",
+  "interactables": [],
   "npcs": [],
   "exits": {
-    "east": "cold_passage",
-    "north": "mine_entrance",
-    "down": "cellar"
+    "down": "gas_room",
+    "south": "shaft_room"
   }
 }
