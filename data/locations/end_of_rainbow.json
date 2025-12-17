@@ -1,7 +1,7 @@
 {
   "id": "end_of_rainbow",
   "name": "End of Rainbow",
-  "description": "You are on a small, rocky beach on the continuation of the Frigid River past the Falls. The beach is narrow due to the presence of the White Cliffs. The river canyon opens here and sunlight shines in from above. A rainbow crosses over the falls to the east and a narrow path continues to the southwest. A shimmering pot of gold appears at the end of the rainbow.",
+  "description": "You are on a narrow, rocky strip of ground where the river continues beyond the spillway. The canyon walls press in close, limiting both space and ambition, while sunlight reaches down just enough to suggest this area was never meant to be enclosed. Overhead, a persistent band of refracted light spans the drop to the east. At its terminus sits a conspicuously placed pot of gold, shimmering with the confidence of an asset that passed inspection.",
   "interactables": [
     "rainbow",
     "pot_of_gold",

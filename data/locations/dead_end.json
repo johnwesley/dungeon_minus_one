@@ -1,7 +1,7 @@
 {
   "id": "dead_end",
   "name": "Dead End",
-  "description": "You have come to a dead end in the mine. There is a small pile of coal here.",
+  "description": "You have reached the end of a narrow mining tunnel where excavation stopped without ceremony. The rock face ahead shows signs of work that was abandoned rather than completed. At your feet is a small pile of coal, extracted, gathered, and then left behind, apparently not worth carrying any farther.",
   "interactables": [
     "coal_pile"
   ],

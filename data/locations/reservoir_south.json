@@ -1,7 +1,7 @@
 {
   "id": "reservoir_south",
   "name": "Reservoir South",
-  "description": "You are in a long room on the south edge of a large reservoir basin. If the dam is doing its job, it's a deep lake; if it isn't, it's a mudflat with delusions of grandeur. There is a path along the stream to the east or west, a steep pathway climbing southwest along the edge of a chasm, and a path leading into a canyon to the southeast.",
+  "description": "You are standing along the southern edge of a broad reservoir basin whose state depends entirely on decisions made upstream. If the dam is functioning as intended, this is a deep, controlled body of water. If not, it is an exposed mudflat still arranged as though water were expected to return. A path follows the stream east and west, while a steep track climbs southwest along the rim of a chasm. To the southeast, the terrain funnels into a canyon, carrying whatever remains onward.",
   "interactables": [
     "lake",
     "stream"

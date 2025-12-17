@@ -1,7 +1,7 @@
 {
   "id": "loud_room",
   "name": "Loud Room",
-  "description": "This is a large room with a ceiling which cannot be detected from the ground. There is a narrow passage from east to west and a stone stairway leading upward. The room is deafeningly loud with an undetermined rushing sound. The sound seems to reverberate from all of the walls, making it difficult even to think. On the ground is a large platinum bar.",
+  "description": "This is a vast chamber whose ceiling is lost to distance and noise. A narrow passage runs east to west, and a stone stairway leads upward, both partially swallowed by a relentless rushing sound that fills the space. The noise reverberates from every surface, making concentration difficult and conversation pointless. On the floor lies a massive platinum bar, resting in plain view as though its presence has long since been accepted.",
   "interactables": [
     "platinum_bar",
     "stairway"

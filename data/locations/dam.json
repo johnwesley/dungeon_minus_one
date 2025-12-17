@@ -1,7 +1,7 @@
 {
   "id": "dam",
   "name": "Dam",
-  "description": "You are standing on the top of Flood Control Dam #3, which was quite a tourist attraction in times far distant. There are paths to the north, south, and west, and a scramble down. Behind the dam lies a wide reservoir basin. A control panel sits here with a large metal bolt mounted on it, and directly above the bolt is a small green plastic bubble, as if the structure expects you to care about levels and levers.",
+  "description": "You are standing on top of Flood Control Dam #3, a broad concrete span built to inspire confidence through mass alone. Once a destination, it now functions without commentary or ceremony. Paths extend north, south, and west, while a rough scramble leads down the face of the structure. Behind the dam lies a wide reservoir basin, its surface held in place by decisions made elsewhere. Nearby, a control panel supports a large metal bolt, with a small green plastic bubble mounted above it, quietly suggesting that someone once believed monitoring mattered.",
   "interactables": [
     "control_panel",
     "bolt",

@@ -1,7 +1,7 @@
 {
   "id": "cold_passage",
   "name": "Cold Passage",
-  "description": "This is a cold and damp corridor where a long east-west passageway turns into a southward path.",
+  "description": "This corridor is cold, damp, and long enough to feel intentional. The stone walls weep steadily, making the floor slick without quite admitting fault. The passage runs east to west before bending south, as if the original plan lost confidence partway through. The cold settles in and stays, apparently on purpose.",
   "interactables": [],
   "npcs": [],
   "exits": {

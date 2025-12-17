@@ -1,7 +1,7 @@
 {
   "id": "maze_entrance",
   "name": "Maze (Dusty Crossroads)",
-  "description": "This is part of a maze of twisty little passages, all alike. The floor here is covered with a thick layer of dust, and you can see footprints leading in several directions.",
+  "description": "You stand at a junction within a maze of narrow stone passages, each corridor indistinguishable from the next. A thick layer of dust covers the floor, interrupted by footprints that head off in several directions without any clear preference. The layout suggests choice, though the dust implies that none of them led anywhere useful.",
   "interactables": [
     "dust",
     "footprints"

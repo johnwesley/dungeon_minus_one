@@ -1,11 +1,5 @@
 {
   "id": "victory",
-  "name": "The Treasure Vault (Victory)",
-  "description": "You stand in a secret vault beneath the trophy case, now overflowing with the lost treasures of the Great Underground Empire. The spirits of the Flatheads seem to applaud (or perhaps mock) your greed. You have conquered the dungeon, solved its riddles, and survived its traps. You are the Master Adventurer. The game is over. Thank you for playing!",
-  "interactables": [
-    "treasures",
-    "trophy_case"
-  ],
-  "npcs": [],
-  "exits": {}
+  "name": "The Treasure Vault",
+  "description": "This is a low, overengineered chamber directly beneath the trophy case. The treasures are arranged with bureaucratic precision, less like a hoard and more like an inventory that has finally reconciled. A stone dais at the far end bears a sealed gold coffin, its surface etched with the same procedural hieroglyphics seen elsewhere.\n\nAs the last item settles into place above, something ancient and mechanical acknowledges the state change. There is no fanfare. No judgment. Somewhere deep in the structure, a process completes and does not restart.\n\nThe Eternal Administrator does not rise. The coffin remains sealed. Whatever duty bound this system together has been satisfied, and it no longer requires your participation."
 }

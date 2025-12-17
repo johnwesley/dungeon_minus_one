@@ -1,7 +1,7 @@
 {
   "id": "egyptian_room",
   "name": "Egyptian Room",
-  "description": "This is a room which looks like an Egyptian tomb. There is an ascending staircase to the west. The solid-gold coffin used for the burial of Ramses II is here.",
+  "description": "This chamber resembles an Egyptian tomb, though the carvings on the walls read less like prayers and more like instructions. An ascending staircase leads west. Dominating the room is a solid-gold coffin, elaborately worked and sealed, prepared for the burial of the Eternal Administrator. The hieroglyphics appear meticulously preserved, outlining duties, permissions, and prohibitions with ceremonial seriousness.",
   "interactables": [
     "gold_coffin",
     "staircase",

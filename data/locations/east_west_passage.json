@@ -1,7 +1,7 @@
 {
   "id": "east_west_passage",
   "name": "East-West Passage",
-  "description": "This is a narrow east-west passageway. There is a narrow stairway leading down at the north end of the room.",
+  "description": "This is a narrow east–west passage carved with efficiency rather than comfort. The walls are close enough to suggest this corridor was meant for transit, not hesitation. At the northern end, a narrow stairway descends into darkness, positioned like an optional feature no one expected to be optional.",
   "interactables": [
     "narrow_stairway"
   ],

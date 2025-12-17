@@ -1,7 +1,7 @@
 {
   "id": "machine_room",
   "name": "Machine Room",
-  "description": "This is a large, cold room whose sole exit is to the north. In one corner there is a machine which is reminiscent of a clothes dryer. On its face is a switch which is labelled 'START'. The switch does not appear to be manipulable by any human hand, unless the fingers are about 1/16 by 1/4 inch. On the front of the machine is a large lid, which is closed.",
+  "description": "This is a large, cold chamber dedicated entirely to a single machine. The device resembles an industrial dryer, scaled and sealed without regard for human interaction. On its face is a switch labeled 'START', recessed to a size incompatible with ordinary fingers. A heavy lid on the front is closed, concealing whatever process occurs inside. The room offers no explanation, only the assumption that the machine knows when to run.",
   "interactables": [
     "machine",
     "lid",

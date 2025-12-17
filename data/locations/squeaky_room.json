@@ -1,7 +1,7 @@
 {
   "id": "squeaky_room",
   "name": "Squeaky Room",
-  "description": "You are in a small room. Strange squeaky sounds may be heard coming from the passage at the north end. You may also escape to the east.",
+  "description": "This is a small, unremarkable chamber whose attention is drawn northward by intermittent squeaking sounds echoing from the passage ahead. The noise is irregular but persistent, suggesting ongoing activity rather than coincidence. An exit to the east offers a way back toward more familiar ground, allowing avoidance without clarification.",
   "interactables": [],
   "npcs": [],
   "exits": {

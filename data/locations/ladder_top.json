@@ -1,7 +1,7 @@
 {
   "id": "ladder_top",
   "name": "Ladder Top",
-  "description": "This is a very small room. In the corner is a rickety wooden ladder, leading downward. It might be safe to descend. There is also a staircase leading upward.",
+  "description": "This is a small, enclosed space that appears to exist solely to manage vertical movement. A rickety wooden ladder descends through an opening in the floor, offering a return path that inspires limited confidence. A staircase leads upward, constructed with more permanence, as though ascent was expected to be preferable.",
   "interactables": [
     "wooden_ladder",
     "staircase"

@@ -1,7 +1,7 @@
 {
   "id": "mine_entrance",
   "name": "Mine Entrance",
-  "description": "You are standing at the entrance of what might have been a coal mine. The shaft enters the west wall, and there is another exit on the south end of the room.",
+  "description": "You are standing at the entrance to what appears to have once been a coal mine. A rough shaft cuts into the western wall, its supports aged but functional enough to suggest use continued well past prudence. Another exit leads south, offering an alternative route that feels more like deferral than escape.",
   "interactables": [
     "shaft"
   ],

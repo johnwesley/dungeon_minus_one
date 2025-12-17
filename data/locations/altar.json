@@ -1,7 +1,7 @@
 {
   "id": "altar",
   "name": "Altar",
-  "description": "This is the south end of a large temple. In front of you is what appears to be an altar. In one corner is a small hole in the floor which leads into darkness. You probably could not get back up it. On the two ends of the altar are burning candles. On the altar is a large black book, open to page 569.",
+  "description": "You are at the southern end of a large stone chamber that was clearly built for formal use and has never been fully decommissioned. In front of you stands an altar, intact and still arranged for operation. In one corner, a small hole drops straight down into darkness, offering no realistic option for return. Two candles burn steadily at either end of the altar, and a large black book lies open on its surface, already turned to the relevant page.",
   "interactables": [
     "altar",
     {

@@ -1,7 +1,7 @@
 {
   "id": "atlantis_room",
-  "name": "Atlantis Room",
-  "description": "This is an ancient room, long under water. There is an exit to the south and a staircase leading up. On the shore lies Poseidon's own crystal trident.",
+  "name": "Submerged Operations Chamber",
+  "description": "This chamber shows clear signs of extended submersion, with mineral stains marking former waterlines along the walls. The space has only recently been made accessible, and it still feels like it expects to flood again. An exit leads south back toward the reservoir, while a staircase rises upward, dry but uninviting. Resting near the edge of the chamber is a crystal trident, placed with the confidence of an item that was never meant to be misplaced.",
   "interactables": [
     "crystal_trident",
     "staircase"

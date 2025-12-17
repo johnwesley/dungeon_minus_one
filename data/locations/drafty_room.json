@@ -1,7 +1,7 @@
 {
   "id": "drafty_room",
   "name": "Drafty Room",
-  "description": "This is a small drafty room in which is the bottom of a long shaft. To the south is a passageway and to the east a very narrow passage. In the shaft can be seen a heavy iron chain. At the end of the chain is a basket.",
+  "description": "This is a small, drafty chamber at the base of a long vertical shaft. Air moves through here with purpose, suggesting the shaft above was meant to connect more than just floors. To the south is a standard passageway; to the east, a narrow corridor that looks like an afterthought. A heavy iron chain hangs down the center of the shaft, terminating in a metal basket, positioned precisely where someone once expected items to arrive or depart.",
   "interactables": [
     "shaft",
     "basket",

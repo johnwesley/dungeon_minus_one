@@ -1,7 +1,7 @@
 {
   "id": "reservoir_north",
-  "name": "Reservoir North",
-  "description": "You are in a large cavernous room, the south of which was formerly a lake. However, with the water level lowered, there is merely a wide stream running through there. There is a slimy stairway leaving the room to the north. There is a hand-held air pump here.",
+  "name": "North Reservoir Access",
+  "description": "You are in a large cavernous chamber whose southern half was previously occupied by a managed body of water. With the level now lowered, only a broad stream remains, continuing its assigned route through the room. A slimy stairway ascends to the north, offering poor footing and no apology. Nearby rests a hand-held air pump, apparently left behind for reasons that were once documented.",
   "interactables": [
     "air_pump",
     "stairway",

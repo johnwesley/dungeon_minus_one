@@ -1,7 +1,7 @@
 {
   "id": "entrance_to_hades",
   "name": "Entrance to Hades",
-  "description": "You are outside a large gateway, on which is inscribed 'Abandon every hope all ye who enter here!' The gate is open; through it you can see a desolation, with a pile of mangled bodies in one corner. Thousands of voices, lamenting some hideous fate, can be heard.",
+  "description": "You stand before a massive gateway whose scale suggests permanence rather than drama. Carved into the stone above the opening is an inscription that reads, 'Abandon every hope all ye who enter here!', presented less as a warning than as a prerequisite. The gate stands open, revealing a bleak expanse beyond where bodies have accumulated in one corner, arranged by gravity and time. From within come the distant sounds of countless voices, not screaming, but lamenting with the exhausted consistency of a process that has been running far too long.",
   "interactables": [
     "gateway",
     {
@@ -15,8 +15,8 @@
   "npcs": [
     {
       "id": "spirits",
-      "name": "Evil Spirits",
-      "description": "The way through the gate is barred by evil spirits, who jeer at your attempts to pass.",
+      "name": "Incorporeal Maintainers",
+      "description": "The way through the gate is barred by incorporeal figures who jeer at your attempts to pass. Their voices overlap, repeating fragments of rules, checklists, and outdated procedures with practiced indifference. They do not appear hostile so much as certain that compliance is still required.",
       "behavior": "The Evil Spirits bar passage through the gate. They are incorporeal, bored, and utterly certain the rules still apply. They block the `south` exit unless they have been driven off.\n\nBLOCKING:\n- If the player tries to go `south` while `flags.spirits_banished` is not true, block the move. The spirits jeer and the gateway might as well be a wall.\n- Once `flags.spirits_banished = true`, the spirits no longer block passage.\n\nRITUAL (Bell / Book / Candle):\nThe spirits can be driven off by performing the ritual described in the black book.\n\nTrack progress with these flags:\n- `flags.hades_bell_rung`\n- `flags.hades_book_read`\n- `flags.hades_candles_lit`\n\nACTIONS:\n- If the player tries to `ring` the bell (\"ring bell\", \"ring brass bell\"):\n  - If they have `brass_bell` in inventory, set `flags.hades_bell_rung = true` via `update_game_state`.\n  - Otherwise, tell them there is no bell here worth ringing.\n- If the player tries to `read` the book (\"read book\", \"read black book\"):\n  - If they have `black_book` in inventory, set `flags.hades_book_read = true` via `update_game_state`.\n  - Otherwise, tell them they are missing the one piece of documentation that matters.\n- If the player tries to `light` the candles (\"light candles\", \"light candle\"):\n  - If they have `candles` in inventory, set `flags.hades_candles_lit = true` via `update_game_state`.\n  - Otherwise, tell them candlelight is not a philosophical concept.\n\nCOMPLETION:\n- If all three ritual flags are true, set `flags.spirits_banished = true` via `update_game_state` and describe the spirits recoiling and dissipating. From then on, the `south` exit is usable."
     }
   ],

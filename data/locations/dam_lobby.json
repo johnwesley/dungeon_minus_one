@@ -1,7 +1,7 @@
 {
   "id": "dam_lobby",
   "name": "Dam Lobby",
-  "description": "This room appears to have been the waiting room for groups touring the dam. There are open doorways here to the north and east marked 'Private', and there is a path leading south over the top of the dam. Some guidebooks entitled 'Flood Control Dam #3' are on the reception desk. There is a matchbook whose cover says 'Visit Beautiful FCD#3' here.",
+  "description": "This room appears to have served as a waiting area for organized groups before questions became inconvenient. A reception desk stands near the center, still stocked with guidebooks titled 'Flood Control Dam #3', arranged as if someone expected them to be read. Two open doorways to the north and east are marked 'Private', the signs left in place long after their authority stopped being enforced. A path leads south over the top of the dam, inviting visitors to proceed without supervision. On the desk lies a matchbook advertising 'Visit Beautiful FCD#3', its optimism intact.",
   "interactables": [
     "guidebooks",
     "matchbook",

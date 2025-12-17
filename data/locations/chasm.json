@@ -1,7 +1,7 @@
 {
   "id": "chasm",
   "name": "Chasm",
-  "description": "A chasm runs southwest to northeast and the path follows it. You are on the south side of the chasm, where a crack opens into a passage.",
+  "description": "A deep chasm cuts diagonally across the area from southwest to northeast, and the path has been routed alongside it rather than resolved. You are standing on the southern edge, where the ground stops making promises. A narrow crack in the rock opens into a passage, suggesting someone decided lateral access was preferable to addressing the gap directly. The chasm itself remains open, vast, and unconcerned.",
   "interactables": [
     "crack",
     "chasm"

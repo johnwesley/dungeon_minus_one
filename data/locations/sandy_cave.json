@@ -1,7 +1,7 @@
 {
   "id": "sandy_cave",
   "name": "Sandy Cave",
-  "description": "This is a sand-filled cave whose exit is to the southwest. The sand here is deep and loose, perfect for digging.",
+  "description": "This cave has been gradually filled with loose sand, obscuring whatever shape it once had. The sand is deep and unstable, settling underfoot as though the space is still in the process of being forgotten. An exit leads back to the southwest, where the accumulation thins. The conditions here make digging not just possible, but expected.",
   "interactables": [
     "sand",
     "scarab"

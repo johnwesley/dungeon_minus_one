@@ -1,7 +1,7 @@
 {
   "id": "torch_room",
   "name": "Torch Room",
-  "description": "This is a large room with a prominent doorway leading to a down staircase. Above you is a large dome. Up around the edge of the dome, twenty feet up, is a wooden railing. In the center of the room sits a white marble pedestal. A piece of rope descends from the railing above, ending some five feet above your head. Sitting on the pedestal is a flaming torch, made of ivory.",
+  "description": "This is a large chamber arranged with deliberate symmetry. A broad doorway leads down, suggesting progression by design rather than accident. Overhead, a domed ceiling rises well beyond reach, its perimeter lined with a wooden railing that implies supervision without presence. From that railing, a length of rope hangs down, stopping several feet short of usefulness. At the center of the room stands a white marble pedestal, and resting upon it is an ivory torch, already lit, as though illumination here was considered an approved exception.",
   "interactables": [
     "pedestal",
     "ivory_torch",

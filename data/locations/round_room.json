@@ -1,7 +1,7 @@
 {
   "id": "round_room",
   "name": "Round Room",
-  "description": "This is a circular stone room with passages in all directions. Several of them have unfortunately been blocked by cave-ins.",
+  "description": "You are in a circular stone chamber designed with symmetry rather than clarity. Passages radiate outward in several directions, though many have been partially blocked by cave-ins, reducing theoretical options to practical ones. The room’s shape suggests it was once meant to offer choice, but time and collapse have quietly narrowed those ambitions.",
   "interactables": [
     "stone_walls",
     "cave_ins"

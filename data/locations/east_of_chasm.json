@@ -1,7 +1,7 @@
 {
   "id": "east_of_chasm",
   "name": "East of Chasm",
-  "description": "You are on the east edge of a chasm, the bottom of which cannot be seen. A narrow passage goes north, and the path you are on continues to the east.",
+  "description": "You are standing on the eastern edge of a deep chasm whose bottom has either never been measured or was deliberately omitted from the records. The air rising from it is cool and indifferent. A narrow passage leads north, hugging the edge with more confidence than seems warranted, while the main path continues east as if choosing not to acknowledge the drop at all.",
   "interactables": [
     "chasm"
   ],

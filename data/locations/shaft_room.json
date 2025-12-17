@@ -1,7 +1,7 @@
 {
   "id": "shaft_room",
   "name": "Shaft Room",
-  "description": "This is a large room, in the middle of which is a small shaft descending through the floor into darkness below. To the west and the north are exits from this room. Constructed over the top of the shaft is a metal framework to which a heavy iron chain is attached. At the end of the chain is a basket.",
+  "description": "This is a large, utilitarian chamber organized around a narrow shaft that descends into darkness at its center. A metal framework has been constructed over the opening, supporting a heavy iron chain that lowers a basket into the space below. The apparatus appears designed for repeated use, implying a workflow rather than an accident. Exits lead west and north, routing traffic away from the shaft unless explicitly required.",
   "interactables": [
     "shaft",
     "basket",

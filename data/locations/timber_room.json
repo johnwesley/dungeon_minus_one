@@ -1,7 +1,7 @@
 {
   "id": "timber_room",
   "name": "Timber Room",
-  "description": "This is a long and narrow passage, which is cluttered with broken timbers. A wide passage comes from the east and turns at the west end of the room into a very narrow passageway. From the west comes a strong draft. There is a broken timber here.",
+  "description": "This is a long, narrow passage cluttered with splintered timbers that appear to have failed incrementally rather than all at once. The remains suggest supports that were stressed, patched, and eventually abandoned. A wider corridor enters from the east before narrowing sharply at the western end, where a steady draft pushes through the debris. Among the wreckage lies a single broken timber, no longer serving any purpose but still occupying space.",
   "interactables": [
     "broken_timber"
   ],

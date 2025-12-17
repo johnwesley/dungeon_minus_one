@@ -1,7 +1,7 @@
 {
   "id": "mirror_room",
   "name": "Mirror Room",
-  "description": "You are in a large square room with tall ceilings. On the south wall is an enormous mirror which fills the entire wall. There are exits on the other three sides of the room.",
+  "description": "You are in a large square chamber with a ceiling high enough to discourage inspection. The southern wall is entirely occupied by an enormous mirror, its surface polished to an impersonal clarity that reflects more than it explains. The remaining walls offer exits in three directions, arranged as if the room were designed to observe decisions rather than influence them.",
   "interactables": [
     "mirror"
   ],

@@ -1,7 +1,7 @@
 {
   "id": "maze_skeleton",
   "name": "Maze (Skeleton Alcove)",
-  "description": "This is one section of a maze of narrow stone passages, each helpfully indistinguishable from the last. The remains of a previous explorer lie here, arranged by time rather than intention. Nearby are the tools they carried: a rusty knife, a lantern that no longer serves a purpose, a skeleton key that arrived too late, and a leather bag heavy with coins. The maze appears unimpressed by all of it.",
+  "description": "This alcove breaks the monotony only by what remains here. The bones of a previous explorer lie where exhaustion or acceptance finally won. Nearby are the tools they carried: a rusty knife, a lantern that no longer serves a purpose, a skeleton key that arrived too late, and a leather bag heavy with coins. The maze has made no accommodation for any of it.",
   "interactables": [
     "skeleton",
     "rusty_knife",

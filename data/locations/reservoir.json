@@ -1,7 +1,7 @@
 {
   "id": "reservoir",
   "name": "Reservoir",
-  "description": "You are on what used to be a large lake, but which is now a large mud pile. There are shores to the north and south. Lying half buried in the mud is an old trunk, bulging with jewels.",
+  "description": "You are standing in what was once a substantial body of water and is now an expanse of drying mud. The basin retains the shape of a lake, faithfully preserving a design whose purpose has lapsed. Shores lie to the north and south, marking boundaries that no longer contain anything useful. Half-buried in the mud rests an old trunk swollen with jewels, apparently deposited here when the water receded and no one came back to check.",
   "interactables": [
     "trunk_of_jewels",
     "mud"

@@ -1,7 +1,7 @@
 {
   "id": "shore",
   "name": "Shore",
-  "description": "You are on the east shore of the river. The water here seems somewhat treacherous. A path travels from north to south here, the south end quickly turning around a sharp corner.",
+  "description": "You are on the eastern edge of the river where the water moves fast enough to discourage experimentation. The ground here is uneven and damp, shaped more by erosion than intention. A narrow path runs north to south, with the southern end bending sharply as if routed around something that was easier not to move.",
   "interactables": [
     "water",
     "path"

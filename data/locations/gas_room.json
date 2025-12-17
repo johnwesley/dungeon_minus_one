@@ -1,7 +1,7 @@
 {
   "id": "gas_room",
   "name": "Gas Room",
-  "description": "This is a small room which smells strongly of coal gas. There is a short climb up some stairs and a narrow tunnel leading east. There is a sapphire-encrusted bracelet here.",
+  "description": "This is a small enclosed chamber filled with the sharp, unmistakable smell of coal gas. The air here feels managed rather than safe, as though containment was prioritized over comfort. A short set of stairs leads upward, away from the worst of it, while a narrow tunnel runs east into darker workings. Lying exposed on the floor is a sapphire-encrusted bracelet, left behind in a place where lingering was clearly discouraged.",
   "interactables": [
     "sapphire_bracelet",
     "stairs"

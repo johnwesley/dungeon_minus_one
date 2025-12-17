@@ -1,7 +1,7 @@
 {
   "id": "sandy_beach",
   "name": "Sandy Beach",
-  "description": "You are on a large sandy beach on the east shore of the river, which is flowing quickly by. A path runs beside the river to the south here, and a passage is partially buried in sand to the northeast. There is a shovel here.",
+  "description": "You are standing on a wide sandy beach along the eastern bank of a fast-moving river. The sand here looks less natural than accumulated, deposited gradually by water that never asked where it should stop. A path follows the river south, worn smooth by repetition. To the northeast, a passage has been partially swallowed by drifting sand, its outline still visible enough to suggest someone expected to come back. A shovel lies nearby, positioned as if uncovering things was once considered a routine task.",
   "interactables": [
     "shovel",
     "sand",

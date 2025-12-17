@@ -1,7 +1,7 @@
 {
   "id": "rocky_ledge",
   "name": "Rocky Ledge",
-  "description": "You are on a ledge about halfway up the wall of the river canyon. You can see from here that the main flow from Aragain Falls twists along a passage which it is impossible for you to enter. Below you is the canyon bottom. Above you is more cliff, which appears climbable.",
+  "description": "You are standing on a narrow ledge roughly halfway up the canyon wall, positioned just well enough to make retreat inconvenient. From here you can see a stronger flow of water twisting through a sealed passage clearly not intended for foot traffic. Below lies the canyon floor, and above is more exposed rock that appears climbable, assuming enthusiasm outweighs caution. The ledge itself offers minimal reassurance.",
   "interactables": [
     "cliff",
     "ledge"

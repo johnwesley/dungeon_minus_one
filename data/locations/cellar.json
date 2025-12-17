@@ -1,7 +1,7 @@
 {
   "id": "cellar",
   "name": "Cellar",
-  "description": "You are in a dark and damp cellar with a narrow passageway leading north, and a crawlway to the south. On the west is the bottom of a steep metal ramp which is unclimbable. The trap door above you has crashed shut.",
+  "description": "You are in a dark, damp cellar that feels designed to collect mistakes. A narrow passage leads north, while a low crawlway disappears to the south, apparently for situations that have already gone badly. To the west, the base of a steep metal ramp rises out of reach, its surface slick and unapologetic. Above you, a trap door has slammed shut, sealing the space with the finality of a decision nobody plans to revisit.",
   "interactables": [
     "steep_ramp",
     "passageway",

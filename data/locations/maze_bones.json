@@ -1,7 +1,7 @@
 {
   "id": "maze_bones",
   "name": "Maze (Bone-Littered Passage)",
-  "description": "This is part of a maze of twisty little passages, all alike. The floor is littered with small bones, likely the remains of unfortunate creatures that lost their way.",
+  "description": "This passage is part of the same uniform maze, though the floor here is scattered with small bones. They appear to have accumulated gradually, the remains of creatures that followed the same rules you are now attempting to follow. The maze shows no sign of having noticed.",
   "interactables": [
     "bones"
   ],

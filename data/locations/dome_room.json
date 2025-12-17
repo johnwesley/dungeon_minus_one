@@ -1,7 +1,7 @@
 {
   "id": "dome_room",
   "name": "Dome Room",
-  "description": "You are at the periphery of a large dome, which forms the ceiling of another room below. Protecting you from a precipitous drop is a wooden railing which circles the dome.",
+  "description": "You are standing along the edge of a large domed chamber, looking down into a space that was clearly designed to be observed rather than occupied. A wooden railing runs the perimeter, offering just enough protection to discourage accidents without fully inspiring confidence. The dome above curves smoothly, its construction suggesting careful planning for a problem no longer explained. Somewhere below lies a lower chamber, separated from you by height, intention, and a lack of guardrails.",
   "interactables": [
     "wooden_railing",
     "dome",

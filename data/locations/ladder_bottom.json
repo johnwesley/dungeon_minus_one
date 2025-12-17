@@ -1,7 +1,7 @@
 {
   "id": "ladder_bottom",
   "name": "Ladder Bottom",
-  "description": "This is a rather wide room. On one side is the bottom of a narrow wooden ladder. To the west and the south are passages leaving the room.",
+  "description": "This is a wide, utilitarian chamber where several passages converge without ceremony. A narrow wooden ladder rises along one wall, clearly intended as a controlled way back up rather than an invitation. Passages lead west and south, branching off with no indication of priority or purpose, as though routing decisions were made elsewhere and simply terminated here.",
   "interactables": [
     "ladder"
   ],

@@ -1,7 +1,7 @@
 {
   "id": "bat_room",
   "name": "Bat Room",
-  "description": "You are in a small room which has doors only to the east and south. In the corner of the room on the ceiling is a large vampire bat who is obviously deranged and holding his nose. There is an exquisite jade figurine here.",
+  "description": "This is a small, stale room with exits only to the east and south. In the ceiling corner hangs a large vampire bat, visibly agitated and pinching her nose like the air itself is a personal insult. Beneath her, an exquisite jade figurine sits in the open, as if someone approved its placement without reviewing environmental impact. She is not sharing.",
   "interactables": [
     "jade_figurine"
   ],
@@ -9,7 +9,8 @@
     {
       "id": "bat",
       "name": "Vampire Bat",
-      "description": "A large vampire bat hangs from the ceiling in the corner of the room. It appears deranged and is holding its nose."
+      "description": "A large vampire bat hangs from the ceiling in the corner of the room. She looks overstimulated, furious, and lethally efficient, as if she has been living with other people’s mistakes for far too long.",
+      "behavior": "The Vampire Bat blocks access to the jade figurine. She is lethal, fast, and operating beyond tolerance due to intolerable air quality and sensory overload. She is not a folkloric vampire. She is an infrastructure victim who has been left to absorb the consequences of upstream decisions.\n\nBLOCKING:\n- Any attempt to take or approach the jade figurine while the Bat is unresolved results in immediate attack (player dies - call restart_game).\n\nGARLIC:\n- Garlic does NOT repel her. It reads as another loud mistake.\n- If the player waves, brandishes, throws, drops, or attempts to use garlic on the Bat in any way, she attacks instantly (player dies - call restart_game).\n\nPERSUASION PATHS (NON-COMBAT):\n1) RECLASSIFICATION / MITIGATION ARGUMENT (set flags.bat_persuaded = true)\n- If the player convincingly argues that the jade figurine is an unsecured high-value asset improperly placed under failing environmental conditions, and that removing it is mitigation rather than theft, she may relent.\n- On success, she allows access to the figurine while insisting the removal is 'for mitigation' and verbally 'on record'.\n\n2) PAPER TRAIL FANTASY / ESCALATION PERFORMANCE (set flags.bat_persuaded = true)\n- If the player credibly performs the act of creating a record (claiming they will file, report, escalate, or document the hazardous placement and conditions), she may accept the fiction.\n- One vague promise is insufficient. Specificity and commitment to the fiction are required.\n- On success, she allows access to the figurine while openly doubting the report will ever be filed.\n\nFAILURES:\n- Threats, flattery, mystical language, or vampire theatrics result in immediate lethal response (player dies - call restart_game).\n- Attempting persuasion without acknowledging environmental conditions results in interruption and death.\n\nCOMBAT:\n- The Bat is not meaningfully fightable. Any attack results in immediate lethal retaliation (player dies - call restart_game).\n\nRESOLUTION:\n- Once flags.bat_persuaded is true, she no longer blocks the jade figurine. She remains hostile and will still kill the player for prolonged provocation or nonsense, but she allows the asset removal to proceed.\n\nPOST-RESOLUTION:\n- After the figurine is taken, she warns the player not to linger and suggests that further exposure will reintroduce risk."
     }
   ],
   "exits": {

@@ -1,7 +1,7 @@
 {
   "id": "engravings_cave",
   "name": "Engravings Cave",
-  "description": "You have entered a low cave with passages leading northwest and east. There are old engravings on the walls here.",
+  "description": "You have entered a low cave where the walls have been deliberately carved rather than naturally worn. Passages lead northwest and east, cutting through the space without regard for the markings around them. The engravings on the walls depict figures, symbols, and sequences arranged with care, suggesting an attempt to record meaning or instruction long after the context for either had faded.",
   "interactables": [
     "engravings",
     "walls"

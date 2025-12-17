@@ -1,7 +1,7 @@
 {
   "id": "strange_passage",
   "name": "Strange Passage",
-  "description": "This is a long passage. To the west is one entrance. On the east there is an old wooden door, with a large opening in it about cyclops sized.",
+  "description": "This is a long, uneven passage that feels more like a connection than a destination. The western end opens back into the Cyclops’ domain, while to the east stands an old wooden door that has been extensively modified. A large, roughly cut opening has been added at eye level for something significantly larger than a person, suggesting the door was adapted to accommodate a requirement it was never designed to meet.",
   "interactables": [
     "wooden_door",
     "opening"

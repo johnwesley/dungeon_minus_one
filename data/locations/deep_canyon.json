@@ -1,7 +1,7 @@
 {
   "id": "deep_canyon",
   "name": "Deep Canyon",
-  "description": "You are on the south edge of a deep canyon. Passages lead off to the east, northwest and southwest. A stairway leads down. You can hear a loud roaring sound, like that of rushing water, from below.",
+  "description": "You are standing on the southern edge of a deep canyon carved with more determination than elegance. Paths lead off in several directions, skirting the rim as if unsure how close they should get. A stairway descends into shadow, toward the source of a constant roaring sound below. Whatever is moving down there has been doing so for a long time, and it does not sound optional.",
   "interactables": [
     "stairway",
     "canyon"

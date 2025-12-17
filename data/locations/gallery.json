@@ -1,7 +1,7 @@
 {
   "id": "gallery",
   "name": "Gallery",
-  "description": "This is an art gallery. Most of the paintings have been stolen by vandals with exceptional taste. The vandals left through either the north or west exits. Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.",
+  "description": "This room was clearly intended to function as an art gallery, though its current state suggests curation did not survive contact with reality. Most of the wall space is empty, the absence of paintings implying prior visitors made firm decisions about what mattered. The few remaining fixtures appear resigned to this outcome. On the far wall hangs a single painting of exceptional beauty, still present either by oversight or because no one could agree on its disposition.",
   "interactables": [
     "painting",
     "walls"
