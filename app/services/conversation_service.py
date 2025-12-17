@@ -9,6 +9,56 @@ from app.models.database import Conversation, Message
 from app.services.game_tools import GameToolHandlers
 
 
+ENDING_ASCII = "[ PROCESS COMPLETE ]\n[ NO FURTHER INPUT ]\n\n>"
+
+
+def _normalize_command(message: str) -> str:
+    return " ".join(message.strip().lower().split())
+
+
+def _is_restart_request(message: str) -> bool:
+    cmd = _normalize_command(message)
+    return cmd in {
+        "restart",
+        "[restart]",
+        "start over",
+        "start again",
+        "begin again",
+        "new game",
+    }
+
+
+def _is_vault_entry_command(message: str) -> bool:
+    cmd = _normalize_command(message)
+
+    if cmd in {"down", "d", "go down"}:
+        return True
+
+    if cmd in {
+        "enter panel",
+        "enter the panel",
+        "enter vault",
+        "enter the vault",
+        "enter stairs",
+        "enter the stairs",
+        "enter staircase",
+        "enter the staircase",
+        "down stairs",
+        "down the stairs",
+        "down staircase",
+        "down the staircase",
+        "downstairs",
+        "go down stairs",
+        "go down the stairs",
+        "go downstairs",
+        "go down staircase",
+        "go down the staircase",
+    }:
+        return True
+
+    return False
+
+
 class ConversationNotFoundError(Exception):
     """Raised when a conversation is not found."""
 
@@ -355,6 +405,108 @@ class ConversationService:
                 user_id=user_id,
                 title=self._generate_title(message),
             )
+
+        # App-enforced victory/game-over handling (hard stop).
+        # This guarantees deterministic output and prevents the LLM from mutating state post-victory.
+        assert self.game_repo is not None
+        state = await self.game_repo.get_state(conversation.id)
+
+        if state:
+            current_location = state.current_location or "start"
+            flags = state.flags or {}
+            game_over = bool(flags.get("game_over"))
+            vault_revealed = bool(flags.get("vault_revealed"))
+
+            if game_over:
+                if _is_restart_request(message):
+                    yield StreamEvent(type="delta", data={"content": ENDING_ASCII})
+                    yield StreamEvent(type="done", data={"message": {}})
+                    yield StreamEvent(type="restart", data={"conversation_id": conversation.id})
+                    return
+
+                yield StreamEvent(type="delta", data={"content": ENDING_ASCII})
+                yield StreamEvent(type="done", data={"message": {}})
+                return
+
+            if current_location == "living_room" and vault_revealed and _is_vault_entry_command(message):
+                user_msg = await self.message_repo.create(
+                    conversation_id=conversation.id,
+                    role="user",
+                    content=message,
+                )
+
+                yield StreamEvent(
+                    type="start",
+                    data={
+                        "conversation_id": conversation.id,
+                        "user_message_id": user_msg.id,
+                    },
+                )
+
+                new_flags = dict(flags)
+                new_flags["game_over"] = True
+                await self.game_repo.update_state(
+                    conversation.id,
+                    {"current_location": "victory", "flags": new_flags},
+                )
+
+                victory = await self.game_repo.get_location("victory")
+                victory_description = (victory or {}).get("description", "").rstrip()
+                full_content = f"{victory_description}\n\n{ENDING_ASCII}".lstrip()
+
+                assistant_msg = await self.message_repo.create(
+                    conversation_id=conversation.id,
+                    role="assistant",
+                    content=full_content,
+                )
+                await self.conversation_repo.touch(conversation.id)
+
+                yield StreamEvent(type="delta", data={"content": full_content})
+                yield StreamEvent(
+                    type="done",
+                    data={
+                        "message": {
+                            "id": assistant_msg.id,
+                            "role": assistant_msg.role,
+                            "content": assistant_msg.content,
+                            "created_at": assistant_msg.created_at.isoformat(),
+                        }
+                    },
+                )
+                return
+
+            if current_location == "victory":
+                new_flags = dict(flags)
+                new_flags["game_over"] = True
+                await self.game_repo.update_state(
+                    conversation.id,
+                    {"flags": new_flags},
+                )
+
+                victory = await self.game_repo.get_location("victory")
+                victory_description = (victory or {}).get("description", "").rstrip()
+                full_content = f"{victory_description}\n\n{ENDING_ASCII}".lstrip()
+
+                assistant_msg = await self.message_repo.create(
+                    conversation_id=conversation.id,
+                    role="assistant",
+                    content=full_content,
+                )
+                await self.conversation_repo.touch(conversation.id)
+
+                yield StreamEvent(type="delta", data={"content": full_content})
+                yield StreamEvent(
+                    type="done",
+                    data={
+                        "message": {
+                            "id": assistant_msg.id,
+                            "role": assistant_msg.role,
+                            "content": assistant_msg.content,
+                            "created_at": assistant_msg.created_at.isoformat(),
+                        }
+                    },
+                )
+                return
 
         # Handle Dev Commands (intercept before saving message or calling LLM)
         if message.startswith("/"):
