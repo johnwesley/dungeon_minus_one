@@ -11,7 +11,7 @@
     {
       "id": "leaflet",
       "name": "leaflet",
-      "description": "**WELCOME TO DUNGEON -1**\n\n*You are now participating in a legacy recovery exercise.*\n\n*Objective: Locate items of residual value and place them in the designated trophy case inside the house.*\n\n*Note: Several subsystems remain active despite the absence of oversight, documentation, or clear intent.*\n\n*There is no help line. There is no appeals process. The parser is final.*\n\n*Proceed at your own risk.*"
+      "description": "**WELCOME TO DUNGEON -1**\n\n*You are now participating in a legacy recovery exercise.*\n\n*Objective: Locate items of residual value and place them in the designated trophy case inside the house.*\n\n*Status: Multiple subsystems remain active despite the absence of oversight, documentation, or clear intent.*\n\n*There is no help line. There is no appeals process. The parser is final.*\n\n*Proceed accordingly.*"
     },
     "front_door"
   ],
