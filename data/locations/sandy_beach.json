@@ -4,8 +4,7 @@
   "description": "You are standing on a wide sandy beach along the eastern bank of a fast-moving river. The sand here looks less natural than accumulated, deposited gradually by water that never asked where it should stop. A path follows the river south, worn smooth by repetition. To the northeast, a passage has been partially swallowed by drifting sand, its outline still visible enough to suggest someone expected to come back. A shovel lies nearby, positioned as if uncovering things was once considered a routine task.",
   "interactables": [
     "shovel",
-    "sand",
-    "magic_boat"
+    "sand"
   ],
   "npcs": [],
   "exits": {
