@@ -22,10 +22,6 @@ class Settings(BaseSettings):
     # Development mode: bypass login when True
     dev_auth_bypass: bool = False
 
-    # Extended Thinking (Optional)
-    # Recommended: 2048-4096 for game logic. Set to 0 or None to disable.
-    thinking_budget_tokens: Optional[int] = None
-
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

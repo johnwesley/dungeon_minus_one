@@ -63,16 +63,7 @@ class AnthropicClient(LLMClient):
             api_key=api_key or settings.anthropic_api_key
         )
         self.model = model or settings.model_name
-        
-        # Configure thinking and max_tokens
-        self.thinking_budget = settings.thinking_budget_tokens
-        
-        if self.thinking_budget and self.thinking_budget > 0:
-            # If thinking is enabled, we need a higher max_tokens limit.
-            # We allow the budget + 8k for the actual response.
-            self.max_tokens = self.thinking_budget + 8192
-        else:
-            self.max_tokens = 4096
+        self.max_tokens = 4096
         
         # Load prompts and combine them
         narrator_prompt = load_prompt(NARRATOR_PROMPT)
@@ -97,21 +88,12 @@ class AnthropicClient(LLMClient):
         system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> str:
         """Send messages and return the complete response."""
-        params = {
-            "model": self.model,
-            "max_tokens": self.max_tokens,
-            "system": system_prompt or self.default_system_prompt,
-            "messages": messages,
-        }
-        
-        # Add thinking parameter if budget is set
-        if self.thinking_budget and self.thinking_budget > 0:
-            params["thinking"] = {
-                "type": "enabled",
-                "budget_tokens": self.thinking_budget
-            }
-
-        response = await self.client.messages.create(**params)
+        response = await self.client.messages.create(
+            model=self.model,
+            max_tokens=self.max_tokens,
+            system=system_prompt or self.default_system_prompt,
+            messages=messages,
+        )
         return response.content[0].text
 
     async def chat_stream(
@@ -120,20 +102,12 @@ class AnthropicClient(LLMClient):
         system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> AsyncIterator[str]:
         """Send messages and yield response chunks."""
-        params = {
-            "model": self.model,
-            "max_tokens": self.max_tokens,
-            "system": system_prompt or self.default_system_prompt,
-            "messages": messages,
-        }
-
-        if self.thinking_budget and self.thinking_budget > 0:
-            params["thinking"] = {
-                "type": "enabled",
-                "budget_tokens": self.thinking_budget
-            }
-
-        async with self.client.messages.stream(**params) as stream:
+        async with self.client.messages.stream(
+            model=self.model,
+            max_tokens=self.max_tokens,
+            system=system_prompt or self.default_system_prompt,
+            messages=messages,
+        ) as stream:
             async for text in stream.text_stream:
                 yield text
 
@@ -159,23 +133,12 @@ class AnthropicClient(LLMClient):
         # Make a mutable copy of messages for the tool loop
         working_messages = list(messages)
 
-        # Base params for all requests in the loop
-        base_params = {
-            "model": self.model,
-            "max_tokens": self.max_tokens,
-            "system": system_prompt or self.default_system_prompt,
-            "tools": GAME_TOOLS,
-        }
-        
-        if self.thinking_budget and self.thinking_budget > 0:
-            base_params["thinking"] = {
-                "type": "enabled",
-                "budget_tokens": self.thinking_budget
-            }
-
         # Initial request with tools
         response = await self.client.messages.create(
-            **base_params,
+            model=self.model,
+            max_tokens=self.max_tokens,
+            system=system_prompt or self.default_system_prompt,
+            tools=GAME_TOOLS,
             messages=working_messages,
         )
 
@@ -227,7 +190,10 @@ class AnthropicClient(LLMClient):
 
             # Continue conversation with tool results
             response = await self.client.messages.create(
-                **base_params,
+                model=self.model,
+                max_tokens=self.max_tokens,
+                system=system_prompt or self.default_system_prompt,
+                tools=GAME_TOOLS,
                 messages=working_messages,
             )
 
@@ -246,24 +212,14 @@ class AnthropicClient(LLMClient):
     ) -> AsyncIterator[dict[str, Any]]:
         """Send messages with tool use and yield streaming events."""
         working_messages = list(messages)
-        
-        base_params = {
-            "model": self.model,
-            "max_tokens": self.max_tokens,
-            "system": system_prompt or self.default_system_prompt,
-            "tools": GAME_TOOLS,
-        }
-
-        if self.thinking_budget and self.thinking_budget > 0:
-            base_params["thinking"] = {
-                "type": "enabled",
-                "budget_tokens": self.thinking_budget
-            }
 
         while True:
             async with self.client.messages.stream(
-                **base_params,
+                model=self.model,
+                max_tokens=self.max_tokens,
+                system=system_prompt or self.default_system_prompt,
                 messages=working_messages,
+                tools=GAME_TOOLS,
             ) as stream:
                 async for event in stream:
                     if event.type == "content_block_start":
@@ -275,8 +231,6 @@ class AnthropicClient(LLMClient):
                     elif event.type == "content_block_delta":
                         if event.delta.type == "text_delta":
                             yield {"type": "text", "content": event.delta.text}
-                        elif event.delta.type == "thinking_delta":
-                            yield {"type": "thinking", "content": event.delta.thinking}
 
             # Get the complete message from the stream accumulator
             final_message = await stream.get_final_message()

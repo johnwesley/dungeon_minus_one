@@ -578,13 +578,7 @@ class ConversationService:
                     chunk = event["content"]
                     full_content += chunk
                     yield StreamEvent(type="delta", data={"content": chunk})
-                
-                elif event["type"] == "thinking":
-                    # Filter out thinking events so they don't reach the frontend
-                    # Log them to console for debugging
-                    print(f"Thinking: {event['content']}", flush=True)
-                    continue
-                
+
                 elif event["type"] == "tool_start":
                     yield StreamEvent(
                         type="progress", 
