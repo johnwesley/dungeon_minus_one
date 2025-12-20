@@ -1,7 +1,26 @@
 from typing import AsyncIterator, Optional
 from dataclasses import dataclass
+import os
+import json
+import time
 
 from app.repositories.conversation_repository import ConversationRepository
+
+# Debug flag for state injection logging
+DEBUG_SERVICE = os.environ.get("DEBUG_SERVICE", "").lower() == "true"
+DEBUG_SERVICE_LOG_PATH = os.path.join(os.path.dirname(__file__), "../../.cursor/service_debug.log")
+
+
+def log_service_debug(data: dict):
+    """Write service debug data to log file as JSON line."""
+    if not DEBUG_SERVICE:
+        return
+    try:
+        os.makedirs(os.path.dirname(DEBUG_SERVICE_LOG_PATH), exist_ok=True)
+        with open(DEBUG_SERVICE_LOG_PATH, "a") as f:
+            f.write(json.dumps(data, default=str) + "\n")
+    except Exception:
+        pass
 from app.repositories.message_repository import MessageRepository
 from app.repositories.game_repository import GameRepository
 from app.clients.llm_client import LLMClient
@@ -411,6 +430,25 @@ class ConversationService:
         assert self.game_repo is not None
         state = await self.game_repo.get_state(conversation.id)
 
+        # Inject current game state into system prompt for context refreshment
+        state_summary = ""
+        if state:
+            location_name = state.current_location
+            # Fetch location details for richer context
+            loc_data = await self.game_repo.get_location(state.current_location)
+            exits = ", ".join(loc_data.get("exits", {}).keys()) if loc_data else "Unknown"
+            inventory_items = [i['name'] for i in (state.inventory or []) if isinstance(i, dict) and 'name' in i]
+            
+            state_summary = (
+                f"\n\nCURRENT GAME STATE (Source of Truth):\n"
+                f"- Location: {location_name}\n"
+                f"- Exits: {exits}\n"
+                f"- Inventory: {', '.join(inventory_items) if inventory_items else 'Empty'}\n"
+                f"\nREMINDER: You MUST call update_game_state when moving to a new location. "
+                f"Describing a room without updating the state causes desync. "
+                f"Always call get_game_state first, then update_game_state before describing the new location."
+            )
+
         if state:
             current_location = state.current_location or "start"
             flags = state.flags or {}
@@ -423,7 +461,7 @@ class ConversationService:
                     yield StreamEvent(type="done", data={"message": {}})
                     yield StreamEvent(type="restart", data={"conversation_id": conversation.id})
                     return
-
+                
                 yield StreamEvent(type="delta", data={"content": ENDING_ASCII})
                 yield StreamEvent(type="done", data={"message": {}})
                 return
@@ -534,11 +572,18 @@ class ConversationService:
 
         # Load history
         history = await self.message_repo.list_by_conversation(conversation.id)
+        
+        # SLIDING WINDOW: Keep only the last 20 messages to prevent context overflow
+        # This keeps the "fresh" context while relying on GameState for the source of truth.
+        WINDOW_SIZE = 20
+        if len(history) > WINDOW_SIZE:
+            history = history[-WINDOW_SIZE:]
+            
         llm_messages = [{"role": m.role, "content": m.content} for m in history]
 
         # Get tool handlers
         base_handlers = self.tool_handlers.get_handlers()
-
+        
         # Track if restart was triggered during this request
         restart_triggered = False
 
@@ -567,12 +612,53 @@ class ConversationService:
             wrapped_handlers[name] = wrapped_handler
 
         full_content = ""
+        tools_called = []  # Track tool calls for message history
 
         try:
+            # Inject dynamic state summary into system prompt (via client if supported, or prepended to messages?)
+            # The client supports a system_prompt argument. We'll use that to append our dynamic state.
+            # Note: We need to get the BASE system prompt first, then append.
+            # However, the client loads the base prompt internally.
+            # To avoid double-loading or overwriting, let's pass it explicitly here if the client allows overriding/appending.
+            # Our client implementation takes `system_prompt`. If we pass it, it REPLACES the default.
+            # So we must reconstruct the full prompt here if we want to add to it.
+            
+            # Better approach: The AnthropicClient loads the default prompt in __init__.
+            # We can create a method to "get_default_system_prompt" or just load it here too.
+            from prompts import load_prompt, NARRATOR_PROMPT
+            narrator_prompt = load_prompt(NARRATOR_PROMPT)
+            try:
+                premise_prompt = load_prompt("premise")
+                base_system_text = f"{narrator_prompt}\n\n## Game Premise\n{premise_prompt}"
+            except FileNotFoundError:
+                base_system_text = narrator_prompt
+                
+            final_system_prompt = f"{base_system_text}\n{state_summary}"
+
+            # Debug logging before LLM call
+            log_service_debug({
+                "event": "llm_call_start",
+                "timestamp": int(time.time() * 1000),
+                "conversation_id": conversation.id,
+                "message_count": len(llm_messages),
+                "state_summary": state_summary,
+                "messages_preview": [
+                    {"role": m["role"], "content": m["content"][:150] + "..." if len(m["content"]) > 150 else m["content"]}
+                    for m in llm_messages[-5:]  # Last 5 messages
+                ],
+            })
+
             # Consume the streaming event generator
             async for event in self.llm_client.chat_stream_with_tools(
                 messages=llm_messages,
                 tool_handlers=wrapped_handlers,
+                system_prompt=[
+                    {
+                        "type": "text", 
+                        "text": final_system_prompt,
+                        "cache_control": {"type": "ephemeral"}
+                    }
+                ]
             ):
                 if event["type"] == "text":
                     chunk = event["content"]
@@ -580,8 +666,9 @@ class ConversationService:
                     yield StreamEvent(type="delta", data={"content": chunk})
 
                 elif event["type"] == "tool_start":
+                    tools_called.append(event["tool"])
                     yield StreamEvent(
-                        type="progress", 
+                        type="progress",
                         data={"step": "using_tool", "tool": event["tool"]}
                     )
                 
@@ -597,6 +684,14 @@ class ConversationService:
                 data={"error": str(e), "code": "LLM_ERROR"},
             )
             return
+
+        # Append tool call summary to message content for future context
+        # This ensures Claude sees evidence of its tool usage in conversation history
+        if tools_called:
+            # Deduplicate while preserving order
+            unique_tools = list(dict.fromkeys(tools_called))
+            tool_summary = f"\n\n---\n[Tools used: {', '.join(unique_tools)}]"
+            full_content += tool_summary
 
         # Save assistant response
         assistant_msg = await self.message_repo.create(

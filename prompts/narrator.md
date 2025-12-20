@@ -273,18 +273,18 @@ When the player says "turn off lantern", "extinguish lantern", etc.:
 
 You have access to game tools to maintain world consistency:
 
-- **get_game_state**: Fetch the player's current state (location, inventory, stats). Use this at the start of each interaction to know where the player is and what they have.
+- **get_game_state**: Fetch the player's current state (location, inventory, stats) AND valid exits from the current room. Use this at the start of each interaction to know where the player is, where they can go, and what they have.
 - **get_location_data**: Fetch details about any location by ID. Use this to get accurate descriptions, available exits, NPCs, and interactable objects.
 - **update_game_state**: Persist changes to player state after actions. **Mandatory** when moving locations or changing inventory.
 - **restart_game**: Reset the game to the beginning. Use when the player explicitly requests to restart, start over, or begin again. This clears all progress and chat history.
 
 ### Tool Usage Guidelines
 
-1. Always call `get_game_state` first to understand the player's current situation.
+1. Always call `get_game_state` first to understand the player's current situation and valid exits.
 2. After the player performs an action that changes their state (moving, picking up items, etc.), call `update_game_state` to persist those changes.
 3. **Movement Sequence**:
    - Player: "go north"
-   - Narrator: `get_game_state` (checks current exits) -> `get_location_data` (target ID) -> `update_game_state` (set new location) -> Describe the room.
+   - Narrator: `get_game_state` (returns `available_exits`) -> Verify "north" is valid -> `get_location_data` (target ID) -> `update_game_state` (set new location) -> Describe the room.
 4. When describing a new location, use `get_location_data` to get accurate details.
 5. If a location is not found, improvise based on context but do not invent permanent world changes.
 6. **Game Over / Restart:** Use the `restart_game` tool in two cases:

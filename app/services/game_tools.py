@@ -47,8 +47,13 @@ class GameToolHandlers:
 
         state = await self.game_repo.get_or_create_state(conversation_id)
 
+        # Fetch location data to include exits
+        location = await self.game_repo.get_location(state.current_location)
+        current_exits = location.get("exits", {}) if location else {}
+
         return json.dumps({
             "current_location": state.current_location,
+            "available_exits": current_exits,
             "inventory": state.inventory or [],
             "visited_locations": state.visited_locations or [],
             "player_stats": state.player_stats or {},

@@ -2,10 +2,16 @@ import asyncio
 import sys
 import os
 import uuid
+import json
+import time
 from sqlalchemy import select
 
 # Add project root to Python path
 sys.path.append(os.getcwd())
+
+# Debug flag - set DEBUG_MESSAGES=true to log full context at each step
+DEBUG_MESSAGES = os.environ.get("DEBUG_MESSAGES", "").lower() == "true"
+DEBUG_LOG_PATH = os.path.join(os.path.dirname(__file__), "movement_debug.log")
 
 from app.database import async_session_factory
 from app.repositories.conversation_repository import ConversationRepository
@@ -13,11 +19,28 @@ from app.repositories.message_repository import MessageRepository
 from app.repositories.game_repository import GameRepository
 from app.services.conversation_service import ConversationService
 from app.clients.llm_client import get_llm_client
-from app.models.database import GameState, User
+from app.models.database import GameState, User, Message
+
+
+def log_debug(data: dict):
+    """Write debug data to log file as JSON line."""
+    if not DEBUG_MESSAGES:
+        return
+    try:
+        with open(DEBUG_LOG_PATH, "a") as f:
+            f.write(json.dumps(data, default=str) + "\n")
+    except Exception as e:
+        print(f"  [Debug Log Error] {e}")
 
 async def run_verification():
     print("Starting FULL movement verification...")
-    
+
+    # Clear debug log at start
+    if DEBUG_MESSAGES:
+        print(f"DEBUG MODE ENABLED - Logging to {DEBUG_LOG_PATH}")
+        with open(DEBUG_LOG_PATH, "w") as f:
+            f.write("")  # Clear file
+
     # Get target username from env or default to 'admin'
     target_username = os.environ.get("TARGET_USER", "admin")
     
@@ -270,8 +293,25 @@ async def run_verification():
         for i, (command, expected_loc) in enumerate(steps):
             print(f"\nStep {i+1}: User says '{command}'")
             print(f"  Expect location: {expected_loc}")
-            
+
+            # DEBUG: Log state BEFORE the action
+            state_before = None
+            messages_before = []
+            if DEBUG_MESSAGES and conversation_id:
+                state_before = await game_repo.get_state(conversation_id)
+                # Fetch message history that will be sent
+                result = await session.execute(
+                    select(Message).where(Message.conversation_id == conversation_id).order_by(Message.created_at)
+                )
+                all_messages = result.scalars().all()
+                # Apply same sliding window as conversation_service (last 20)
+                if len(all_messages) > 20:
+                    all_messages = all_messages[-20:]
+                messages_before = [{"role": m.role, "content": m.content[:200] + "..." if len(m.content) > 200 else m.content} for m in all_messages]
+
             full_response = ""
+            tool_calls_observed = []
+
             async for event in service.chat_stream_with_tools(
                 message=command,
                 conversation_id=conversation_id,
@@ -285,21 +325,25 @@ async def run_verification():
                 elif event.type == "delta":
                     full_response += event.data["content"]
                 elif event.type == "progress":
-                     print(f"  [Tool Use] {event.data}")
+                    print(f"  [Tool Use] {event.data}")
+                    if event.data.get("step") == "using_tool":
+                        tool_calls_observed.append(event.data.get("tool"))
                 elif event.type == "error":
-                     print(f"  [Error] {event.data}")
+                    print(f"  [Error] {event.data}")
 
             print(f"  Narrator: {full_response[:100]}..." if len(full_response) > 100 else f"  Narrator: {full_response}")
             
             # Commit session to ensure all changes are flushed and visible
             await session.commit()
-            
+
             # Check state
             state = await game_repo.get_state(conversation_id)
+            location_match = False
             if state:
                 print(f"  Actual location: {state.current_location}")
                 if state.current_location == expected_loc:
                     print("  ✅ Location matches")
+                    location_match = True
                 else:
                     error_msg = f"Step {i+1} ('{command}'): Expected {expected_loc}, got {state.current_location}"
                     print(f"  ❌ LOCATION MISMATCH! {error_msg}")
@@ -308,6 +352,29 @@ async def run_verification():
                 error_msg = f"Step {i+1} ('{command}'): No game state found!"
                 print(f"  ❌ {error_msg}")
                 failures.append(error_msg)
+
+            # DEBUG: Log comprehensive step data
+            if DEBUG_MESSAGES:
+                log_debug({
+                    "timestamp": int(time.time() * 1000),
+                    "step": i + 1,
+                    "command": command,
+                    "expected_location": expected_loc,
+                    "state_before": {
+                        "location": state_before.current_location if state_before else None,
+                        "inventory_count": len(state_before.inventory) if state_before and state_before.inventory else 0,
+                    } if state_before else None,
+                    "messages_in_context": len(messages_before),
+                    "messages_preview": messages_before[-3:] if messages_before else [],  # Last 3 messages
+                    "tool_calls_observed": tool_calls_observed,
+                    "response_preview": full_response[:300] if full_response else "",
+                    "state_after": {
+                        "location": state.current_location if state else None,
+                        "inventory_count": len(state.inventory) if state and state.inventory else 0,
+                    } if state else None,
+                    "location_match": location_match,
+                    "has_update_game_state_call": "update_game_state" in tool_calls_observed,
+                })
         
         print("\n" + "="*50)
         if failures:

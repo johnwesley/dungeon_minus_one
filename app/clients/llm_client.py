@@ -3,10 +3,27 @@ from typing import AsyncIterator, Optional, Callable, Any
 import anthropic
 import json
 import time
+import os
 
 from app.config import get_settings
 from prompts import load_prompt, NARRATOR_PROMPT
 from app.clients.tools import GAME_TOOLS
+
+# Debug flag - set DEBUG_LLM=true to log detailed API payloads
+DEBUG_LLM = os.environ.get("DEBUG_LLM", "").lower() == "true"
+DEBUG_LLM_LOG_PATH = os.path.join(os.path.dirname(__file__), "../../.cursor/llm_debug.log")
+
+
+def log_llm_debug(data: dict):
+    """Write LLM debug data to log file as JSON line."""
+    if not DEBUG_LLM:
+        return
+    try:
+        os.makedirs(os.path.dirname(DEBUG_LLM_LOG_PATH), exist_ok=True)
+        with open(DEBUG_LLM_LOG_PATH, "a") as f:
+            f.write(json.dumps(data, default=str) + "\n")
+    except Exception:
+        pass
 
 
 class LLMClient(ABC):
@@ -216,26 +233,35 @@ class AnthropicClient(LLMClient):
         msg_count = len(messages)
         total_chars = sum(len(str(m.get("content", ""))) for m in messages)
         print(f"DEBUG: Context - Messages: {msg_count}, Approx Chars: {total_chars}")
-        
-        # region agent log
-        try:
-            with open("/Users/johnwesley/github/dungeon_minus_one/.cursor/debug.log", "a") as f:
-                f.write(json.dumps({
-                    "sessionId": "debug-session",
-                    "runId": "repro-attempt-1",
-                    "hypothesisId": "D", 
-                    "location": "app/clients/llm_client.py:chat_stream_with_tools",
-                    "message": "Context size",
-                    "data": {"msg_count": msg_count, "total_chars": total_chars},
-                    "timestamp": int(time.time() * 1000)
-                }) + "\n")
-        except Exception:
-            pass
-        # endregion
+
+        # Enhanced debug logging
+        log_llm_debug({
+            "event": "api_call_start",
+            "timestamp": int(time.time() * 1000),
+            "msg_count": msg_count,
+            "total_chars": total_chars,
+            "messages": [
+                {
+                    "role": m.get("role"),
+                    "content_preview": str(m.get("content", ""))[:200]
+                }
+                for m in messages
+            ],
+            "system_prompt_preview": str(system_prompt)[:500] if system_prompt else None,
+        })
 
         working_messages = list(messages)
+        iteration = 0
 
         while True:
+            iteration += 1
+            log_llm_debug({
+                "event": "stream_iteration_start",
+                "timestamp": int(time.time() * 1000),
+                "iteration": iteration,
+                "working_messages_count": len(working_messages),
+            })
+
             async with self.client.messages.stream(
                 model=self.model,
                 max_tokens=self.max_tokens,
@@ -246,21 +272,12 @@ class AnthropicClient(LLMClient):
                 async for event in stream:
                     if event.type == "content_block_start":
                         if event.content_block.type == "tool_use":
-                            # region agent log
-                            try:
-                                with open("/Users/johnwesley/github/dungeon_minus_one/.cursor/debug.log", "a") as f:
-                                    f.write(json.dumps({
-                                        "sessionId": "debug-session",
-                                        "runId": "repro-attempt-1",
-                                        "hypothesisId": "A",
-                                        "location": "app/clients/llm_client.py:stream",
-                                        "message": "Tool Use Detected",
-                                        "data": {"tool": event.content_block.name},
-                                        "timestamp": int(time.time() * 1000)
-                                    }) + "\n")
-                            except Exception:
-                                pass
-                            # endregion
+                            log_llm_debug({
+                                "event": "tool_use_detected",
+                                "timestamp": int(time.time() * 1000),
+                                "iteration": iteration,
+                                "tool": event.content_block.name,
+                            })
                             yield {
                                 "type": "tool_start",
                                 "tool": event.content_block.name
@@ -271,12 +288,26 @@ class AnthropicClient(LLMClient):
 
             # Get the complete message from the stream accumulator
             final_message = await stream.get_final_message()
-            
+
+            log_llm_debug({
+                "event": "stream_iteration_end",
+                "timestamp": int(time.time() * 1000),
+                "iteration": iteration,
+                "stop_reason": final_message.stop_reason,
+                "content_blocks": len(final_message.content),
+            })
+
             # Append assistant response to history
             working_messages.append({"role": final_message.role, "content": final_message.content})
 
             # Check if tools were used
             if final_message.stop_reason != "tool_use":
+                log_llm_debug({
+                    "event": "api_call_complete",
+                    "timestamp": int(time.time() * 1000),
+                    "iterations": iteration,
+                    "final_stop_reason": final_message.stop_reason,
+                })
                 break
 
             # Extract tool uses
@@ -291,16 +322,35 @@ class AnthropicClient(LLMClient):
                 tool_input = tool_use.input
                 tool_id = tool_use.id
 
+                log_llm_debug({
+                    "event": "tool_execution_start",
+                    "timestamp": int(time.time() * 1000),
+                    "iteration": iteration,
+                    "tool": tool_name,
+                    "input": tool_input,
+                })
+
                 if tool_name in tool_handlers:
                     try:
                         result = await tool_handlers[tool_name](tool_input)
+                        log_llm_debug({
+                            "event": "tool_execution_success",
+                            "timestamp": int(time.time() * 1000),
+                            "tool": tool_name,
+                            "result_preview": str(result)[:300],
+                        })
                     except Exception as e:
                         result = f"Error: {str(e)}"
+                        log_llm_debug({
+                            "event": "tool_execution_error",
+                            "timestamp": int(time.time() * 1000),
+                            "tool": tool_name,
+                            "error": str(e),
+                        })
                         tool_results.append({
                             "type": "tool_result",
                             "tool_use_id": tool_id,
                             "content": result,
-                            "is_error": True,
                             "is_error": True,
                         })
                         continue
