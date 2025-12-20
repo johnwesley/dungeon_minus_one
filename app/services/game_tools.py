@@ -63,6 +63,7 @@ class GameToolHandlers:
         Returns:
             JSON string with updated state or error
         """
+        print(f"DEBUG: update_game_state called with: {input_data}")
         conversation_id = input_data.get("conversation_id")
         changes = input_data.get("changes", {})
 
