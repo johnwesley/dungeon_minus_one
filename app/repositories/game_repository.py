@@ -71,7 +71,15 @@ class GameRepository:
 
         for field, value in changes.items():
             if field in allowed_fields:
-                setattr(state, field, value)
+                if field == "flags":
+                    # Merge flags instead of replacing to preserve existing flags
+                    # This prevents bugs like troll_incapacitated being wiped out
+                    # when lantern_lit is updated
+                    existing_flags = state.flags or {}
+                    existing_flags.update(value)
+                    setattr(state, field, existing_flags)
+                else:
+                    setattr(state, field, value)
 
         await self.session.flush()
         return state
