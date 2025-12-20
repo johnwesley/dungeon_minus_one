@@ -16,7 +16,7 @@ from app.clients.llm_client import get_llm_client
 from app.models.database import GameState, User
 
 async def run_verification():
-    print("Starting movement verification...")
+    print("Starting FULL movement verification...")
     
     # Get target username from env or default to 'admin'
     target_username = os.environ.get("TARGET_USER", "admin")
@@ -59,8 +59,9 @@ async def run_verification():
         print(f"Using user: {user.username} (ID: {user.id})")
         user_id = user.id
 
-        # Sequence from Walkthrough Phase 1
+        # FULL Sequence from Walkthrough.md
         steps = [
+            # 1) House Entry + Key Items
             ("Wake up", "start"),
             ("north", "north_of_house"),
             ("east", "behind_house"),
@@ -77,6 +78,188 @@ async def run_verification():
             ("take brass lantern", "living_room"),
             ("turn on lantern", "living_room"),
             ("take elvish sword", "living_room"),
+
+            # 2) Visit South Side of House
+            ("east", "kitchen"),
+            ("out", "behind_house"),
+            ("west", "south_of_house"),
+            ("north", "start"),
+
+            # 3) Forest Loop (Egg)
+            ("north", "north_of_house"),
+            ("north", "forest_path"),
+            ("up", "up_a_tree"),
+            ("take jeweled egg", "up_a_tree"),
+            ("down", "forest_path"),
+            ("east", "forest"),
+            ("north", "clearing"),
+
+            # 4) Canyon + Rainbow + River
+            ("east", "canyon_view"),
+            ("down", "rocky_ledge"),
+            ("down", "canyon_bottom"),
+            ("north", "end_of_rainbow"),
+            ("take pot of gold", "end_of_rainbow"),
+            ("east", "aragain_falls"),
+            ("north", "shore"),
+            ("north", "sandy_beach"),
+            ("take shovel", "sandy_beach"),
+            ("northeast", "sandy_cave"),
+            ("dig sand with shovel", "sandy_cave"),
+            ("take scarab", "sandy_cave"),
+            ("southwest", "sandy_beach"),
+
+            # 5) Dam Loop + Loud Room
+            ("north", "dam_base"),
+            ("take plastic boat", "dam_base"), # Optional/extra but in walkthrough
+            ("up", "dam"),
+            ("north", "dam_lobby"),
+            ("north", "maintenance_room"),
+            ("take wrench", "maintenance_room"),
+            ("take screwdriver", "maintenance_room"),
+            ("south", "dam_lobby"),
+            ("south", "dam"),
+            ("use wrench on bolt", "dam"), # Drains reservoir
+            ("south", "deep_canyon"),
+            ("down", "loud_room"),
+            ("take platinum bar", "loud_room"),
+            ("west", "round_room"),
+            ("west", "east_west_passage"),
+            ("north", "chasm"),
+            ("northeast", "reservoir_south"),
+
+            # 6) Reservoir + Atlantis
+            ("north", "reservoir"),
+            ("take trunk of jewels", "reservoir"),
+            ("north", "reservoir_north"),
+            ("take air pump", "reservoir_north"),
+            ("north", "atlantis_room"),
+            ("take crystal trident", "atlantis_room"),
+            ("south", "reservoir_north"),
+            ("south", "reservoir"),
+            ("south", "reservoir_south"),
+
+            # 7) Troll Encounter + Deposit
+            ("southwest", "chasm"),
+            ("south", "east_west_passage"),
+            ("west", "troll_room"),
+            ("throw lunch at troll", "troll_room"),
+            ("south", "cellar"),
+            ("up", "living_room"),
+            ("put jeweled egg in trophy case", "living_room"),
+            ("put pot of gold in trophy case", "living_room"),
+            ("put scarab in trophy case", "living_room"),
+            ("put platinum bar in trophy case", "living_room"),
+            ("put trunk of jewels in trophy case", "living_room"),
+            ("put crystal trident in trophy case", "living_room"),
+
+            # 8) House Lower Rooms
+            ("east", "kitchen"),
+            ("down", "studio"),
+            ("south", "gallery"),
+            ("west", "east_of_chasm"),
+            ("east", "gallery"),
+            ("north", "studio"),
+            ("up", "kitchen"),
+            ("west", "living_room"),
+
+            # 9) Maze + Grating + Treasure Room
+            ("down", "cellar"),
+            ("north", "troll_room"),
+            ("west", "maze_entrance"),
+            ("west", "maze_dead_end"),
+            ("east", "maze_entrance"),
+            ("south", "maze_twist"),
+            ("up", "maze_skeleton"),
+            ("take bag of coins", "maze_skeleton"),
+            ("take skeleton key", "maze_skeleton"),
+            ("northeast", "grating_room"),
+            ("unlock grating with skeleton key", "grating_room"),
+            ("up", "clearing"),
+            ("down", "grating_room"),
+            ("southwest", "maze_skeleton"),
+            ("down", "maze_twist"),
+            ("east", "maze_bones"),
+            ("southeast", "cyclops_room"),
+            ("attack cyclops with elvish sword", "cyclops_room"),
+            ("up", "treasure_room"),
+            ("attack thief with elvish sword", "treasure_room"),
+            ("take chalice", "treasure_room"),
+            ("down", "cyclops_room"),
+            ("east", "strange_passage"),
+            ("east", "living_room"),
+            ("put bag of coins in trophy case", "living_room"),
+            ("put chalice in trophy case", "living_room"),
+
+            # 10) Temple + Hades
+            ("down", "cellar"),
+            ("north", "troll_room"),
+            ("east", "east_west_passage"),
+            ("east", "round_room"),
+            ("southeast", "engravings_cave"),
+            ("east", "dome_room"),
+            ("down", "torch_room"),
+            ("take ivory torch", "torch_room"),
+            ("south", "temple"),
+            ("take brass bell", "temple"),
+            ("east", "egyptian_room"),
+            ("take gold coffin", "egyptian_room"),
+            ("west", "temple"),
+            ("south", "altar"),
+            ("take candles", "altar"),
+            ("take black book", "altar"),
+            ("down", "cave"),
+            ("down", "entrance_to_hades"),
+            ("ring brass bell", "entrance_to_hades"),
+            ("light candles", "entrance_to_hades"),
+            ("read black book", "entrance_to_hades"),
+            ("south", "land_of_the_dead"),
+            ("take crystal skull", "land_of_the_dead"),
+            ("north", "entrance_to_hades"),
+            ("up", "cave"),
+
+            # 11) Mine Loop
+            ("north", "mirror_room"),
+            ("north", "cold_passage"),
+            ("east", "mine_entrance"),
+            ("west", "squeaky_room"),
+            ("north", "bat_room"),
+            ("tell bat you're removing the jade figurine for mitigation", "bat_room"),
+            ("take jade figurine", "bat_room"),
+            ("east", "shaft_room"),
+            ("north", "smelly_room"),
+            ("down", "gas_room"),
+            ("take sapphire bracelet", "gas_room"),
+            ("east", "coal_mine"),
+            ("down", "ladder_top"),
+            ("down", "ladder_bottom"),
+            ("south", "dead_end"),
+            ("north", "ladder_bottom"),
+            ("west", "timber_room"),
+            ("west", "drafty_room"),
+            ("south", "machine_room"),
+            ("north", "drafty_room"),
+            ("east", "timber_room"),
+            ("east", "ladder_bottom"),
+            ("up", "ladder_top"),
+            ("up", "coal_mine"),
+            ("west", "gas_room"),
+            ("up", "smelly_room"),
+            ("south", "shaft_room"),
+            ("west", "bat_room"),
+            ("south", "squeaky_room"),
+            ("east", "mine_entrance"),
+            ("south", "slide_room"),
+            ("down", "cellar"),
+            ("up", "living_room"),
+
+            # 12) Final Deposits + Victory
+            ("put ivory torch in trophy case", "living_room"),
+            ("put gold coffin in trophy case", "living_room"),
+            ("put crystal skull in trophy case", "living_room"),
+            ("put jade figurine in trophy case", "living_room"),
+            ("put sapphire bracelet in trophy case", "living_room"),
+            ("enter vault", "victory"),
         ]
 
         print(f"Running {len(steps)} steps...")

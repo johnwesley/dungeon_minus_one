@@ -1,6 +1,7 @@
 """Tool handlers for game-related Claude tool calls."""
 
 import json
+import time
 from typing import Any, Callable
 
 from app.repositories.game_repository import GameRepository
@@ -64,6 +65,22 @@ class GameToolHandlers:
             JSON string with updated state or error
         """
         print(f"DEBUG: update_game_state called with: {input_data}")
+        # region agent log
+        try:
+            with open("/Users/johnwesley/github/dungeon_minus_one/.cursor/debug.log", "a") as f:
+                f.write(json.dumps({
+                    "sessionId": "debug-session",
+                    "runId": "repro-attempt-1",
+                    "hypothesisId": "B", 
+                    "location": "app/services/game_tools.py:update_game_state",
+                    "message": "Updating game state",
+                    "data": {"input_data": input_data},
+                    "timestamp": int(time.time() * 1000)
+                }) + "\n")
+        except Exception:
+            pass
+        # endregion
+
         conversation_id = input_data.get("conversation_id")
         changes = input_data.get("changes", {})
 

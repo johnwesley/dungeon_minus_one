@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import AsyncIterator, Optional, Callable, Any
 import anthropic
 import json
+import time
 
 from app.config import get_settings
 from prompts import load_prompt, NARRATOR_PROMPT
@@ -211,6 +212,27 @@ class AnthropicClient(LLMClient):
         system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> AsyncIterator[dict[str, Any]]:
         """Send messages with tool use and yield streaming events."""
+        # Calculate and log context size
+        msg_count = len(messages)
+        total_chars = sum(len(str(m.get("content", ""))) for m in messages)
+        print(f"DEBUG: Context - Messages: {msg_count}, Approx Chars: {total_chars}")
+        
+        # region agent log
+        try:
+            with open("/Users/johnwesley/github/dungeon_minus_one/.cursor/debug.log", "a") as f:
+                f.write(json.dumps({
+                    "sessionId": "debug-session",
+                    "runId": "repro-attempt-1",
+                    "hypothesisId": "D", 
+                    "location": "app/clients/llm_client.py:chat_stream_with_tools",
+                    "message": "Context size",
+                    "data": {"msg_count": msg_count, "total_chars": total_chars},
+                    "timestamp": int(time.time() * 1000)
+                }) + "\n")
+        except Exception:
+            pass
+        # endregion
+
         working_messages = list(messages)
 
         while True:
@@ -224,6 +246,21 @@ class AnthropicClient(LLMClient):
                 async for event in stream:
                     if event.type == "content_block_start":
                         if event.content_block.type == "tool_use":
+                            # region agent log
+                            try:
+                                with open("/Users/johnwesley/github/dungeon_minus_one/.cursor/debug.log", "a") as f:
+                                    f.write(json.dumps({
+                                        "sessionId": "debug-session",
+                                        "runId": "repro-attempt-1",
+                                        "hypothesisId": "A",
+                                        "location": "app/clients/llm_client.py:stream",
+                                        "message": "Tool Use Detected",
+                                        "data": {"tool": event.content_block.name},
+                                        "timestamp": int(time.time() * 1000)
+                                    }) + "\n")
+                            except Exception:
+                                pass
+                            # endregion
                             yield {
                                 "type": "tool_start",
                                 "tool": event.content_block.name
@@ -263,6 +300,7 @@ class AnthropicClient(LLMClient):
                             "type": "tool_result",
                             "tool_use_id": tool_id,
                             "content": result,
+                            "is_error": True,
                             "is_error": True,
                         })
                         continue
