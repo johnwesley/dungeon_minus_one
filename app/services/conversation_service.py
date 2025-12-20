@@ -430,6 +430,10 @@ class ConversationService:
         assert self.game_repo is not None
         state = await self.game_repo.get_state(conversation.id)
 
+        # Capture state BEFORE streaming for diff generation
+        location_before = state.current_location if state else None
+        inventory_before = set(i['id'] for i in (state.inventory or []) if isinstance(i, dict) and 'id' in i) if state else set()
+
         # Inject current game state into system prompt for context refreshment
         state_summary = ""
         if state:
@@ -685,10 +689,32 @@ class ConversationService:
             )
             return
 
-        # Append tool call summary to message content for future context
-        # This ensures Claude sees evidence of its tool usage in conversation history
-        if tools_called:
-            # Deduplicate while preserving order
+        # Generate state diff for message history
+        # This ensures Claude sees explicit state changes, not just tool names
+        state_after = await self.game_repo.get_state(conversation.id)
+        location_after = state_after.current_location if state_after else None
+        inventory_after = set(i['id'] for i in (state_after.inventory or []) if isinstance(i, dict) and 'id' in i) if state_after else set()
+
+        changes = []
+
+        # Location change
+        if location_before != location_after:
+            changes.append(f"{location_before} → {location_after}")
+
+        # Inventory changes
+        added = inventory_after - inventory_before
+        removed = inventory_before - inventory_after
+        if added:
+            changes.append(f"+{', '.join(sorted(added))}")
+        if removed:
+            changes.append(f"-{', '.join(sorted(removed))}")
+
+        # Append state diff or tool list to message
+        if changes:
+            state_diff = f"\n\n---\n[State: {' | '.join(changes)}]"
+            full_content += state_diff
+        elif tools_called:
+            # Fallback to tool list if no state changes detected
             unique_tools = list(dict.fromkeys(tools_called))
             tool_summary = f"\n\n---\n[Tools used: {', '.join(unique_tools)}]"
             full_content += tool_summary
