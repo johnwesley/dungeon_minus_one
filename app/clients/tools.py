@@ -34,7 +34,7 @@ GAME_TOOLS = [
     },
     {
         "name": "update_game_state",
-        "description": "Update the player's game state after they perform actions. Use this to persist changes like moving to a new location, picking up items, or updating stats.",
+        "description": "CRITICAL: Persist game state changes. You MUST call this tool whenever the player moves to a new location, picks up/drops items, or changes stats. Fetching location data does NOT update the player's location automatically - you must use this tool to save the move.",
         "input_schema": {
             "type": "object",
             "properties": {

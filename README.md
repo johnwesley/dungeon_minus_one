@@ -56,6 +56,7 @@ Run `make help` to see all available commands.
 | `make run` | Run local dev server |
 | `make reset` | Clear game state (keep locations) |
 | `make hard-reset` | Wipe DB and re-seed locations |
+| `make verify-movement` | Run automated test for movement logic |
 | `make invite` | Generate invite code (local) |
 | `make prod-up` | Start production containers |
 | `make prod-logs` | Tail production logs |

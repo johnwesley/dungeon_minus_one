@@ -48,6 +48,9 @@ sync-locations-prune:  ## Sync + prune static location fixtures (deletes missing
 sync-locations-check:  ## Check DB matches fixtures (no writes; expects exact match)
 	$(PYTHON) scripts/sync_locations.py --dry-run --prune
 
+verify-movement:  ## Verify narrator tool usage for movement
+	$(PYTHON) scripts/verify_movement.py
+
 invite:  ## Generate a new invite code
 	$(PYTHON) scripts/generate_invite.py
 
