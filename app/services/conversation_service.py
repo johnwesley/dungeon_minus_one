@@ -443,14 +443,21 @@ class ConversationService:
             exits = ", ".join(loc_data.get("exits", {}).keys()) if loc_data else "Unknown"
             inventory_items = [i['name'] for i in (state.inventory or []) if isinstance(i, dict) and 'name' in i]
             
+            # Format flags for display (only show NPC bypass flags and key state flags)
+            npc_bypass_flags = {k: v for k, v in (state.flags or {}).items()
+                               if any(kw in k for kw in ['troll', 'cyclops', 'thief', 'bat', 'spirits', 'lantern'])}
+            flags_display = ", ".join(f"{k}={v}" for k, v in npc_bypass_flags.items()) if npc_bypass_flags else "None"
+
             state_summary = (
                 f"\n\nCURRENT GAME STATE (Source of Truth):\n"
                 f"- Location: {location_name}\n"
                 f"- Exits: {exits}\n"
                 f"- Inventory: {', '.join(inventory_items) if inventory_items else 'Empty'}\n"
+                f"- Active Flags: {flags_display}\n"
                 f"\nREMINDER: You MUST call update_game_state when moving to a new location. "
                 f"Describing a room without updating the state causes desync. "
-                f"Always call get_game_state first, then update_game_state before describing the new location."
+                f"Always call get_game_state first, then update_game_state before describing the new location. "
+                f"IMPORTANT: Check Active Flags before applying NPC blocking behavior - if an NPC's bypass flag is set, they do not block."
             )
 
         if state:
