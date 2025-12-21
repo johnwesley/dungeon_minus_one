@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # Development mode: bypass login when True
     dev_auth_bypass: bool = False
 
+    # Skills configuration (prompt concatenation approach)
+    skills_enabled: bool = False  # Set to True to include skill files in system prompt
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

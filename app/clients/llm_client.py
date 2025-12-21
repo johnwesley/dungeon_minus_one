@@ -64,7 +64,7 @@ class LLMClient(ABC):
         tool_handlers: dict[str, Callable],
         system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> AsyncIterator[dict[str, Any]]:
-        """Send messages with tool use and yield streaming events."""
+        """Send messages with tool use support."""
         pass
 
 
@@ -228,7 +228,13 @@ class AnthropicClient(LLMClient):
         tool_handlers: dict[str, Callable],
         system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> AsyncIterator[dict[str, Any]]:
-        """Send messages with tool use and yield streaming events."""
+        """Send messages with tool use support.
+
+        Args:
+            messages: Conversation history
+            tool_handlers: Dict mapping tool names to async handler functions
+            system_prompt: Optional system prompt override
+        """
         # Calculate and log context size
         msg_count = len(messages)
         total_chars = sum(len(str(m.get("content", ""))) for m in messages)
@@ -253,6 +259,14 @@ class AnthropicClient(LLMClient):
         working_messages = list(messages)
         iteration = 0
 
+        # Build base request parameters
+        base_params = {
+            "model": self.model,
+            "max_tokens": self.max_tokens,
+            "system": system_prompt or self.default_system_prompt,
+            "tools": GAME_TOOLS,
+        }
+
         while True:
             iteration += 1
             log_llm_debug({
@@ -263,11 +277,8 @@ class AnthropicClient(LLMClient):
             })
 
             async with self.client.messages.stream(
-                model=self.model,
-                max_tokens=self.max_tokens,
-                system=system_prompt or self.default_system_prompt,
                 messages=working_messages,
-                tools=GAME_TOOLS,
+                **base_params,
             ) as stream:
                 async for event in stream:
                     if event.type == "content_block_start":

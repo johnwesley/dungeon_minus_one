@@ -26,6 +26,7 @@ from app.repositories.game_repository import GameRepository
 from app.clients.llm_client import LLMClient
 from app.models.database import Conversation, Message
 from app.services.game_tools import GameToolHandlers
+from app.config import get_settings
 
 
 ENDING_ASCII = "[ PROCESS COMPLETE ]\n[ NO FURTHER INPUT ]\n\n>"
@@ -686,14 +687,21 @@ class ConversationService:
             
             # Better approach: The AnthropicClient loads the default prompt in __init__.
             # We can create a method to "get_default_system_prompt" or just load it here too.
-            from prompts import load_prompt, NARRATOR_PROMPT
+            from prompts import load_prompt, load_all_skills, NARRATOR_PROMPT
             narrator_prompt = load_prompt(NARRATOR_PROMPT)
             try:
                 premise_prompt = load_prompt("premise")
                 base_system_text = f"{narrator_prompt}\n\n## Game Premise\n{premise_prompt}"
             except FileNotFoundError:
                 base_system_text = narrator_prompt
-                
+
+            # Load skills if enabled (prompt concatenation approach)
+            settings = get_settings()
+            if settings.skills_enabled:
+                skills_content = load_all_skills()
+                if skills_content:
+                    base_system_text = f"{base_system_text}\n\n## Game Mechanics (Skills)\n\n{skills_content}"
+
             final_system_prompt = f"{base_system_text}\n{state_summary}"
 
             # Debug logging before LLM call
@@ -703,6 +711,7 @@ class ConversationService:
                 "conversation_id": conversation.id,
                 "message_count": len(llm_messages),
                 "state_summary": state_summary,
+                "skills_enabled": settings.skills_enabled,
                 "messages_preview": [
                     {"role": m["role"], "content": m["content"][:150] + "..." if len(m["content"]) > 150 else m["content"]}
                     for m in llm_messages[-5:]  # Last 5 messages
@@ -715,11 +724,11 @@ class ConversationService:
                 tool_handlers=wrapped_handlers,
                 system_prompt=[
                     {
-                        "type": "text", 
+                        "type": "text",
                         "text": final_system_prompt,
                         "cache_control": {"type": "ephemeral"}
                     }
-                ]
+                ],
             ):
                 if event["type"] == "text":
                     chunk = event["content"]
