@@ -24,6 +24,7 @@ class GameStateResponse(BaseModel):
     current_location: str
     inventory: list[Union[str, dict[str, Any]]]  # All items including treasures (strings or objects)
     trophy_case: list[str]         # Deposited treasures from flags.trophy_case
+    treasures_found: list[str]     # Backwards-compatible alias for older frontend builds
     total_treasures: int = TOTAL_TREASURES
 
 
@@ -50,6 +51,7 @@ async def get_game_state(
             current_location="Unknown",
             inventory=[],
             trophy_case=[],
+            treasures_found=[],
         )
 
     # Get full inventory (including treasures player is carrying)
@@ -63,4 +65,5 @@ async def get_game_state(
         current_location=state.current_location or "Unknown",
         inventory=inventory,
         trophy_case=trophy_case,
+        treasures_found=trophy_case,
     )

@@ -29,6 +29,21 @@ from app.services.game_tools import GameToolHandlers
 
 
 ENDING_ASCII = "[ PROCESS COMPLETE ]\n[ NO FURTHER INPUT ]\n\n>"
+TREASURE_IDS = {
+    "platinum_bar",
+    "gold_coffin",
+    "ivory_torch",
+    "crystal_trident",
+    "trunk_of_jewels",
+    "bag_of_coins",
+    "pot_of_gold",
+    "jade_figurine",
+    "chalice",
+    "jeweled_egg",
+    "sapphire_bracelet",
+    "crystal_skull",
+    "scarab",
+}
 
 
 def _normalize_command(message: str) -> str:
@@ -76,6 +91,27 @@ def _is_vault_entry_command(message: str) -> bool:
         return True
 
     return False
+
+
+def _mentions_trophy_case(cmd: str, location: Optional[str]) -> bool:
+    if "trophy case" in cmd or "trophycase" in cmd or "trophy-case" in cmd:
+        return True
+    # Treat "case" as the trophy case when in the living room.
+    if location == "living_room" and "case" in cmd:
+        return True
+    return False
+
+
+def _is_trophy_case_removal(message: str, location: Optional[str]) -> bool:
+    cmd = _normalize_command(message)
+    if not _mentions_trophy_case(cmd, location):
+        return False
+    removal_verbs = ("take", "remove", "get", "pull", "withdraw")
+    return any(cmd.startswith(v + " ") or f" {v} " in cmd for v in removal_verbs)
+
+
+def _has_all_treasures(trophy_case: set[str]) -> bool:
+    return TREASURE_IDS.issubset(trophy_case)
 
 
 class ConversationNotFoundError(Exception):
@@ -440,11 +476,22 @@ class ConversationService:
             location_name = state.current_location
             # Fetch location details for richer context
             loc_data = await self.game_repo.get_location(state.current_location)
-            exits = ", ".join(loc_data.get("exits", {}).keys()) if loc_data else "Unknown"
+            exits_map = loc_data.get("exits", {}) if loc_data else {}
+            exits = ", ".join(exits_map.keys()) if exits_map else "Unknown"
             inventory_items = [i['name'] for i in (state.inventory or []) if isinstance(i, dict) and 'name' in i]
+            flags = state.flags or {}
+            trophy_case_items = flags.get("trophy_case", [])
+            trophy_case_display = ", ".join(trophy_case_items) if trophy_case_items else "Empty"
+            dropped_items_map = flags.get("dropped_items", {})
+            dropped_here = dropped_items_map.get(state.current_location, []) if isinstance(dropped_items_map, dict) else []
+            def _display_item(item):
+                if isinstance(item, dict):
+                    return item.get("name") or item.get("id") or json.dumps(item, ensure_ascii=True)
+                return str(item)
+            dropped_display = ", ".join(_display_item(item) for item in dropped_here) if dropped_here else "None"
             
             # Format flags for display (only show NPC bypass flags and key state flags)
-            npc_bypass_flags = {k: v for k, v in (state.flags or {}).items()
+            npc_bypass_flags = {k: v for k, v in flags.items()
                                if any(kw in k for kw in ['troll', 'cyclops', 'thief', 'bat', 'spirits', 'lantern'])}
             flags_display = ", ".join(f"{k}={v}" for k, v in npc_bypass_flags.items()) if npc_bypass_flags else "None"
 
@@ -452,7 +499,10 @@ class ConversationService:
                 f"\n\nCURRENT GAME STATE (Source of Truth):\n"
                 f"- Location: {location_name}\n"
                 f"- Exits: {exits}\n"
+                f"- Exits Map: {json.dumps(exits_map, ensure_ascii=True)}\n"
                 f"- Inventory: {', '.join(inventory_items) if inventory_items else 'Empty'}\n"
+                f"- Trophy Case: {trophy_case_display}\n"
+                f"- Dropped Here: {dropped_display}\n"
                 f"- Active Flags: {flags_display}\n"
                 f"\nREMINDER: You MUST call update_game_state when moving to a new location. "
                 f"Describing a room without updating the state causes desync. "
