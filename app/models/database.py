@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Index, JSON, Boolean
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -100,7 +101,7 @@ class GameState(Base):
     inventory = Column(JSON, default=list)
     visited_locations = Column(JSON, default=list)
     player_stats = Column(JSON, default=dict)
-    flags = Column(JSON, default=dict)
+    flags = Column(MutableDict.as_mutable(JSON), default=dict)
     dev_snapshot = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
