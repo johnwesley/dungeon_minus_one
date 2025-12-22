@@ -798,14 +798,20 @@ class ConversationService:
         # Update conversation timestamp
         await self.conversation_repo.touch(conversation.id)
 
-        # Emit done event
+        # Emit done event (strip internal state markers from user output)
+        user_content = assistant_msg.content
+        if "\n\n---\n[State:" in user_content:
+            user_content = user_content.split("\n\n---\n[State:")[0]
+        elif "\n\n---\n[Tools used:" in user_content:
+            user_content = user_content.split("\n\n---\n[Tools used:")[0]
+
         yield StreamEvent(
             type="done",
             data={
                 "message": {
                     "id": assistant_msg.id,
                     "role": assistant_msg.role,
-                    "content": assistant_msg.content,
+                    "content": user_content,
                     "created_at": assistant_msg.created_at.isoformat(),
                 }
             },
