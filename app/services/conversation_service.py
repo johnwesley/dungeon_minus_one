@@ -479,6 +479,8 @@ class ConversationService:
             loc_data = await self.game_repo.get_location(state.current_location)
             exits_map = loc_data.get("exits", {}) if loc_data else {}
             exits = ", ".join(exits_map.keys()) if exits_map else "Unknown"
+            interactables = loc_data.get("interactables", []) if loc_data else []
+            interactables_display = json.dumps(interactables, ensure_ascii=False) if interactables else "None"
             inventory_items = [i['name'] for i in (state.inventory or []) if isinstance(i, dict) and 'name' in i]
             flags = state.flags or {}
             trophy_case_items = flags.get("trophy_case", [])
@@ -504,6 +506,7 @@ class ConversationService:
                 f"- Inventory: {', '.join(inventory_items) if inventory_items else 'Empty'}\n"
                 f"- Trophy Case: {trophy_case_display}\n"
                 f"- Dropped Here: {dropped_display}\n"
+                f"- Interactables: {interactables_display}\n"
                 f"- Active Flags: {flags_display}\n"
                 f"\nREMINDER: You MUST call update_game_state when moving to a new location. "
                 f"Describing a room without updating the state causes desync. "
