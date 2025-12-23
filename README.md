@@ -63,3 +63,13 @@ Run `make help` to see all available commands.
 | `make invite` | Generate invite code (local) |
 | `make prod-up` | Start production containers |
 | `make prod-logs` | Tail production logs |
+
+## Debug Logging
+
+The API output includes debug prints only when explicitly enabled. Leave these unset/false for clean responses.
+
+- `DEBUG_LLM=true` enables LLM context debug prints and writes JSON lines to `.cursor/llm_debug.log`.
+- `DEBUG_GAME_TOOLS=true` enables tool handler debug prints and writes JSON lines to `.cursor/debug.log`.
+- `DEBUG_SERVICE=true` enables service debug JSON logging to `.cursor/service_debug.log` (no console output).
+
+To silence Uvicorn access logs, run with `--log-level warning` (for example, update `make run`).

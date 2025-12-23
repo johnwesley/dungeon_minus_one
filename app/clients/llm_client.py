@@ -238,7 +238,8 @@ class AnthropicClient(LLMClient):
         # Calculate and log context size
         msg_count = len(messages)
         total_chars = sum(len(str(m.get("content", ""))) for m in messages)
-        print(f"DEBUG: Context - Messages: {msg_count}, Approx Chars: {total_chars}")
+        if DEBUG_LLM:
+            print(f"DEBUG: Context - Messages: {msg_count}, Approx Chars: {total_chars}")
 
         # Enhanced debug logging
         log_llm_debug({
