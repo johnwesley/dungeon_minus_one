@@ -27,6 +27,7 @@ flowchart TB
     make setup
     cp .env.example .env  # Add your ANTHROPIC_API_KEY
     ```
+    Set `ENVIRONMENT=dev` and leave `DB_AUTO_CREATE=true` for local use.
 
 2.  **Run**: Start the dev server.
     ```bash
@@ -46,6 +47,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 -   **Port**: 8080
 -   **Database**: PostgreSQL (persisted in volume)
 -   **Auth**: Invite-only (see `make prod-invite`)
+    -   Set `ENVIRONMENT=prod`, `DB_AUTO_CREATE=false`, and a strong `AUTH_SECRET_KEY`.
 
 ## Commands
 
@@ -57,6 +59,7 @@ Run `make help` to see all available commands.
 | `make reset` | Clear game state (keep locations) |
 | `make hard-reset` | Wipe DB and re-seed locations |
 | `make verify-movement` | Run automated test for movement logic |
+| `make validate-config` | Validate configuration (set `DB_CHECK=true` to test DB) |
 | `make invite` | Generate invite code (local) |
 | `make prod-up` | Start production containers |
 | `make prod-logs` | Tail production logs |

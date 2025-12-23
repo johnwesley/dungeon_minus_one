@@ -1,14 +1,14 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.api.router import api_router
 from app.database import init_db, async_session_factory
-from app.config import get_settings
+from app.config import get_settings, validate_settings
 from app.models.database import User
 from app.services.auth_service import get_password_hash
 
@@ -16,11 +16,11 @@ from app.services.auth_service import get_password_hash
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
-    # Startup: initialize database
-    await init_db()
-
     # Create dev user with password "dev" if dev mode is enabled
     settings = get_settings()
+    validate_settings(settings)
+    if settings.db_auto_create:
+        await init_db()
     if settings.dev_auth_bypass:
         async with async_session_factory() as session:
             result = await session.execute(select(User).where(User.username == "dev"))
@@ -82,6 +82,17 @@ async def serve_login():
 async def serve_register():
     """Serve the registration page."""
     return FileResponse(static_path / "register.html")
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for load balancers."""
+    try:
+        async with async_session_factory() as session:
+            await session.execute(text("SELECT 1"))
+        return {"status": "ok"}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Database unavailable") from exc
 
 
 if __name__ == "__main__":

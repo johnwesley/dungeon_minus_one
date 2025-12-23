@@ -6,6 +6,7 @@ from typing import Optional
 class Settings(BaseSettings):
     """Application configuration settings."""
 
+    environment: str = "dev"
     anthropic_api_key: str
     database_url: str = "sqlite+aiosqlite:///./chat.db"
     model_name: str = "claude-opus-4-5-20251101"
@@ -22,6 +23,9 @@ class Settings(BaseSettings):
     # Development mode: bypass login when True
     dev_auth_bypass: bool = False
 
+    # Allow schema auto-create on startup (dev/local only)
+    db_auto_create: bool = True
+
     # Skills configuration (prompt concatenation approach)
     skills_enabled: bool = False  # Set to True to include skill files in system prompt
 
@@ -35,3 +39,17 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Get cached settings instance."""
     return Settings()
+
+
+def validate_settings(settings: Settings) -> None:
+    """Validate settings for non-dev environments."""
+    env = settings.environment.lower().strip()
+    if env in {"staging", "prod", "production"}:
+        if not settings.database_url:
+            raise ValueError("DATABASE_URL must be set for staging/production.")
+        if settings.database_url.lower().startswith("sqlite"):
+            raise ValueError("SQLite is not allowed for staging/production.")
+        if not settings.auth_secret_key or settings.auth_secret_key == "dev_secret_key_change_me_in_prod":
+            raise ValueError("AUTH_SECRET_KEY must be set to a non-default value for staging/production.")
+        if settings.db_auto_create:
+            raise ValueError("DB_AUTO_CREATE must be false for staging/production.")

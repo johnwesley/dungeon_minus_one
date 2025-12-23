@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help prod-up prod-down prod-logs prod-restart prod-rebuild prod-seed prod-seed-prune prod-seed-check prod-invite prod-reset prod-notify frontend-install frontend-dev frontend-build dev-full notify
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config prod-up prod-down prod-logs prod-restart prod-rebuild prod-seed prod-seed-prune prod-seed-check prod-invite prod-reset prod-notify frontend-install frontend-dev frontend-build dev-full notify
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -50,6 +50,9 @@ sync-locations-check:  ## Check DB matches fixtures (no writes; expects exact ma
 
 verify-movement:  ## Verify narrator tool usage for movement
 	$(PYTHON) scripts/verify_movement.py
+
+validate-config:  ## Validate config (set DB_CHECK=true for DB connectivity)
+	$(PYTHON) scripts/validate_config.py $(if $(DB_CHECK),--db-check,)
 
 invite:  ## Generate a new invite code
 	$(PYTHON) scripts/generate_invite.py

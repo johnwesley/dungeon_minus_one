@@ -28,6 +28,28 @@ cat .env
 source .env
 ```
 
+Ensure `ENVIRONMENT=staging` or `ENVIRONMENT=prod`, `DB_AUTO_CREATE=false`, and a strong `AUTH_SECRET_KEY` are set for non-dev deployments.
+
+Example `.env` values for a single managed Postgres cluster with two databases:
+
+```bash
+# Staging
+ENVIRONMENT=staging
+DB_AUTO_CREATE=false
+DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>:5432/dungeon_staging
+AUTH_SECRET_KEY=<staging-secret>
+```
+
+```bash
+# Production
+ENVIRONMENT=prod
+DB_AUTO_CREATE=false
+DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>:5432/dungeon_prod
+AUTH_SECRET_KEY=<prod-secret>
+```
+
+Note on `DB_AUTO_CREATE`: when set to `true`, the app runs `create_all()` at startup to auto-create tables. This is convenient for local dev but should be `false` in staging/prod so migrations are the only schema source and multiple instances don't race at boot.
+
 ## 3. Deployment Steps
 
 Perform these steps on the server for every release.
