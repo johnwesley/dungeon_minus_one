@@ -29,3 +29,12 @@ Thumbs.db
 
 # Logs
 *.log
+
+# OpenTofu / Terraform
+infra/.terraform/
+infra/.opentofu/
+infra/*.tfstate*
+infra/terraform.tfvars
+infra/tofu.tfvars
+infra/.terraform.lock.hcl
+infra/.opentofu.lock.hcl

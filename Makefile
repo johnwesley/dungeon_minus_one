@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config prod-up prod-down prod-logs prod-restart prod-rebuild prod-seed prod-seed-prune prod-seed-check prod-invite prod-reset prod-notify frontend-install frontend-dev frontend-build dev-full notify
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config prod-up prod-down prod-logs prod-restart prod-rebuild prod-seed prod-seed-prune prod-seed-check prod-invite prod-reset prod-notify frontend-install frontend-dev frontend-build dev-full notify infra-init infra-plan infra-apply infra-destroy
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -114,3 +114,17 @@ dev-full:  ## Start backend + frontend dev servers (access at localhost:5173)
 	@echo "Access the app at http://localhost:5173"
 	@DEV_AUTH_BYPASS=true $(PYTHON) -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
 	cd $(FRONTEND) && npm run dev
+
+# --- Infrastructure (OpenTofu) ---
+
+infra-init:  ## Initialize OpenTofu (usage: make infra-init DO_TOKEN=xxx)
+	cd infra && TF_VAR_do_token=$(DO_TOKEN) tofu init
+
+infra-plan:  ## Plan infrastructure changes (usage: make infra-plan DO_TOKEN=xxx)
+	cd infra && TF_VAR_do_token=$(DO_TOKEN) tofu plan $(if $(NODES),-var="staging_node_count=$(NODES)",)
+
+infra-apply:  ## Apply infrastructure changes (usage: make infra-apply DO_TOKEN=xxx)
+	cd infra && TF_VAR_do_token=$(DO_TOKEN) tofu apply $(if $(NODES),-var="staging_node_count=$(NODES)",)
+
+infra-destroy:  ## Destroy all infrastructure (usage: make infra-destroy DO_TOKEN=xxx)
+	cd infra && TF_VAR_do_token=$(DO_TOKEN) tofu destroy
