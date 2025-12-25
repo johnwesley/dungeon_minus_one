@@ -11,13 +11,13 @@ flowchart TB
         L_App <--> L_DB[(SQLite)]
     end
 
-    subgraph Prod["Production (Docker Compose)"]
-        P_Browser[Browser] <-->|:8080| P_App[FastAPI Container]
-        P_App <--> P_DB[(Postgres Container)]
+    subgraph Staging["Staging (Docker Compose)"]
+        S_Browser[Browser] <-->|:8080| S_App[FastAPI Container]
+        S_App <--> S_DB[(Managed Postgres)]
     end
 
     L_App -.-> Claude[Anthropic API]
-    P_App -.-> Claude
+    S_App -.-> Claude
 ```
 
 ## Quick Start (Local)
@@ -35,19 +35,19 @@ flowchart TB
     ```
     Access at `http://localhost:8000`.
 
-## Production
+## Staging
 
-Deploy on a single VM using Docker Compose.
+Deploy on staging using Docker Compose.
 
 ```bash
-# Start production services detached
-docker compose -f docker-compose.prod.yml up -d --build
+# Start staging services detached
+docker compose -f docker-compose.staging.yml up -d
 ```
 
 -   **Port**: 8080
--   **Database**: PostgreSQL (persisted in volume)
--   **Auth**: Invite-only (see `make prod-invite`)
-    -   Set `ENVIRONMENT=prod`, `DB_AUTO_CREATE=false`, and a strong `AUTH_SECRET_KEY`.
+-   **Database**: Managed PostgreSQL (external)
+-   **Auth**: Invite-only (see `make staging-invite`)
+    -   Set `ENVIRONMENT=staging`, `DB_AUTO_CREATE=false`, `APP_IMAGE=...`, and a strong `AUTH_SECRET_KEY`.
 
 ## Commands
 
@@ -61,8 +61,8 @@ Run `make help` to see all available commands.
 | `make verify-movement` | Run automated test for movement logic |
 | `make validate-config` | Validate configuration (set `DB_CHECK=true` to test DB) |
 | `make invite` | Generate invite code (local) |
-| `make prod-up` | Start production containers |
-| `make prod-logs` | Tail production logs |
+| `make staging-up` | Start staging containers |
+| `make staging-logs` | Tail staging logs |
 
 ## Debug Logging
 
