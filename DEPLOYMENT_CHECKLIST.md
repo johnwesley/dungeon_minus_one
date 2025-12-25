@@ -9,33 +9,32 @@ Lessons learned from v0.2.0 deployment issues. Use this checklist to prevent and
   - `alembic.ini`
   - `alembic/` directory
   - `data/` directory
-- [ ] Run `docker compose exec app alembic current` to verify Alembic is configured
+- [ ] Run `docker compose -f /opt/dungeon-minus-one/docker-compose.staging.yml exec app alembic current` to verify Alembic is configured
 
 ### Database Migrations
 - [ ] Review pending migrations with `alembic upgrade head --sql` (dry run)
-- [ ] Never use `alembic stamp` in production without verifying schema matches
+- [ ] Never use `alembic stamp` in staging without verifying schema matches
 - [ ] After migration, verify columns exist: `\d table_name` in psql
 
 ### Environment Variables
 - [ ] Verify `.env` file has all required variables
-- [ ] Confirm `DATABASE_URL`, `ANTHROPIC_API_KEY`, `AUTH_SECRET_KEY` are set
+- [ ] Confirm `APP_IMAGE`, `DATABASE_URL`, `ANTHROPIC_API_KEY`, `AUTH_SECRET_KEY` are set
 
 ## Deployment Steps
 
 ```bash
-# 1. Fetch and checkout new version
-git fetch origin --tags -f
-git checkout <tag>
+# 1. Update APP_IMAGE to the new tag
+sudo sed -i 's/^APP_IMAGE=.*/APP_IMAGE=registry.digitalocean.com\\/your-registry\\/dungeon-minus-one:<tag>/' /opt/dungeon-minus-one/.env
 
-# 2. Rebuild containers
-make prod-rebuild
+# 2. Pull latest image
+sudo systemctl restart dungeon-minus-one
 
 # 3. Run migrations (verify first!)
-docker compose exec app alembic upgrade head --sql  # Preview
-docker compose exec app alembic upgrade head        # Apply
+docker compose -f /opt/dungeon-minus-one/docker-compose.staging.yml exec app alembic upgrade head --sql  # Preview
+docker compose -f /opt/dungeon-minus-one/docker-compose.staging.yml exec app alembic upgrade head        # Apply
 
 # 4. Verify deployment
-docker compose logs --tail=50 app
+docker compose -f /opt/dungeon-minus-one/docker-compose.staging.yml logs --tail=50 app
 ```
 
 ## Post-Deployment Verification
@@ -48,12 +47,11 @@ docker compose logs --tail=50 app
 
 ### Database Checks
 ```bash
-# Verify locations loaded
-source .env && docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT COUNT(*) FROM locations;"
-# Expected: 72
+# Verify locations loaded (expects no diffs)
+docker compose -f /opt/dungeon-minus-one/docker-compose.staging.yml exec app python scripts/sync_locations.py --dry-run --prune
 
-# Verify schema
-source .env && docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB -c "\d game_states"
+# Verify schema is at head
+docker compose -f /opt/dungeon-minus-one/docker-compose.staging.yml exec app alembic current
 ```
 
 ## Troubleshooting
@@ -63,22 +61,22 @@ source .env && docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB -c 
 **Solution:**
 1. Check logs for the *original* error (scroll up past the cascade)
 2. Often caused by missing columns - verify schema
-3. Restart the app: `docker compose restart app`
+3. Restart the app: `sudo systemctl restart dungeon-minus-one`
 
 ### "column X does not exist"
 **Cause:** Migration didn't run or was stamped without applying.
 **Solution:**
 ```bash
 # Add missing column manually
-source .env && docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB -c "ALTER TABLE table_name ADD COLUMN column_name TYPE;"
-docker compose restart app
+docker compose -f /opt/dungeon-minus-one/docker-compose.staging.yml exec app alembic upgrade head
+sudo systemctl restart dungeon-minus-one
 ```
 
 ### Location shows "Unknown"
 **Cause:** Locations not seeded or seed script failed.
 **Solution:**
 ```bash
-docker compose exec app python scripts/sync_locations.py
+docker compose -f /opt/dungeon-minus-one/docker-compose.staging.yml exec app python scripts/sync_locations.py
 ```
 
 ### Seed script duplicate key error

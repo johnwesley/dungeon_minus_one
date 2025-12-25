@@ -1,9 +1,9 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config prod-up prod-down prod-logs prod-restart prod-rebuild prod-seed prod-seed-prune prod-seed-check prod-invite prod-reset prod-notify frontend-install frontend-dev frontend-build dev-full notify infra-init infra-plan infra-apply infra-destroy
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config staging-up staging-down staging-logs staging-restart staging-rebuild staging-seed staging-seed-prune staging-seed-check staging-invite staging-reset staging-notify frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release infra-init infra-plan infra-apply infra-destroy
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
-DOCKER_COMPOSE_PROD := docker compose -f docker-compose.prod.yml
+DOCKER_COMPOSE_STAGING := docker compose -f docker-compose.staging.yml
 FRONTEND := frontend
 
 help:  ## Show this help message
@@ -62,40 +62,41 @@ notify:  ## Create a notification (usage: make notify TITLE="title" MSG="message
 
 dev: setup run  ## Setup and run local dev in one command
 
-# --- Production / Staging (Docker Compose) ---
+# --- Staging (Docker Compose) ---
 
-prod-up:  ## Start production containers detached
-	$(DOCKER_COMPOSE_PROD) up -d
+staging-up:  ## Start staging containers detached
+	$(DOCKER_COMPOSE_STAGING) up -d
 
-prod-down:  ## Stop and remove production containers
-	$(DOCKER_COMPOSE_PROD) down
+staging-down:  ## Stop and remove staging containers
+	$(DOCKER_COMPOSE_STAGING) down
 
-prod-logs:  ## Follow production logs
-	$(DOCKER_COMPOSE_PROD) logs -f
+staging-logs:  ## Follow staging logs
+	$(DOCKER_COMPOSE_STAGING) logs -f
 
-prod-restart:  ## Restart production containers
-	$(DOCKER_COMPOSE_PROD) restart
+staging-restart:  ## Restart staging containers
+	$(DOCKER_COMPOSE_STAGING) restart
 
-prod-rebuild:  ## Rebuild and restart production containers
-	$(DOCKER_COMPOSE_PROD) up -d --build
+staging-rebuild:  ## Pull latest image and restart staging containers
+	$(DOCKER_COMPOSE_STAGING) pull
+	$(DOCKER_COMPOSE_STAGING) up -d
 
-prod-seed:  ## Seed/Update production database locations
-	$(DOCKER_COMPOSE_PROD) exec -T app python scripts/sync_locations.py
+staging-seed:  ## Seed/Update staging database locations
+	$(DOCKER_COMPOSE_STAGING) exec -T app python scripts/sync_locations.py
 
-prod-seed-prune:  ## Seed/Update production database locations and prune missing (use for staging/dev only)
-	$(DOCKER_COMPOSE_PROD) exec -T app python scripts/sync_locations.py --prune
+staging-seed-prune:  ## Seed/Update staging database locations and prune missing (use for staging/dev only)
+	$(DOCKER_COMPOSE_STAGING) exec -T app python scripts/sync_locations.py --prune
 
-prod-seed-check:  ## Check production DB matches fixtures (no writes; expects exact match)
-	$(DOCKER_COMPOSE_PROD) exec -T app python scripts/sync_locations.py --dry-run --prune
+staging-seed-check:  ## Check staging DB matches fixtures (no writes; expects exact match)
+	$(DOCKER_COMPOSE_STAGING) exec -T app python scripts/sync_locations.py --dry-run --prune
 
-prod-invite:  ## Generate invite code in production
-	$(DOCKER_COMPOSE_PROD) exec app python scripts/generate_invite.py
+staging-invite:  ## Generate invite code in staging
+	$(DOCKER_COMPOSE_STAGING) exec app python scripts/generate_invite.py
 
-prod-reset:  ## Reset game sessions in production (keeps users)
-	$(DOCKER_COMPOSE_PROD) exec app python scripts/reset_game_state.py
+staging-reset:  ## Reset game sessions in staging (keeps users)
+	$(DOCKER_COMPOSE_STAGING) exec app python scripts/reset_game_state.py
 
-prod-notify:  ## Create notification in production (usage: make prod-notify TITLE="title" MSG="message")
-	$(DOCKER_COMPOSE_PROD) exec app python scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)
+staging-notify:  ## Create notification in staging (usage: make staging-notify TITLE="title" MSG="message")
+	$(DOCKER_COMPOSE_STAGING) exec app python scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)
 
 # --- Frontend (Vite) ---
 
@@ -105,7 +106,7 @@ frontend-install:  ## Install frontend dependencies
 frontend-dev:  ## Start Vite dev server (port 5173)
 	cd $(FRONTEND) && npm run dev
 
-frontend-build:  ## Build frontend for production
+frontend-build:  ## Build frontend for staging/prod-style
 	cd $(FRONTEND) && npm run build
 
 dev-full:  ## Start backend + frontend dev servers (access at localhost:5173)
@@ -114,6 +115,22 @@ dev-full:  ## Start backend + frontend dev servers (access at localhost:5173)
 	@echo "Access the app at http://localhost:5173"
 	@DEV_AUTH_BYPASS=true $(PYTHON) -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
 	cd $(FRONTEND) && npm run dev
+
+# --- Docker Image ---
+
+REGISTRY ?= registry.digitalocean.com
+REPO ?= dungeon-minus-one
+IMAGE_NAME = $(REGISTRY)/$(REPO)/dungeon-minus-one
+TAG ?= latest
+
+docker-build:  ## Build Docker image for amd64 (usage: make docker-build TAG=v0.5.0)
+	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME):$(TAG) --load .
+
+docker-push:  ## Push Docker image (usage: make docker-push TAG=v0.5.0)
+	docker push $(IMAGE_NAME):$(TAG)
+
+docker-release:  ## Build and push Docker image for amd64 (usage: make docker-release TAG=v0.5.0)
+	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME):$(TAG) --push .
 
 # --- Infrastructure (OpenTofu) ---
 

@@ -1,0 +1,11 @@
+services:
+  app:
+    image: ${APP_IMAGE}
+    container_name: dungeon_minus_one
+    restart: always
+    ports:
+      - "8080:8000"
+    env_file:
+      - .env
+    environment:
+      - DOPPLER_TOKEN=${DOPPLER_TOKEN}
