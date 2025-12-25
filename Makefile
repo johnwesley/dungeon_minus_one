@@ -206,11 +206,27 @@ infra-init:  ## Initialize OpenTofu (auto-sources .env.deploy if present)
 
 infra-plan:  ## Plan infrastructure changes (auto-sources .env.deploy if present)
 	@if [ -f $(DEPLOY_ENV) ]; then set -a && . ./$(DEPLOY_ENV) && set +a; fi && \
-		cd infra && TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} tofu plan $(if $(NODES),-var="staging_node_count=$(NODES)",)
+		cd infra && \
+		CURRENT_IMAGE=$$(TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} tofu output -raw staging_app_image 2>/dev/null) && \
+		if [ -z "$$CURRENT_IMAGE" ]; then \
+			echo "Error: Could not get current image from state. Run deploy-staging first."; \
+			exit 1; \
+		fi && \
+		TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} \
+		TF_VAR_staging_app_image=$$CURRENT_IMAGE \
+		tofu plan $(if $(NODES),-var="staging_node_count=$(NODES)",)
 
 infra-apply:  ## Apply infrastructure changes (auto-sources .env.deploy if present)
 	@if [ -f $(DEPLOY_ENV) ]; then set -a && . ./$(DEPLOY_ENV) && set +a; fi && \
-		cd infra && TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} tofu apply $(if $(NODES),-var="staging_node_count=$(NODES)",)
+		cd infra && \
+		CURRENT_IMAGE=$$(TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} tofu output -raw staging_app_image 2>/dev/null) && \
+		if [ -z "$$CURRENT_IMAGE" ]; then \
+			echo "Error: Could not get current image from state. Run deploy-staging first."; \
+			exit 1; \
+		fi && \
+		TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} \
+		TF_VAR_staging_app_image=$$CURRENT_IMAGE \
+		tofu apply $(if $(NODES),-var="staging_node_count=$(NODES)",)
 
 infra-destroy:  ## Destroy all infrastructure (auto-sources .env.deploy if present)
 	@if [ -f $(DEPLOY_ENV) ]; then set -a && . ./$(DEPLOY_ENV) && set +a; fi && \
