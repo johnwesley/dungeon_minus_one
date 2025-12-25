@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config staging-up staging-down staging-logs staging-restart staging-rebuild staging-seed staging-seed-prune staging-seed-check staging-invite staging-reset staging-notify frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release infra-init infra-plan infra-apply infra-destroy
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config staging-up staging-down staging-logs staging-restart staging-rebuild staging-seed staging-seed-prune staging-seed-check staging-invite staging-reset staging-notify frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release deploy-staging scale-staging infra-init infra-plan infra-apply infra-destroy
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -121,7 +121,14 @@ dev-full:  ## Start backend + frontend dev servers (access at localhost:5173)
 REGISTRY ?= registry.digitalocean.com
 REPO ?= dungeon-minus-one
 IMAGE_NAME = $(REGISTRY)/$(REPO)/dungeon-minus-one
-TAG ?= latest
+
+# Tag derivation: extract version from branch name (release/v0.5.0 -> v0.5.0)
+GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+DEFAULT_TAG := $(shell echo $(GIT_BRANCH) | sed 's|.*/||')
+TAG ?= $(DEFAULT_TAG)
+
+# Deployment environment file
+DEPLOY_ENV := infra/.env.deploy
 
 docker-build:  ## Build Docker image for amd64 (usage: make docker-build TAG=v0.5.0)
 	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME):$(TAG) --load .
@@ -132,16 +139,79 @@ docker-push:  ## Push Docker image (usage: make docker-push TAG=v0.5.0)
 docker-release:  ## Build and push Docker image for amd64 (usage: make docker-release TAG=v0.5.0)
 	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME):$(TAG) --push .
 
+deploy-staging:  ## Build, push, and deploy to staging (usage: make deploy-staging [TAG=v0.5.0])
+	@if [ ! -f $(DEPLOY_ENV) ]; then \
+		echo "Error: $(DEPLOY_ENV) not found."; \
+		echo "Copy infra/.env.deploy.example to $(DEPLOY_ENV) and fill in values."; \
+		exit 1; \
+	fi
+	@echo "==> Building and pushing image: $(IMAGE_NAME):$(TAG)"
+	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME):$(TAG) --push .
+	@echo ""
+	@echo "==> Planning infrastructure changes..."
+	@set -a && . ./$(DEPLOY_ENV) && set +a && \
+		cd infra && \
+		TF_VAR_do_token=$$DO_TOKEN \
+		TF_VAR_staging_app_image=$(IMAGE_NAME):$(TAG) \
+		tofu plan $(if $(NODES),-var="staging_node_count=$(NODES)",)
+	@echo ""
+	@read -p "Apply these changes? [y/N] " confirm && \
+		[ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ] || { echo "Aborted."; exit 1; }
+	@set -a && . ./$(DEPLOY_ENV) && set +a && \
+		cd infra && \
+		TF_VAR_do_token=$$DO_TOKEN \
+		TF_VAR_staging_app_image=$(IMAGE_NAME):$(TAG) \
+		tofu apply -auto-approve $(if $(NODES),-var="staging_node_count=$(NODES)",)
+	@echo ""
+	@echo "==> Deployment complete: $(IMAGE_NAME):$(TAG)"
+
+scale-staging:  ## Scale staging nodes without rebuilding (usage: make scale-staging NODES=2)
+	@if [ ! -f $(DEPLOY_ENV) ]; then \
+		echo "Error: $(DEPLOY_ENV) not found."; \
+		echo "Copy infra/.env.deploy.example to $(DEPLOY_ENV) and fill in values."; \
+		exit 1; \
+	fi
+	@if [ -z "$(NODES)" ]; then \
+		echo "Error: NODES is required (e.g., make scale-staging NODES=2)"; \
+		exit 1; \
+	fi
+	@echo "==> Getting current app image from state..."
+	@set -a && . ./$(DEPLOY_ENV) && set +a && \
+		CURRENT_IMAGE=$$(cd infra && TF_VAR_do_token=$$DO_TOKEN tofu output -raw staging_app_image 2>/dev/null) && \
+		if [ -z "$$CURRENT_IMAGE" ]; then \
+			echo "Error: Could not get current image from state. Run deploy-staging first."; \
+			exit 1; \
+		fi && \
+		echo "Current image: $$CURRENT_IMAGE" && \
+		echo "" && \
+		echo "==> Planning scale to $(NODES) node(s)..." && \
+		cd infra && \
+		TF_VAR_do_token=$$DO_TOKEN \
+		TF_VAR_staging_app_image=$$CURRENT_IMAGE \
+		tofu plan -var="staging_node_count=$(NODES)" && \
+		echo "" && \
+		read -p "Apply these changes? [y/N] " confirm && \
+		[ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ] || { echo "Aborted."; exit 1; } && \
+		TF_VAR_do_token=$$DO_TOKEN \
+		TF_VAR_staging_app_image=$$CURRENT_IMAGE \
+		tofu apply -auto-approve -var="staging_node_count=$(NODES)" && \
+		echo "" && \
+		echo "==> Scaled to $(NODES) node(s)"
+
 # --- Infrastructure (OpenTofu) ---
 
-infra-init:  ## Initialize OpenTofu (usage: make infra-init DO_TOKEN=xxx)
-	cd infra && TF_VAR_do_token=$(DO_TOKEN) tofu init
+infra-init:  ## Initialize OpenTofu (auto-sources .env.deploy if present)
+	@if [ -f $(DEPLOY_ENV) ]; then set -a && . ./$(DEPLOY_ENV) && set +a; fi && \
+		cd infra && TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} tofu init
 
-infra-plan:  ## Plan infrastructure changes (usage: make infra-plan DO_TOKEN=xxx)
-	cd infra && TF_VAR_do_token=$(DO_TOKEN) tofu plan $(if $(NODES),-var="staging_node_count=$(NODES)",)
+infra-plan:  ## Plan infrastructure changes (auto-sources .env.deploy if present)
+	@if [ -f $(DEPLOY_ENV) ]; then set -a && . ./$(DEPLOY_ENV) && set +a; fi && \
+		cd infra && TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} tofu plan $(if $(NODES),-var="staging_node_count=$(NODES)",)
 
-infra-apply:  ## Apply infrastructure changes (usage: make infra-apply DO_TOKEN=xxx)
-	cd infra && TF_VAR_do_token=$(DO_TOKEN) tofu apply $(if $(NODES),-var="staging_node_count=$(NODES)",)
+infra-apply:  ## Apply infrastructure changes (auto-sources .env.deploy if present)
+	@if [ -f $(DEPLOY_ENV) ]; then set -a && . ./$(DEPLOY_ENV) && set +a; fi && \
+		cd infra && TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} tofu apply $(if $(NODES),-var="staging_node_count=$(NODES)",)
 
-infra-destroy:  ## Destroy all infrastructure (usage: make infra-destroy DO_TOKEN=xxx)
-	cd infra && TF_VAR_do_token=$(DO_TOKEN) tofu destroy
+infra-destroy:  ## Destroy all infrastructure (auto-sources .env.deploy if present)
+	@if [ -f $(DEPLOY_ENV) ]; then set -a && . ./$(DEPLOY_ENV) && set +a; fi && \
+		cd infra && TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} tofu destroy

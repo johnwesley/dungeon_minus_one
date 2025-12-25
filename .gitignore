@@ -38,3 +38,4 @@ infra/terraform.tfvars
 infra/tofu.tfvars
 infra/.terraform.lock.hcl
 infra/.opentofu.lock.hcl
+infra/.env.deploy
