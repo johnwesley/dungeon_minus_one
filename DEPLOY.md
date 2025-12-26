@@ -109,17 +109,22 @@ docker compose -f /opt/dungeon-minus-one/docker-compose.staging.yml exec app pyt
     docker compose -f /opt/dungeon-minus-one/docker-compose.staging.yml exec app python scripts/create_notification.py "Update vX.Y.Z" "A new update has been deployed. Check the changelog!" --ttl 48
     ```
 
-## Invite Codes (API, no SSH)
+## Invite Codes (API, no SSH — staging)
 
-Generate invite codes from your machine without SSH:
+Generate invite codes from your machine without SSH (preferred for staging):
 
 ```bash
-python scripts/generate_invite_api.py \\
-  --base-url https://<staging-host> \\
-  --username <admin-user>
+make invite-staging
 ```
 
+This assumes Doppler config `stg` in project `staging-deployment` provides:
+
+- `DMO_BASE_URL` (e.g. `https://<staging-host>`)
+- `DMO_ADMIN_USER` (admin username)
+
 The script prompts for the password if not provided and prints the new invite code.
+
+Note: This is intentionally labeled **staging** to leave room for a future `invite-prod` workflow.
 
 ## 5. Troubleshooting
 

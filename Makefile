@@ -1,10 +1,12 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config staging-up staging-down staging-logs staging-restart staging-rebuild staging-seed staging-seed-prune staging-seed-check staging-invite staging-reset staging-notify frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release deploy-staging scale-staging infra-init infra-plan infra-apply infra-destroy
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite-api invite-staging staging-up staging-down staging-logs staging-restart staging-rebuild staging-seed staging-seed-prune staging-seed-check staging-invite staging-reset staging-notify frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release deploy-staging scale-staging infra-init infra-plan infra-apply infra-destroy
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 DOCKER_COMPOSE_STAGING := docker compose -f docker-compose.staging.yml
 FRONTEND := frontend
+DOPPLER_PROJECT ?= staging-deployment
+DOPPLER_CONFIG ?= stg
 
 help:  ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -54,8 +56,13 @@ verify-movement:  ## Verify narrator tool usage for movement
 validate-config:  ## Validate config (set DB_CHECK=true for DB connectivity)
 	$(PYTHON) scripts/validate_config.py $(if $(DB_CHECK),--db-check,)
 
-invite:  ## Generate a new invite code
+invite:  ## Generate a new invite code (local DB)
 	$(PYTHON) scripts/generate_invite.py
+
+invite-staging:  ## Generate invite via API using Doppler (staging only)
+	doppler run --project $(DOPPLER_PROJECT) --config $(DOPPLER_CONFIG) -- $(PYTHON) scripts/generate_invite_api.py
+
+invite-api: invite-staging  ## Alias for invite-staging (staging only)
 
 notify:  ## Create a notification (usage: make notify TITLE="title" MSG="message")
 	$(PYTHON) scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)

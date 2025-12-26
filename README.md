@@ -46,7 +46,7 @@ docker compose -f docker-compose.staging.yml up -d
 
 -   **Port**: 8080
 -   **Database**: Managed PostgreSQL (external)
--   **Auth**: Invite-only (see `make staging-invite` or `scripts/generate_invite_api.py`)
+-   **Auth**: Invite-only (preferred: `make invite-staging`, uses Doppler project `staging-deployment`)
     -   Set `ENVIRONMENT=staging`, `DB_AUTO_CREATE=false`, `APP_IMAGE=...`, and a strong `AUTH_SECRET_KEY`.
     -   For invite API guardrails, set `INVITE_IP_ALLOWLIST`, `TRUST_PROXY_HEADERS=true`, and `TRUSTED_PROXY_IPS` (LB IPs/CIDRs).
 
@@ -62,6 +62,8 @@ Run `make help` to see all available commands.
 | `make verify-movement` | Run automated test for movement logic |
 | `make validate-config` | Validate configuration (set `DB_CHECK=true` to test DB) |
 | `make invite` | Generate invite code (local) |
+| `make invite-staging` | Generate invite via API using Doppler (staging only) |
+| `make invite-api` | Alias for `make invite-staging` |
 | `make staging-up` | Start staging containers |
 | `make staging-logs` | Tail staging logs |
 
