@@ -23,8 +23,17 @@ class Settings(BaseSettings):
     # Development mode: bypass login when True
     dev_auth_bypass: bool = False
 
+    # Proxy/IP handling
+    trust_proxy_headers: bool = False
+    trusted_proxy_ips: Optional[str] = None  # Comma-separated IPs/CIDRs for LB/proxy
+
     # Allow schema auto-create on startup (dev/local only)
     db_auto_create: bool = True
+
+    # Invite guardrails
+    invite_ip_allowlist: Optional[str] = None  # Comma-separated IPs/CIDRs
+    invite_rate_limit_max: int = 10
+    invite_rate_limit_window_seconds: int = 60
 
     # Skills configuration (prompt concatenation approach)
     skills_enabled: bool = False  # Set to True to include skill files in system prompt

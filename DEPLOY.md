@@ -40,6 +40,11 @@ DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>:5432/dungeon_staging
 AUTH_SECRET_KEY=<staging-secret>
 ANTHROPIC_API_KEY=<anthropic-key>
 APP_IMAGE=registry.digitalocean.com/<registry>/dungeon-minus-one:<tag>
+TRUST_PROXY_HEADERS=true
+TRUSTED_PROXY_IPS=<lb-ip-or-cidr>
+INVITE_IP_ALLOWLIST=<your-ip-or-cidr>
+INVITE_RATE_LIMIT_MAX=10
+INVITE_RATE_LIMIT_WINDOW_SECONDS=60
 ```
 
 Note on `DB_AUTO_CREATE`: when set to `true`, the app runs `create_all()` at startup to auto-create tables. This is convenient for local dev but should be `false` in staging so migrations are the only schema source and multiple instances don't race at boot.
@@ -103,6 +108,18 @@ docker compose -f /opt/dungeon-minus-one/docker-compose.staging.yml exec app pyt
     ```bash
     docker compose -f /opt/dungeon-minus-one/docker-compose.staging.yml exec app python scripts/create_notification.py "Update vX.Y.Z" "A new update has been deployed. Check the changelog!" --ttl 48
     ```
+
+## Invite Codes (API, no SSH)
+
+Generate invite codes from your machine without SSH:
+
+```bash
+python scripts/generate_invite_api.py \\
+  --base-url https://<staging-host> \\
+  --username <admin-user>
+```
+
+The script prompts for the password if not provided and prints the new invite code.
 
 ## 5. Troubleshooting
 

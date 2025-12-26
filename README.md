@@ -46,8 +46,9 @@ docker compose -f docker-compose.staging.yml up -d
 
 -   **Port**: 8080
 -   **Database**: Managed PostgreSQL (external)
--   **Auth**: Invite-only (see `make staging-invite`)
+-   **Auth**: Invite-only (see `make staging-invite` or `scripts/generate_invite_api.py`)
     -   Set `ENVIRONMENT=staging`, `DB_AUTO_CREATE=false`, `APP_IMAGE=...`, and a strong `AUTH_SECRET_KEY`.
+    -   For invite API guardrails, set `INVITE_IP_ALLOWLIST`, `TRUST_PROXY_HEADERS=true`, and `TRUSTED_PROXY_IPS` (LB IPs/CIDRs).
 
 ## Commands
 

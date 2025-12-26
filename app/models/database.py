@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Index, JSON, Boolean
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Index, JSON, Boolean, Integer
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import relationship
 
@@ -39,6 +39,20 @@ class InviteCode(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     used_at = Column(DateTime, nullable=True)
     used_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+
+
+class RateLimitEntry(Base):
+    """Rate limit counter for fixed-window limits."""
+
+    __tablename__ = "rate_limits"
+
+    key = Column(String(255), primary_key=True)
+    count = Column(Integer, nullable=False, default=0)
+    window_start = Column(DateTime, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (Index("idx_rate_limits_expires_at", "expires_at"),)
 
 
 class Conversation(Base):

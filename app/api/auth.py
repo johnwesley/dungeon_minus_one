@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,6 +7,7 @@ from app.database import get_db
 from app.models.database import User, InviteCode
 from app.models.auth_schemas import UserLogin, UserRegister, Token, InviteCreate
 from app.services.auth_service import verify_password, get_password_hash, create_access_token, decode_access_token
+from app.services.rate_limit_service import enforce_invite_allowlist, enforce_invite_rate_limit
 from app.config import get_settings
 from fastapi.security import OAuth2PasswordBearer
 import uuid
@@ -107,12 +108,20 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/invite/generate")
-async def generate_invite(data: InviteCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def generate_invite(
+    data: InviteCreate,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     # Simple admin check: first user is admin, or check flag
     if not current_user.is_admin:
         # Allow if it's the very first user (bootstrapping) or if explicit admin
         # For now, we'll be lenient for testing or strict. Let's rely on a hardcoded check or just is_admin
         raise HTTPException(status_code=403, detail="Admin privileges required")
+
+    client_ip = await enforce_invite_allowlist(request)
+    await enforce_invite_rate_limit(db, client_ip)
 
     code = data.code or str(uuid.uuid4())[:8]
     
@@ -126,4 +135,3 @@ async def generate_invite(data: InviteCreate, current_user: User = Depends(get_c
     await db.commit()
     
     return {"code": code}
-
