@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite-api invite-staging staging-up staging-down staging-logs staging-restart staging-rebuild staging-seed staging-seed-prune staging-seed-check staging-invite staging-reset staging-notify frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release deploy-staging scale-staging infra-init infra-plan infra-apply infra-destroy
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite-api invite-staging staging-up staging-down staging-logs staging-restart staging-rebuild staging-seed staging-seed-prune staging-seed-check staging-invite staging-reset staging-notify frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release deploy-staging scale-staging infra-init infra-plan infra-apply infra-destroy k8s-cluster k8s-kubeconfig k8s-setup k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -238,3 +238,81 @@ infra-apply:  ## Apply infrastructure changes (auto-sources .env.deploy if prese
 infra-destroy:  ## Destroy all infrastructure (auto-sources .env.deploy if present)
 	@if [ -f $(DEPLOY_ENV) ]; then set -a && . ./$(DEPLOY_ENV) && set +a; fi && \
 		cd infra && TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} tofu destroy
+
+# --- Kubernetes (DOKS) ---
+
+K8S_NAMESPACE := dungeon
+KUBECONFIG_FILE := ~/.kube/doks-dungeon
+
+k8s-cluster:  ## Create DOKS cluster (usage: make k8s-cluster)
+	@if [ ! -f $(DEPLOY_ENV) ]; then \
+		echo "Error: $(DEPLOY_ENV) not found."; \
+		exit 1; \
+	fi
+	@set -a && . ./$(DEPLOY_ENV) && set +a && \
+		cd infra && \
+		CURRENT_IMAGE=$$(TF_VAR_do_token=$$DO_TOKEN tofu output -raw staging_app_image 2>/dev/null || echo "placeholder:latest") && \
+		TF_VAR_do_token=$$DO_TOKEN \
+		TF_VAR_staging_app_image=$$CURRENT_IMAGE \
+		tofu apply -var="k8s_enabled=true" \
+			-target=digitalocean_kubernetes_cluster.main \
+			-target=digitalocean_database_firewall.main
+	@echo ""
+	@echo "==> Cluster created. Run 'make k8s-kubeconfig' to get credentials."
+
+k8s-kubeconfig:  ## Export kubeconfig for DOKS cluster
+	@if [ ! -f $(DEPLOY_ENV) ]; then \
+		echo "Error: $(DEPLOY_ENV) not found."; \
+		exit 1; \
+	fi
+	@mkdir -p ~/.kube
+	@set -a && . ./$(DEPLOY_ENV) && set +a && \
+		cd infra && \
+		TF_VAR_do_token=$$DO_TOKEN tofu output -raw k8s_kubeconfig > $(KUBECONFIG_FILE) && \
+		chmod 600 $(KUBECONFIG_FILE) && \
+		echo "Kubeconfig written to $(KUBECONFIG_FILE)" && \
+		echo "Run: export KUBECONFIG=$(KUBECONFIG_FILE)"
+
+k8s-setup:  ## One-time cluster setup (Doppler operator)
+	@echo "==> Installing Doppler Kubernetes Operator..."
+	helm repo add doppler https://helm.doppler.com || true
+	helm repo update
+	helm upgrade --install doppler-operator doppler/doppler-kubernetes-operator \
+		-n doppler-operator --create-namespace
+	@echo ""
+	@echo "==> Creating namespace..."
+	kubectl apply -f k8s/namespace.yaml
+	@echo ""
+	@echo "==> Next steps:"
+	@echo "  1. Create a Doppler service token for k8s: doppler configs tokens create stg_k8s --name k8s-operator"
+	@echo "  2. Create the secret: kubectl create secret generic doppler-token -n $(K8S_NAMESPACE) --from-literal=serviceToken=YOUR_TOKEN"
+	@echo "  3. Deploy the app: make k8s-deploy"
+
+k8s-deploy:  ## Deploy/update app to DOKS (usage: make k8s-deploy [TAG=v0.5.0])
+	@if [ -n "$(TAG)" ]; then \
+		echo "==> Deploying with image tag: $(TAG)"; \
+		cd k8s && kustomize edit set image registry.digitalocean.com/dungeon-registry/dungeon-minus-one=$(IMAGE_NAME):$(TAG); \
+	fi
+	kubectl apply -k k8s/
+	@echo ""
+	kubectl rollout status deployment/dungeon-app -n $(K8S_NAMESPACE)
+
+k8s-status:  ## Show pods, services, and LB IP
+	@echo "==> Pods:"
+	kubectl get pods -n $(K8S_NAMESPACE) -o wide
+	@echo ""
+	@echo "==> Services:"
+	kubectl get svc -n $(K8S_NAMESPACE)
+	@echo ""
+	@echo "==> Doppler Secrets:"
+	kubectl get dopplersecret -n $(K8S_NAMESPACE) 2>/dev/null || echo "(none)"
+
+k8s-logs:  ## Stream pod logs
+	kubectl logs -f -l app=dungeon-app -n $(K8S_NAMESPACE) --all-containers
+
+k8s-restart:  ## Restart deployment (rolling)
+	kubectl rollout restart deployment/dungeon-app -n $(K8S_NAMESPACE)
+	kubectl rollout status deployment/dungeon-app -n $(K8S_NAMESPACE)
+
+k8s-shell:  ## Open shell in running pod
+	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- /bin/bash

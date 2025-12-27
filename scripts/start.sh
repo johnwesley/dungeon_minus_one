@@ -9,6 +9,6 @@ set -e
 echo "Seeding database..."
 python scripts/sync_locations.py
 
-# Start the application
+# Start the application with graceful shutdown support
 echo "Starting server..."
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-graceful-shutdown 30
