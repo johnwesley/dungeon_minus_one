@@ -9,3 +9,10 @@ services:
       - .env
     environment:
       - DOPPLER_TOKEN=${DOPPLER_TOKEN}
+    stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

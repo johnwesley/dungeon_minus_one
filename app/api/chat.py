@@ -1,4 +1,5 @@
 import json
+import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
@@ -12,6 +13,7 @@ from app.repositories.game_repository import GameRepository
 from app.clients.llm_client import get_llm_client
 from app.services.conversation_service import ConversationService
 from app.api.auth import get_current_user
+from app.connection_manager import connection_manager
 
 router = APIRouter()
 
@@ -42,8 +44,9 @@ async def chat(
     - delta: { content }
     - done: { message }
     - error: { error, code }
+    - closing: { reason } (sent during graceful shutdown)
     """
-    
+
     # Ensure conversation belongs to user
     if request.conversation_id:
         # This check should ideally happen inside service.chat_stream_with_tools
@@ -52,14 +55,35 @@ async def chat(
         pass
 
     async def event_generator():
-        async for event in service.chat_stream_with_tools(
-            message=request.message,
-            conversation_id=request.conversation_id,
-            user_id=current_user.id # Pass user_id to service
-        ):
-            yield {
-                "event": event.type,
-                "data": json.dumps(event.data),
-            }
+        connection_id = str(uuid.uuid4())
+        await connection_manager.register(connection_id)
+        try:
+            # Check if server is shutting down before starting
+            if connection_manager.is_shutting_down():
+                yield {
+                    "event": "closing",
+                    "data": json.dumps({"reason": "server_shutdown"}),
+                }
+                return
+
+            async for event in service.chat_stream_with_tools(
+                message=request.message,
+                conversation_id=request.conversation_id,
+                user_id=current_user.id  # Pass user_id to service
+            ):
+                # Check for shutdown during streaming
+                if connection_manager.is_shutting_down():
+                    yield {
+                        "event": "closing",
+                        "data": json.dumps({"reason": "server_shutdown"}),
+                    }
+                    return
+
+                yield {
+                    "event": event.type,
+                    "data": json.dumps(event.data),
+                }
+        finally:
+            await connection_manager.unregister(connection_id)
 
     return EventSourceResponse(event_generator())

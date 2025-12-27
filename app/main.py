@@ -11,6 +11,7 @@ from app.database import init_db, async_session_factory
 from app.config import get_settings, validate_settings
 from app.models.database import User
 from app.services.auth_service import get_password_hash
+from app.connection_manager import connection_manager
 
 
 @asynccontextmanager
@@ -31,7 +32,17 @@ async def lifespan(app: FastAPI):
                 await session.commit()
 
     yield
-    # Shutdown: cleanup if needed
+
+    # Graceful shutdown: signal connections to close and wait for drain
+    print("Shutdown initiated, signaling active connections...")
+    connection_manager.shutdown_event.set()
+
+    active_count = len(connection_manager.active_connections)
+    if active_count > 0:
+        print(f"Waiting for {active_count} active connection(s) to complete...")
+        await connection_manager.wait_for_connections_to_drain(timeout=30.0)
+
+    print("Shutdown complete")
 
 
 app = FastAPI(
