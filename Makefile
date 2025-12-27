@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite-api invite-staging staging-up staging-down staging-logs staging-restart staging-rebuild staging-seed staging-seed-prune staging-seed-check staging-invite staging-reset staging-notify frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release deploy-staging scale-staging infra-init infra-plan infra-apply infra-destroy k8s-cluster k8s-kubeconfig k8s-setup k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite-api invite-staging staging-up staging-down staging-logs staging-restart staging-rebuild staging-seed staging-seed-prune staging-seed-check staging-invite staging-reset staging-notify frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release deploy-staging scale-staging infra-init infra-plan infra-apply infra-destroy k8s-cluster k8s-kubeconfig k8s-firewall k8s-setup k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -273,6 +273,22 @@ k8s-kubeconfig:  ## Export kubeconfig for DOKS cluster
 		echo "Kubeconfig written to $(KUBECONFIG_FILE)" && \
 		echo "Run: export KUBECONFIG=$(KUBECONFIG_FILE)"
 
+k8s-firewall:  ## Update database firewall to allow k8s nodes
+	@if [ ! -f $(DEPLOY_ENV) ]; then \
+		echo "Error: $(DEPLOY_ENV) not found."; \
+		exit 1; \
+	fi
+	@set -a && . ./$(DEPLOY_ENV) && set +a && \
+		cd infra && \
+		CURRENT_IMAGE=$$(TF_VAR_do_token=$$DO_TOKEN tofu output -raw staging_app_image 2>/dev/null) && \
+		if [ -z "$$CURRENT_IMAGE" ]; then \
+			echo "Error: Could not get current image from state."; \
+			exit 1; \
+		fi && \
+		TF_VAR_do_token=$$DO_TOKEN \
+		TF_VAR_staging_app_image=$$CURRENT_IMAGE \
+		tofu apply -var="k8s_enabled=true" -target=digitalocean_database_firewall.main
+
 k8s-setup:  ## One-time cluster setup (Doppler operator)
 	@echo "==> Installing Doppler Kubernetes Operator..."
 	helm repo add doppler https://helm.doppler.com || true
@@ -291,7 +307,7 @@ k8s-setup:  ## One-time cluster setup (Doppler operator)
 k8s-deploy:  ## Deploy/update app to DOKS (usage: make k8s-deploy [TAG=v0.5.0])
 	@if [ -n "$(TAG)" ]; then \
 		echo "==> Deploying with image tag: $(TAG)"; \
-		cd k8s && kustomize edit set image registry.digitalocean.com/dungeon-registry/dungeon-minus-one=$(IMAGE_NAME):$(TAG); \
+		sed -i.bak 's/newTag: .*/newTag: $(TAG)/' k8s/kustomization.yaml && rm -f k8s/kustomization.yaml.bak; \
 	fi
 	kubectl apply -k k8s/
 	@echo ""
