@@ -11,13 +11,13 @@ flowchart TB
         L_App <--> L_DB[(SQLite)]
     end
 
-    subgraph Staging["Staging (Docker Compose)"]
-        S_Browser[Browser] <-->|:8080| S_App[FastAPI Container]
-        S_App <--> S_DB[(Managed Postgres)]
+    subgraph DOKS["Kubernetes (DOKS)"]
+        K_LB[Load Balancer :443] <--> K_App[App Pods]
+        K_App <--> K_DB[(Managed Postgres)]
     end
 
     L_App -.-> Claude[Anthropic API]
-    S_App -.-> Claude
+    K_App -.-> Claude
 ```
 
 ## Quick Start (Local)
@@ -35,20 +35,25 @@ flowchart TB
     ```
     Access at `http://localhost:8000`.
 
-## Staging
+## Kubernetes Deployment
 
-Deploy on staging using Docker Compose.
+The application is deployed to DigitalOcean Kubernetes (DOKS) with a managed PostgreSQL database.
 
 ```bash
-# Start staging services detached
-docker compose -f docker-compose.staging.yml up -d
+# Build and push Docker image
+make docker-release TAG=v0.6.0
+
+# Deploy to cluster
+make k8s-deploy TAG=v0.6.0
+
+# Check status
+make k8s-status
 ```
 
--   **Port**: 8080
--   **Database**: Managed PostgreSQL (external)
--   **Auth**: Invite-only (preferred: `make invite-staging`, uses Doppler project `staging-deployment`)
-    -   Set `ENVIRONMENT=staging`, `DB_AUTO_CREATE=false`, `APP_IMAGE=...`, and a strong `AUTH_SECRET_KEY`.
-    -   For invite API guardrails, set `INVITE_IP_ALLOWLIST`, `TRUST_PROXY_HEADERS=true`, and `TRUSTED_PROXY_IPS` (LB IPs/CIDRs).
+-   **TLS**: DO Load Balancer with managed certificate
+-   **Database**: Managed PostgreSQL
+-   **Secrets**: Doppler Kubernetes Operator
+-   **Auth**: Invite-only (`make k8s-invite`)
 
 ## Commands
 
@@ -62,10 +67,10 @@ Run `make help` to see all available commands.
 | `make verify-movement` | Run automated test for movement logic |
 | `make validate-config` | Validate configuration (set `DB_CHECK=true` to test DB) |
 | `make invite` | Generate invite code (local) |
-| `make invite-staging` | Generate invite via API using Doppler (staging only) |
-| `make invite-api` | Alias for `make invite-staging` |
-| `make staging-up` | Start staging containers |
-| `make staging-logs` | Tail staging logs |
+| `make k8s-deploy` | Deploy app to DOKS cluster |
+| `make k8s-status` | Show pods, services, secrets |
+| `make k8s-logs` | Stream pod logs |
+| `make k8s-invite` | Generate invite code in cluster |
 
 ## Debug Logging
 

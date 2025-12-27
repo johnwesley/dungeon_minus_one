@@ -1,12 +1,9 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite-api invite-staging staging-up staging-down staging-logs staging-restart staging-rebuild staging-seed staging-seed-prune staging-seed-check staging-invite staging-reset staging-notify frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release deploy-staging scale-staging infra-init infra-plan infra-apply infra-destroy k8s-cluster k8s-kubeconfig k8s-firewall k8s-setup k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-notify
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
-DOCKER_COMPOSE_STAGING := docker compose -f docker-compose.staging.yml
 FRONTEND := frontend
-DOPPLER_PROJECT ?= staging-deployment
-DOPPLER_CONFIG ?= stg
 
 help:  ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -59,51 +56,10 @@ validate-config:  ## Validate config (set DB_CHECK=true for DB connectivity)
 invite:  ## Generate a new invite code (local DB)
 	$(PYTHON) scripts/generate_invite.py
 
-invite-staging:  ## Generate invite via API using Doppler (staging only)
-	doppler run --project $(DOPPLER_PROJECT) --config $(DOPPLER_CONFIG) -- $(PYTHON) scripts/generate_invite_api.py
-
-invite-api: invite-staging  ## Alias for invite-staging (staging only)
-
 notify:  ## Create a notification (usage: make notify TITLE="title" MSG="message")
 	$(PYTHON) scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)
 
 dev: setup run  ## Setup and run local dev in one command
-
-# --- Staging (Docker Compose) ---
-
-staging-up:  ## Start staging containers detached
-	$(DOCKER_COMPOSE_STAGING) up -d
-
-staging-down:  ## Stop and remove staging containers
-	$(DOCKER_COMPOSE_STAGING) down
-
-staging-logs:  ## Follow staging logs
-	$(DOCKER_COMPOSE_STAGING) logs -f
-
-staging-restart:  ## Restart staging containers
-	$(DOCKER_COMPOSE_STAGING) restart
-
-staging-rebuild:  ## Pull latest image and restart staging containers
-	$(DOCKER_COMPOSE_STAGING) pull
-	$(DOCKER_COMPOSE_STAGING) up -d
-
-staging-seed:  ## Seed/Update staging database locations
-	$(DOCKER_COMPOSE_STAGING) exec -T app python scripts/sync_locations.py
-
-staging-seed-prune:  ## Seed/Update staging database locations and prune missing (use for staging/dev only)
-	$(DOCKER_COMPOSE_STAGING) exec -T app python scripts/sync_locations.py --prune
-
-staging-seed-check:  ## Check staging DB matches fixtures (no writes; expects exact match)
-	$(DOCKER_COMPOSE_STAGING) exec -T app python scripts/sync_locations.py --dry-run --prune
-
-staging-invite:  ## Generate invite code in staging
-	$(DOCKER_COMPOSE_STAGING) exec app python scripts/generate_invite.py
-
-staging-reset:  ## Reset game sessions in staging (keeps users)
-	$(DOCKER_COMPOSE_STAGING) exec app python scripts/reset_game_state.py
-
-staging-notify:  ## Create notification in staging (usage: make staging-notify TITLE="title" MSG="message")
-	$(DOCKER_COMPOSE_STAGING) exec app python scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)
 
 # --- Frontend (Vite) ---
 
@@ -146,119 +102,40 @@ docker-push:  ## Push Docker image (usage: make docker-push TAG=v0.5.0)
 docker-release:  ## Build and push Docker image for amd64 (usage: make docker-release TAG=v0.5.0)
 	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME):$(TAG) --push .
 
-deploy-staging:  ## Build, push, and deploy to staging (usage: make deploy-staging [TAG=v0.5.0])
-	@if [ ! -f $(DEPLOY_ENV) ]; then \
-		echo "Error: $(DEPLOY_ENV) not found."; \
-		echo "Copy infra/.env.deploy.example to $(DEPLOY_ENV) and fill in values."; \
-		exit 1; \
-	fi
-	@echo "==> Building and pushing image: $(IMAGE_NAME):$(TAG)"
-	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME):$(TAG) --push .
-	@echo ""
-	@echo "==> Planning infrastructure changes..."
-	@set -a && . ./$(DEPLOY_ENV) && set +a && \
-		cd infra && \
-		TF_VAR_do_token=$$DO_TOKEN \
-		TF_VAR_staging_app_image=$(IMAGE_NAME):$(TAG) \
-		tofu plan $(if $(NODES),-var="staging_node_count=$(NODES)",)
-	@echo ""
-	@read -p "Apply these changes? [y/N] " confirm && \
-		[ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ] || { echo "Aborted."; exit 1; }
-	@set -a && . ./$(DEPLOY_ENV) && set +a && \
-		cd infra && \
-		TF_VAR_do_token=$$DO_TOKEN \
-		TF_VAR_staging_app_image=$(IMAGE_NAME):$(TAG) \
-		tofu apply -auto-approve $(if $(NODES),-var="staging_node_count=$(NODES)",)
-	@echo ""
-	@echo "==> Deployment complete: $(IMAGE_NAME):$(TAG)"
-
-scale-staging:  ## Scale staging nodes without rebuilding (usage: make scale-staging NODES=2)
-	@if [ ! -f $(DEPLOY_ENV) ]; then \
-		echo "Error: $(DEPLOY_ENV) not found."; \
-		echo "Copy infra/.env.deploy.example to $(DEPLOY_ENV) and fill in values."; \
-		exit 1; \
-	fi
-	@if [ -z "$(NODES)" ]; then \
-		echo "Error: NODES is required (e.g., make scale-staging NODES=2)"; \
-		exit 1; \
-	fi
-	@echo "==> Getting current app image from state..."
-	@set -a && . ./$(DEPLOY_ENV) && set +a && \
-		CURRENT_IMAGE=$$(cd infra && TF_VAR_do_token=$$DO_TOKEN tofu output -raw staging_app_image 2>/dev/null) && \
-		if [ -z "$$CURRENT_IMAGE" ]; then \
-			echo "Error: Could not get current image from state. Run deploy-staging first."; \
-			exit 1; \
-		fi && \
-		echo "Current image: $$CURRENT_IMAGE" && \
-		echo "" && \
-		echo "==> Planning scale to $(NODES) node(s)..." && \
-		cd infra && \
-		TF_VAR_do_token=$$DO_TOKEN \
-		TF_VAR_staging_app_image=$$CURRENT_IMAGE \
-		tofu plan -var="staging_node_count=$(NODES)" && \
-		echo "" && \
-		read -p "Apply these changes? [y/N] " confirm && \
-		[ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ] || { echo "Aborted."; exit 1; } && \
-		TF_VAR_do_token=$$DO_TOKEN \
-		TF_VAR_staging_app_image=$$CURRENT_IMAGE \
-		tofu apply -auto-approve -var="staging_node_count=$(NODES)" && \
-		echo "" && \
-		echo "==> Scaled to $(NODES) node(s)"
-
 # --- Infrastructure (OpenTofu) ---
 
 infra-init:  ## Initialize OpenTofu (auto-sources .env.deploy if present)
 	@if [ -f $(DEPLOY_ENV) ]; then set -a && . ./$(DEPLOY_ENV) && set +a; fi && \
 		cd infra && TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} tofu init
 
-infra-plan:  ## Plan infrastructure changes (auto-sources .env.deploy if present)
-	@if [ -f $(DEPLOY_ENV) ]; then set -a && . ./$(DEPLOY_ENV) && set +a; fi && \
-		cd infra && \
-		CURRENT_IMAGE=$$(TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} tofu output -raw staging_app_image 2>/dev/null) && \
-		if [ -z "$$CURRENT_IMAGE" ]; then \
-			echo "Error: Could not get current image from state. Run deploy-staging first."; \
-			exit 1; \
-		fi && \
-		TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} \
-		TF_VAR_staging_app_image=$$CURRENT_IMAGE \
-		tofu plan $(if $(NODES),-var="staging_node_count=$(NODES)",)
-
-infra-apply:  ## Apply infrastructure changes (auto-sources .env.deploy if present)
-	@if [ -f $(DEPLOY_ENV) ]; then set -a && . ./$(DEPLOY_ENV) && set +a; fi && \
-		cd infra && \
-		CURRENT_IMAGE=$$(TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} tofu output -raw staging_app_image 2>/dev/null) && \
-		if [ -z "$$CURRENT_IMAGE" ]; then \
-			echo "Error: Could not get current image from state. Run deploy-staging first."; \
-			exit 1; \
-		fi && \
-		TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} \
-		TF_VAR_staging_app_image=$$CURRENT_IMAGE \
-		tofu apply $(if $(NODES),-var="staging_node_count=$(NODES)",)
-
-infra-destroy:  ## Destroy all infrastructure (auto-sources .env.deploy if present)
-	@if [ -f $(DEPLOY_ENV) ]; then set -a && . ./$(DEPLOY_ENV) && set +a; fi && \
-		cd infra && TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} tofu destroy
-
-# --- Kubernetes (DOKS) ---
-
-K8S_NAMESPACE := dungeon
-KUBECONFIG_FILE := ~/.kube/doks-dungeon
-
-k8s-cluster:  ## Create DOKS cluster (usage: make k8s-cluster)
+infra-plan:  ## Plan infrastructure changes
 	@if [ ! -f $(DEPLOY_ENV) ]; then \
 		echo "Error: $(DEPLOY_ENV) not found."; \
 		exit 1; \
 	fi
 	@set -a && . ./$(DEPLOY_ENV) && set +a && \
-		cd infra && \
-		CURRENT_IMAGE=$$(TF_VAR_do_token=$$DO_TOKEN tofu output -raw staging_app_image 2>/dev/null || echo "placeholder:latest") && \
-		TF_VAR_do_token=$$DO_TOKEN \
-		TF_VAR_staging_app_image=$$CURRENT_IMAGE \
-		tofu apply -var="k8s_enabled=true" \
-			-target=digitalocean_kubernetes_cluster.main \
-			-target=digitalocean_database_firewall.main
-	@echo ""
-	@echo "==> Cluster created. Run 'make k8s-kubeconfig' to get credentials."
+		cd infra && TF_VAR_do_token=$$DO_TOKEN tofu plan
+
+infra-apply:  ## Apply infrastructure changes
+	@if [ ! -f $(DEPLOY_ENV) ]; then \
+		echo "Error: $(DEPLOY_ENV) not found."; \
+		exit 1; \
+	fi
+	@set -a && . ./$(DEPLOY_ENV) && set +a && \
+		cd infra && TF_VAR_do_token=$$DO_TOKEN tofu apply
+
+infra-destroy:  ## Destroy all infrastructure (DANGEROUS)
+	@if [ ! -f $(DEPLOY_ENV) ]; then \
+		echo "Error: $(DEPLOY_ENV) not found."; \
+		exit 1; \
+	fi
+	@set -a && . ./$(DEPLOY_ENV) && set +a && \
+		cd infra && TF_VAR_do_token=$$DO_TOKEN tofu destroy
+
+# --- Kubernetes (DOKS) ---
+
+K8S_NAMESPACE := dungeon
+KUBECONFIG_FILE := ~/.kube/doks-dungeon
 
 k8s-kubeconfig:  ## Export kubeconfig for DOKS cluster
 	@if [ ! -f $(DEPLOY_ENV) ]; then \
@@ -273,23 +150,7 @@ k8s-kubeconfig:  ## Export kubeconfig for DOKS cluster
 		echo "Kubeconfig written to $(KUBECONFIG_FILE)" && \
 		echo "Run: export KUBECONFIG=$(KUBECONFIG_FILE)"
 
-k8s-firewall:  ## Update database firewall to allow k8s nodes
-	@if [ ! -f $(DEPLOY_ENV) ]; then \
-		echo "Error: $(DEPLOY_ENV) not found."; \
-		exit 1; \
-	fi
-	@set -a && . ./$(DEPLOY_ENV) && set +a && \
-		cd infra && \
-		CURRENT_IMAGE=$$(TF_VAR_do_token=$$DO_TOKEN tofu output -raw staging_app_image 2>/dev/null) && \
-		if [ -z "$$CURRENT_IMAGE" ]; then \
-			echo "Error: Could not get current image from state."; \
-			exit 1; \
-		fi && \
-		TF_VAR_do_token=$$DO_TOKEN \
-		TF_VAR_staging_app_image=$$CURRENT_IMAGE \
-		tofu apply -var="k8s_enabled=true" -target=digitalocean_database_firewall.main
-
-k8s-setup:  ## One-time cluster setup (Doppler operator)
+k8s-setup:  ## One-time cluster setup (Doppler operator + namespace)
 	@echo "==> Installing Doppler Kubernetes Operator..."
 	helm repo add doppler https://helm.doppler.com || true
 	helm repo update
@@ -300,7 +161,7 @@ k8s-setup:  ## One-time cluster setup (Doppler operator)
 	kubectl apply -f k8s/namespace.yaml
 	@echo ""
 	@echo "==> Next steps:"
-	@echo "  1. Create a Doppler service token for k8s: doppler configs tokens create stg_k8s --name k8s-operator"
+	@echo "  1. Create a Doppler service token: doppler configs tokens create stg --name k8s-operator"
 	@echo "  2. Create the secret: kubectl create secret generic doppler-token -n $(K8S_NAMESPACE) --from-literal=serviceToken=YOUR_TOKEN"
 	@echo "  3. Deploy the app: make k8s-deploy"
 
@@ -313,7 +174,7 @@ k8s-deploy:  ## Deploy/update app to DOKS (usage: make k8s-deploy [TAG=v0.5.0])
 	@echo ""
 	kubectl rollout status deployment/dungeon-app -n $(K8S_NAMESPACE)
 
-k8s-status:  ## Show pods, services, and LB IP
+k8s-status:  ## Show pods, services, and secrets
 	@echo "==> Pods:"
 	kubectl get pods -n $(K8S_NAMESPACE) -o wide
 	@echo ""
@@ -332,3 +193,18 @@ k8s-restart:  ## Restart deployment (rolling)
 
 k8s-shell:  ## Open shell in running pod
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- /bin/bash
+
+k8s-seed:  ## Sync location fixtures to k8s database
+	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/sync_locations.py
+
+k8s-seed-prune:  ## Sync + prune location fixtures in k8s database
+	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/sync_locations.py --prune
+
+k8s-invite:  ## Generate invite code in k8s
+	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/generate_invite.py
+
+k8s-reset:  ## Reset game sessions in k8s (keeps users)
+	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/reset_game_state.py
+
+k8s-notify:  ## Create notification in k8s (usage: make k8s-notify TITLE="title" MSG="message")
+	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)
