@@ -52,6 +52,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+def _html_response(path: Path) -> FileResponse:
+    return FileResponse(
+        path,
+        media_type="text/html",
+        headers={"Cache-Control": "no-store"},
+    )
+
 # CORS middleware for development
 app.add_middleware(
     CORSMiddleware,
@@ -80,19 +88,19 @@ else:
 @app.get("/")
 async def serve_index():
     """Serve the main HTML page."""
-    return FileResponse(static_path / "index.html")
+    return _html_response(static_path / "index.html")
 
 
 @app.get("/login.html")
 async def serve_login():
     """Serve the login page."""
-    return FileResponse(static_path / "login.html")
+    return _html_response(static_path / "login.html")
 
 
 @app.get("/register.html")
 async def serve_register():
     """Serve the registration page."""
-    return FileResponse(static_path / "register.html")
+    return _html_response(static_path / "register.html")
 
 
 @app.get("/health")

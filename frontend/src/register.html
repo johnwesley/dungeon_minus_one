@@ -5,21 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Register - Dungeon -1</title>
   <link rel="stylesheet" href="/css/main.css">
-  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-  <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
 </head>
-<body class="scanlines crt-vignette" hx-ext="json-enc">
+<body class="scanlines crt-vignette">
   <div class="auth-container">
     <div class="auth-box">
       <h1 class="auth-title glow">Dungeon -1</h1>
 
       <div id="error-msg"></div>
 
-      <form id="register-form" class="auth-form"
-            hx-post="/api/auth/register"
-            hx-target="#error-msg"
-            hx-swap="innerHTML"
-            hx-headers='{"Content-Type": "application/json"}'>
+      <form id="register-form" class="auth-form">
         <div>
           <label class="bbs-label" for="invite_code">Invite Code</label>
           <input type="text"
@@ -59,48 +53,53 @@
     </div>
   </div>
 
-  <script type="module">
-    import { redirectIfAuthenticated, setToken } from '/js/auth.js';
+  <script>
+    (function () {
+      const TOKEN_KEY = 'token';
+      const form = document.getElementById('register-form');
+      const errorMsg = document.getElementById('error-msg');
+      const inviteInput = document.getElementById('invite_code');
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
 
-    // Redirect if already logged in
-    redirectIfAuthenticated();
-
-    // Handle successful registration
-    document.body.addEventListener('htmx:afterRequest', (event) => {
-      if (event.detail.target.id === 'error-msg' && event.detail.successful) {
-        const xhr = event.detail.xhr;
-        if (xhr.status === 200) {
-          try {
-            const data = JSON.parse(xhr.response);
-            if (data.access_token) {
-              setToken(data.access_token);
-              window.location.href = '/';
-              return;
-            }
-          } catch (e) {
-            // Not JSON, show as error
-          }
-        }
+      if (localStorage.getItem(TOKEN_KEY)) {
+        window.location.href = '/';
+        return;
       }
-    });
 
-    // Handle swap - prevent on success, style errors
-    document.body.addEventListener('htmx:beforeSwap', (event) => {
-      if (event.detail.target.id === 'error-msg') {
-        const xhr = event.detail.xhr;
-        if (xhr.status === 200) {
-          // Prevent swap on success - afterRequest will handle redirect
-          event.detail.shouldSwap = false;
-        } else {
-          try {
-            const data = JSON.parse(xhr.response);
-            event.detail.serverResponse = `<div class="bbs-error">${data.detail || 'Registration failed'}</div>`;
-          } catch (e) {
-            event.detail.serverResponse = `<div class="bbs-error">Registration failed</div>`;
-          }
-        }
+      function showError(message) {
+        errorMsg.innerHTML = `<div class="bbs-error">${message}</div>`;
       }
-    });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        errorMsg.innerHTML = '';
+
+        try {
+          const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              invite_code: inviteInput.value,
+              username: usernameInput.value,
+              password: passwordInput.value,
+            }),
+          });
+
+          const data = await response.json().catch(() => ({}));
+
+          if (response.ok && data.access_token) {
+            localStorage.setItem(TOKEN_KEY, data.access_token);
+            window.location.href = '/';
+            return;
+          }
+
+          showError(data.detail || 'Registration failed');
+        } catch (err) {
+          showError('An error occurred. Please try again.');
+        }
+      });
+    })();
   </script>
 </body>
 </html>

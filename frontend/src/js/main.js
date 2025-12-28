@@ -1,6 +1,6 @@
 // Main App Entry Point
 
-import { requireAuth, fetchWithAuth, logout, setupHTMXAuth, getUsername } from './auth.js';
+import { requireAuth, fetchWithAuth, logout, getUsername } from './auth.js';
 import { SSEHandler } from './sse-handler.js';
 
 class DungeonApp {
@@ -39,7 +39,6 @@ class DungeonApp {
   }
 
   async init() {
-    setupHTMXAuth();
     this.bindEvents();
     this.displayUserHandle();
     await this.checkFeedbackEnabled();

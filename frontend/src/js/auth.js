@@ -97,39 +97,4 @@ export function logout() {
   window.location.href = '/login.html';
 }
 
-// Setup HTMX to include auth header on all requests
-export function setupHTMXAuth() {
-  document.body.addEventListener('htmx:configRequest', (event) => {
-    const token = getToken();
-    if (token) {
-      event.detail.headers['Authorization'] = `Bearer ${token}`;
-    }
-  });
-
-  // Handle 401 responses from HTMX
-  document.body.addEventListener('htmx:responseError', (event) => {
-    if (event.detail.xhr.status === 401) {
-      clearToken();
-      window.location.href = '/login.html';
-    }
-  });
-}
-
-// Handle auth form submission (login/register)
-export function handleAuthResponse(event) {
-  const xhr = event.detail.xhr;
-
-  if (xhr.status === 200) {
-    try {
-      const data = JSON.parse(xhr.response);
-      if (data.access_token) {
-        setToken(data.access_token);
-        window.location.href = '/';
-        return true;
-      }
-    } catch (e) {
-      console.error('Failed to parse auth response:', e);
-    }
-  }
-  return false;
-}
+// HTMX helpers removed - auth pages now use fetch directly
