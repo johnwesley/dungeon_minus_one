@@ -85,11 +85,14 @@
       }
     });
 
-    // Handle errors - wrap in error styling
+    // Handle swap - prevent on success, style errors
     document.body.addEventListener('htmx:beforeSwap', (event) => {
       if (event.detail.target.id === 'error-msg') {
         const xhr = event.detail.xhr;
-        if (xhr.status !== 200) {
+        if (xhr.status === 200) {
+          // Prevent swap on success - afterRequest will handle redirect
+          event.detail.shouldSwap = false;
+        } else {
           try {
             const data = JSON.parse(xhr.response);
             event.detail.serverResponse = `<div class="bbs-error">${data.detail || 'Login failed'}</div>`;
