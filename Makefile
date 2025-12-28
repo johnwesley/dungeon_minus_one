@@ -196,6 +196,10 @@ k8s-restart:  ## Restart deployment (rolling)
 	kubectl rollout restart deployment/dungeon-app -n $(K8S_NAMESPACE)
 	kubectl rollout status deployment/dungeon-app -n $(K8S_NAMESPACE)
 
+k8s-rollback:  ## Rollback to previous deployment revision
+	kubectl rollout undo deployment/dungeon-app -n $(K8S_NAMESPACE)
+	kubectl rollout status deployment/dungeon-app -n $(K8S_NAMESPACE)
+
 k8s-shell:  ## Open shell in running pod
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- /bin/bash
 
