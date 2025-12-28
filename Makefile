@@ -174,6 +174,11 @@ k8s-deploy:  ## Deploy/update app to DOKS (usage: make k8s-deploy [TAG=v0.5.0])
 	@echo ""
 	kubectl rollout status deployment/dungeon-app -n $(K8S_NAMESPACE)
 
+k8s-commit-version:  ## Commit and push updated k8s manifests (usage: make k8s-commit-version [TAG=v0.6.0])
+	git add k8s/kustomization.yaml
+	git commit -m "chore: bump k8s deployment version to $(TAG)"
+	git push origin $(GIT_BRANCH)
+
 k8s-status:  ## Show pods, services, and secrets
 	@echo "==> Pods:"
 	kubectl get pods -n $(K8S_NAMESPACE) -o wide
