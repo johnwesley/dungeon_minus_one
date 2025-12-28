@@ -27,6 +27,14 @@ class DungeonApp {
     this.trophyCountEl = document.getElementById('trophy-count');
     this.notificationsPanelEl = document.getElementById('notifications-panel');
 
+    // Feedback form elements
+    this.feedbackPanelEl = document.getElementById('feedback-panel');
+    this.feedbackFormEl = document.getElementById('feedback-form');
+    this.feedbackRatingEl = document.getElementById('feedback-rating-value');
+    this.feedbackMessageEl = document.getElementById('feedback-message');
+    this.feedbackStatusEl = document.getElementById('feedback-status');
+    this.currentFeedbackRating = 0;
+
     this.init();
   }
 
@@ -34,6 +42,7 @@ class DungeonApp {
     setupHTMXAuth();
     this.bindEvents();
     this.displayUserHandle();
+    await this.checkFeedbackEnabled();
     await this.loadNotifications();
     await this.loadConversations();
 
@@ -318,6 +327,147 @@ class DungeonApp {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  // Feedback form methods
+  async checkFeedbackEnabled() {
+    if (!this.feedbackPanelEl) return;
+
+    try {
+      const response = await fetch('/api/feedback/enabled');
+      const data = await response.json();
+
+      if (data.enabled) {
+        this.feedbackPanelEl.classList.remove('hidden');
+        this.initFeedbackForm();
+      }
+      // Form stays hidden if not enabled (default state)
+    } catch (e) {
+      // Form stays hidden on error
+      console.error('Failed to check feedback status:', e);
+    }
+  }
+
+  initFeedbackForm() {
+    if (!this.feedbackPanelEl) return;
+
+    const stars = this.feedbackPanelEl.querySelectorAll('.star');
+    const starRatingContainer = this.feedbackPanelEl.querySelector('.star-rating');
+
+    // Star rating interaction
+    stars.forEach((star, index) => {
+      star.addEventListener('click', () => {
+        this.currentFeedbackRating = index + 1;
+        this.feedbackRatingEl.value = this.currentFeedbackRating;
+        this.updateStarDisplay(stars, this.currentFeedbackRating);
+      });
+
+      star.addEventListener('mouseenter', () => {
+        this.updateStarDisplay(stars, index + 1);
+      });
+    });
+
+    // Reset stars on mouse leave
+    if (starRatingContainer) {
+      starRatingContainer.addEventListener('mouseleave', () => {
+        this.updateStarDisplay(stars, this.currentFeedbackRating);
+      });
+    }
+
+    // Dismiss button
+    const dismissBtn = this.feedbackPanelEl.querySelector('.feedback-dismiss');
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', () => {
+        this.feedbackPanelEl.classList.add('hidden');
+      });
+    }
+
+    // Form submission
+    if (this.feedbackFormEl) {
+      this.feedbackFormEl.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.submitFeedback();
+      });
+    }
+  }
+
+  updateStarDisplay(stars, rating) {
+    stars.forEach((star, index) => {
+      if (index < rating) {
+        star.classList.add('filled');
+        star.innerHTML = '&#9733;'; // Filled star
+      } else {
+        star.classList.remove('filled');
+        star.innerHTML = '&#9734;'; // Empty star
+      }
+    });
+  }
+
+  async submitFeedback() {
+    const rating = parseInt(this.feedbackRatingEl.value);
+    const message = this.feedbackMessageEl.value.trim();
+
+    // Validation
+    if (rating === 0) {
+      this.showFeedbackStatus('Please select a rating', 'error');
+      return;
+    }
+
+    if (!message) {
+      this.showFeedbackStatus('Please enter your feedback', 'error');
+      return;
+    }
+
+    // Disable form during submission
+    const submitBtn = this.feedbackFormEl.querySelector('.feedback-submit');
+    submitBtn.disabled = true;
+    this.showFeedbackStatus('Sending...', '');
+
+    try {
+      const response = await fetchWithAuth('/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ rating, message }),
+      });
+
+      if (!response) return;
+
+      if (response.ok) {
+        const data = await response.json();
+        this.showFeedbackStatus(data.message, 'success');
+
+        // Reset form
+        this.feedbackMessageEl.value = '';
+        this.feedbackRatingEl.value = '0';
+        this.currentFeedbackRating = 0;
+        const stars = this.feedbackPanelEl.querySelectorAll('.star');
+        this.updateStarDisplay(stars, 0);
+
+        // Hide panel after successful submission
+        setTimeout(() => {
+          this.feedbackPanelEl.classList.add('hidden');
+        }, 2000);
+      } else {
+        const data = await response.json();
+        this.showFeedbackStatus(data.detail || 'Failed to send feedback', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to submit feedback:', error);
+      this.showFeedbackStatus('Failed to send feedback', 'error');
+    } finally {
+      submitBtn.disabled = false;
+    }
+  }
+
+  showFeedbackStatus(message, type) {
+    if (!this.feedbackStatusEl) return;
+    this.feedbackStatusEl.textContent = message;
+    this.feedbackStatusEl.className = 'feedback-status';
+    if (type) {
+      this.feedbackStatusEl.classList.add(type);
+    }
   }
 
   async loadGameState() {

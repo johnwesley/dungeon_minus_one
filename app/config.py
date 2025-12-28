@@ -38,6 +38,18 @@ class Settings(BaseSettings):
     # Skills configuration (prompt concatenation approach)
     skills_enabled: bool = False  # Set to True to include skill files in system prompt
 
+    # Feedback feature (only enable in staging/dev)
+    feedback_enabled: bool = False
+
+    # SMTP configuration for feedback emails
+    smtp_host: Optional[str] = None
+    smtp_port: int = 587
+    smtp_username: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_use_tls: bool = True
+    smtp_from_email: Optional[str] = None
+    feedback_recipient_email: Optional[str] = None
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

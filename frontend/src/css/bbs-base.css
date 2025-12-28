@@ -155,7 +155,7 @@ a:hover {
 .bbs-label {
   display: block;
   margin-bottom: var(--space-xs);
-  color: var(--text-dim);
+  color: var(--text-primary);
   text-transform: uppercase;
   font-size: 0.875rem;
 }
