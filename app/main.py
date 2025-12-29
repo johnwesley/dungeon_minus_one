@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
 from sqlalchemy import select, text
+import re
 
 from app.api.router import api_router
 from app.database import init_db, async_session_factory
@@ -52,6 +53,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Regex for Vite-style hashed assets (name-HASH.ext)
+_ASSET_HASH_RE = re.compile(r"^(?P<name>.+)-(?P<hash>[A-Za-z0-9]{6,})$")
+
 
 def _html_response(path: Path) -> FileResponse:
     return FileResponse(
@@ -59,6 +63,29 @@ def _html_response(path: Path) -> FileResponse:
         media_type="text/html",
         headers={"Cache-Control": "no-store"},
     )
+
+
+def _find_fallback_asset(assets_dir: Path, asset_path: str) -> Path | None:
+    requested = Path(asset_path)
+    ext = requested.suffix
+    if ext == "":
+        return None
+
+    match = _ASSET_HASH_RE.match(requested.stem)
+    if match:
+        base_name = match.group("name")
+        search_dir = assets_dir / requested.parent
+        if search_dir.exists():
+            pattern = f"{base_name}-*{ext}"
+            candidates = sorted(search_dir.glob(pattern))
+            if candidates:
+                return candidates[-1]
+
+    if ext == ".css":
+        candidates = sorted(assets_dir.rglob("*.css"))
+        return candidates[-1] if candidates else None
+
+    return None
 
 # CORS middleware for development
 app.add_middleware(
@@ -78,8 +105,19 @@ legacy_static = Path(__file__).parent / "static"
 
 if frontend_dist.exists():
     static_path = frontend_dist
-    # Vite builds assets to /assets/ directory
-    app.mount("/assets", StaticFiles(directory=static_path / "assets"), name="assets")
+    assets_dir = static_path / "assets"
+
+    @app.get("/assets/{asset_path:path}")
+    async def serve_assets(asset_path: str):
+        file_path = assets_dir / asset_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+
+        fallback = _find_fallback_asset(assets_dir, asset_path)
+        if fallback:
+            return FileResponse(fallback, headers={"Cache-Control": "no-store"})
+
+        raise HTTPException(status_code=404, detail="Asset not found")
 else:
     static_path = legacy_static
     app.mount("/static", StaticFiles(directory=static_path), name="static")

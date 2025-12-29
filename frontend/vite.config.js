@@ -6,9 +6,18 @@ export default defineConfig({
   publicDir: '../public',
 
   build: {
+    cssCodeSplit: false,
     outDir: '../dist',
     emptyOutDir: true,
     rollupOptions: {
+      output: {
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
+            return 'assets/style-[hash][extname]';
+          }
+          return 'assets/[name]-[hash][extname]';
+        },
+      },
       input: {
         main: resolve(__dirname, 'src/index.html'),
         login: resolve(__dirname, 'src/login.html'),
