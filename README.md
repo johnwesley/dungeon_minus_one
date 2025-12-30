@@ -55,6 +55,51 @@ make k8s-status
 -   **Secrets**: Doppler Kubernetes Operator
 -   **Auth**: Invite-only (`make k8s-invite`)
 
+## One-Command Releases
+
+If your `infra/.env.deploy` includes Spaces credentials, you can deploy in one step:
+
+```bash
+# Staging (assets-staging.dungeonminusone.com)
+make release-staging TAG=v0.7.0
+
+# Production (assets.dungeonminusone.com)
+make release-prod TAG=v0.7.0
+```
+
+These targets will build/upload assets to Spaces, push the Docker image,
+and deploy the updated image tag to Kubernetes.
+
+## Frontend Assets (Spaces + CDN)
+
+Frontend assets are published to DigitalOcean Spaces (NYC3) and served via CDN to avoid
+asset hash mismatches during rolling deploys. The app still serves HTML with
+`Cache-Control: no-store`.
+
+Setup (one-time):
+
+1. Create a Space named `dungeon-minus-one-assets` in `nyc3` and enable the CDN.
+2. Add custom CDN domains (recommended):
+   - Staging: `assets-staging.dungeonminusone.com`
+   - Production: `assets.dungeonminusone.com`
+3. Configure Spaces CORS to allow GET/HEAD from your app domains.
+4. Create a Spaces access key and export:
+   - `SPACES_ACCESS_KEY`
+   - `SPACES_SECRET_KEY`
+
+Deploy example (staging):
+
+```bash
+ASSET_ENV=staging \
+ASSET_CDN_DOMAIN=assets-staging.dungeonminusone.com \
+make docker-release TAG=v0.6.2
+
+make k8s-deploy TAG=v0.6.2
+```
+
+`make docker-release` will call `make assets-publish` automatically when
+`ASSET_BASE_URL` is set (derived from `ASSET_CDN_DOMAIN`, `ASSET_ENV`, and `TAG`).
+
 ## Commands
 
 Run `make help` to see all available commands.

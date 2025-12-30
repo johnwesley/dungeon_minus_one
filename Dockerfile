@@ -1,6 +1,8 @@
 # Stage 1: Build frontend
 FROM node:20-alpine AS frontend-builder
 WORKDIR /frontend
+ARG ASSET_BASE_URL
+ENV ASSET_BASE_URL=$ASSET_BASE_URL
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
@@ -45,4 +47,3 @@ RUN chmod +x scripts/start.sh
 # - Without DOPPLER_TOKEN: runs directly, reads from .env file (local dev)
 ENTRYPOINT ["sh", "-c", "if [ -n \"$DOPPLER_TOKEN\" ]; then exec doppler run -- \"$@\"; else exec \"$@\"; fi", "--"]
 CMD ["./scripts/start.sh"]
-

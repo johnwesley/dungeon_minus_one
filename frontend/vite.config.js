@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
 
+const assetBaseUrl = process.env.ASSET_BASE_URL || '/'
+const normalizedBase = assetBaseUrl.endsWith('/') ? assetBaseUrl : `${assetBaseUrl}/`
+
 export default defineConfig({
   root: 'src',
   publicDir: '../public',
+  base: normalizedBase,
 
   build: {
     cssCodeSplit: false,

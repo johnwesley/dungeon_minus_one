@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-notify
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-notify
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -70,7 +70,7 @@ frontend-dev:  ## Start Vite dev server (port 5173)
 	cd $(FRONTEND) && npm run dev
 
 frontend-build:  ## Build frontend for staging/prod-style
-	cd $(FRONTEND) && npm run build
+	cd $(FRONTEND) && ASSET_BASE_URL="$(ASSET_BASE_URL)" npm run build
 
 dev-full:  ## Start backend + frontend dev servers (access at localhost:5173)
 	$(PYTHON) scripts/sync_locations.py
@@ -90,23 +90,65 @@ GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main"
 DEFAULT_TAG := $(shell echo $(GIT_BRANCH) | sed 's|.*/||')
 TAG ?= $(DEFAULT_TAG)
 
+# --- Frontend Assets (Spaces) ---
+
+ASSET_REGION ?= nyc3
+ASSET_SPACE ?= dungeon-minus-one-assets
+ASSET_ENV ?= staging
+ASSET_PREFIX ?= $(ASSET_ENV)/$(TAG)
+ASSET_CDN_DOMAIN ?=
+ASSET_BASE_URL ?= $(if $(ASSET_CDN_DOMAIN),https://$(ASSET_CDN_DOMAIN)/$(ASSET_PREFIX)/,)
+ASSET_CACHE_CONTROL ?= public, max-age=31536000, immutable
+
+# Default CDN hostnames (override via env or .env.deploy)
+ASSET_CDN_DOMAIN_STAGING ?= assets-staging.dungeonminusone.com
+ASSET_CDN_DOMAIN_PROD ?= assets.dungeonminusone.com
+
 # Deployment environment file
 DEPLOY_ENV := infra/.env.deploy
 
 docker-build:  ## Build Docker image for amd64 (usage: make docker-build TAG=v0.5.0)
-	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME):$(TAG) --load .
+	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME):$(TAG) --build-arg ASSET_BASE_URL=$(ASSET_BASE_URL) --load .
 
 docker-push:  ## Push Docker image (usage: make docker-push TAG=v0.5.0)
 	docker push $(IMAGE_NAME):$(TAG)
 
 docker-release:  ## Build and push Docker image for amd64 (usage: make docker-release TAG=v0.5.0)
-	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME):$(TAG) --push .
+	@if [ -n "$(ASSET_BASE_URL)" ]; then $(MAKE) assets-publish TAG=$(TAG) ASSET_BASE_URL="$(ASSET_BASE_URL)"; fi
+	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME):$(TAG) --build-arg ASSET_BASE_URL=$(ASSET_BASE_URL) --push .
+
+# --- Asset Publishing (Spaces) ---
+
+assets-publish:  ## Build and upload frontend assets to Spaces
+	@if [ -z "$(ASSET_BASE_URL)" ]; then echo "ASSET_BASE_URL is required (set ASSET_CDN_DOMAIN or ASSET_BASE_URL)."; exit 1; fi
+	$(MAKE) frontend-build ASSET_BASE_URL="$(ASSET_BASE_URL)"
+	$(PYTHON) scripts/publish_frontend_assets.py --dist $(FRONTEND)/dist --space $(ASSET_SPACE) --region $(ASSET_REGION) --prefix $(ASSET_PREFIX) --cache-control "$(ASSET_CACHE_CONTROL)"
+
+# --- One-command release helpers ---
+
+release-staging:  ## Build+publish assets, push image, and deploy to staging
+	@set -a; [ -f $(DEPLOY_ENV) ] && . ./$(DEPLOY_ENV); set +a; \
+	ASSET_ENV=staging \
+	ASSET_CDN_DOMAIN=$${ASSET_CDN_DOMAIN:-$${ASSET_CDN_DOMAIN_STAGING:-$(ASSET_CDN_DOMAIN_STAGING)}} \
+	$(MAKE) docker-release TAG=$(TAG) ASSET_ENV=staging ASSET_CDN_DOMAIN=$${ASSET_CDN_DOMAIN:-$${ASSET_CDN_DOMAIN_STAGING:-$(ASSET_CDN_DOMAIN_STAGING)}}; \
+	$(MAKE) k8s-deploy TAG=$(TAG)
+
+release-prod:  ## Build+publish assets, push image, and deploy to production
+	@set -a; [ -f $(DEPLOY_ENV) ] && . ./$(DEPLOY_ENV); set +a; \
+	ASSET_ENV=prod \
+	ASSET_CDN_DOMAIN=$${ASSET_CDN_DOMAIN:-$${ASSET_CDN_DOMAIN_PROD:-$(ASSET_CDN_DOMAIN_PROD)}} \
+	$(MAKE) docker-release TAG=$(TAG) ASSET_ENV=prod ASSET_CDN_DOMAIN=$${ASSET_CDN_DOMAIN:-$${ASSET_CDN_DOMAIN_PROD:-$(ASSET_CDN_DOMAIN_PROD)}}; \
+	$(MAKE) k8s-deploy TAG=$(TAG)
 
 # --- Infrastructure (OpenTofu) ---
 
 infra-init:  ## Initialize OpenTofu (auto-sources .env.deploy if present)
 	@if [ -f $(DEPLOY_ENV) ]; then set -a && . ./$(DEPLOY_ENV) && set +a; fi && \
-		cd infra && TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} tofu init
+		cd infra && \
+		TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} \
+		TF_VAR_spaces_access_id=$$SPACES_ACCESS_ID \
+		TF_VAR_spaces_secret_key=$$SPACES_SECRET_KEY \
+		tofu init
 
 infra-plan:  ## Plan infrastructure changes
 	@if [ ! -f $(DEPLOY_ENV) ]; then \
@@ -114,7 +156,11 @@ infra-plan:  ## Plan infrastructure changes
 		exit 1; \
 	fi
 	@set -a && . ./$(DEPLOY_ENV) && set +a && \
-		cd infra && TF_VAR_do_token=$$DO_TOKEN tofu plan
+		cd infra && \
+		TF_VAR_do_token=$$DO_TOKEN \
+		TF_VAR_spaces_access_id=$$SPACES_ACCESS_ID \
+		TF_VAR_spaces_secret_key=$$SPACES_SECRET_KEY \
+		tofu plan
 
 infra-apply:  ## Apply infrastructure changes
 	@if [ ! -f $(DEPLOY_ENV) ]; then \
@@ -122,7 +168,11 @@ infra-apply:  ## Apply infrastructure changes
 		exit 1; \
 	fi
 	@set -a && . ./$(DEPLOY_ENV) && set +a && \
-		cd infra && TF_VAR_do_token=$$DO_TOKEN tofu apply
+		cd infra && \
+		TF_VAR_do_token=$$DO_TOKEN \
+		TF_VAR_spaces_access_id=$$SPACES_ACCESS_ID \
+		TF_VAR_spaces_secret_key=$$SPACES_SECRET_KEY \
+		tofu apply
 
 infra-destroy:  ## Destroy all infrastructure (DANGEROUS)
 	@if [ ! -f $(DEPLOY_ENV) ]; then \
@@ -130,7 +180,11 @@ infra-destroy:  ## Destroy all infrastructure (DANGEROUS)
 		exit 1; \
 	fi
 	@set -a && . ./$(DEPLOY_ENV) && set +a && \
-		cd infra && TF_VAR_do_token=$$DO_TOKEN tofu destroy
+		cd infra && \
+		TF_VAR_do_token=$$DO_TOKEN \
+		TF_VAR_spaces_access_id=$$SPACES_ACCESS_ID \
+		TF_VAR_spaces_secret_key=$$SPACES_SECRET_KEY \
+		tofu destroy
 
 # --- Kubernetes (DOKS) ---
 
@@ -145,7 +199,10 @@ k8s-kubeconfig:  ## Export kubeconfig for DOKS cluster
 	@mkdir -p ~/.kube
 	@set -a && . ./$(DEPLOY_ENV) && set +a && \
 		cd infra && \
-		TF_VAR_do_token=$$DO_TOKEN tofu output -raw k8s_kubeconfig > $(KUBECONFIG_FILE) && \
+		TF_VAR_do_token=$$DO_TOKEN \
+		TF_VAR_spaces_access_id=$$SPACES_ACCESS_ID \
+		TF_VAR_spaces_secret_key=$$SPACES_SECRET_KEY \
+		tofu output -raw k8s_kubeconfig > $(KUBECONFIG_FILE) && \
 		chmod 600 $(KUBECONFIG_FILE) && \
 		echo "Kubeconfig written to $(KUBECONFIG_FILE)" && \
 		echo "Run: export KUBECONFIG=$(KUBECONFIG_FILE)"
