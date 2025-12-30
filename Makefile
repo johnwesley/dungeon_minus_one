@@ -122,7 +122,8 @@ docker-release:  ## Build and push Docker image for amd64 (usage: make docker-re
 assets-publish:  ## Build and upload frontend assets to Spaces
 	@set -a; [ -f $(DEPLOY_ENV) ] && . ./$(DEPLOY_ENV); set +a; \
 	if [ -z "$(ASSET_BASE_URL)" ]; then echo "ASSET_BASE_URL is required (set ASSET_CDN_DOMAIN or ASSET_BASE_URL)."; exit 1; fi; \
-	if [ -z "$$SPACES_ACCESS_KEY" ] || [ -z "$$SPACES_SECRET_KEY" ]; then echo "SPACES_ACCESS_KEY and SPACES_SECRET_KEY must be set."; exit 1; fi; \
+	if [ -z "$$SPACES_ACCESS_KEY" ] && [ -z "$$AWS_ACCESS_KEY_ID" ]; then echo "SPACES_ACCESS_KEY or AWS_ACCESS_KEY_ID must be set."; exit 1; fi; \
+	if [ -z "$$SPACES_SECRET_KEY" ] && [ -z "$$AWS_SECRET_ACCESS_KEY" ]; then echo "SPACES_SECRET_KEY or AWS_SECRET_ACCESS_KEY must be set."; exit 1; fi; \
 	$(MAKE) frontend-build ASSET_BASE_URL="$(ASSET_BASE_URL)"; \
 	$(PYTHON) scripts/publish_frontend_assets.py --dist $(FRONTEND)/dist --space $(ASSET_SPACE) --region $(ASSET_REGION) --prefix $(ASSET_PREFIX) --cache-control "$(ASSET_CACHE_CONTROL)"
 
