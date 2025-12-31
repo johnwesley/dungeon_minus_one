@@ -149,8 +149,8 @@ infra-init:  ## Initialize OpenTofu (auto-sources .env.deploy if present)
 	@if [ -f $(DEPLOY_ENV) ]; then set -a && . ./$(DEPLOY_ENV) && set +a; fi && \
 		cd infra && \
 		TF_VAR_do_token=$${DO_TOKEN:-$(DO_TOKEN)} \
-		TF_VAR_spaces_access_id=$$SPACES_ACCESS_ID \
-		TF_VAR_spaces_secret_key=$$SPACES_SECRET_KEY \
+		TF_VAR_spaces_access_id=$${SPACES_ACCESS_KEY:-$${SPACES_ACCESS_ID:-$${AWS_ACCESS_KEY_ID}}} \
+		TF_VAR_spaces_secret_key=$${SPACES_SECRET_KEY:-$${AWS_SECRET_ACCESS_KEY}} \
 		tofu init
 
 infra-plan:  ## Plan infrastructure changes
@@ -161,8 +161,8 @@ infra-plan:  ## Plan infrastructure changes
 	@set -a && . ./$(DEPLOY_ENV) && set +a && \
 		cd infra && \
 		TF_VAR_do_token=$$DO_TOKEN \
-		TF_VAR_spaces_access_id=$$SPACES_ACCESS_ID \
-		TF_VAR_spaces_secret_key=$$SPACES_SECRET_KEY \
+		TF_VAR_spaces_access_id=$${SPACES_ACCESS_KEY:-$${SPACES_ACCESS_ID:-$${AWS_ACCESS_KEY_ID}}} \
+		TF_VAR_spaces_secret_key=$${SPACES_SECRET_KEY:-$${AWS_SECRET_ACCESS_KEY}} \
 		tofu plan
 
 infra-apply:  ## Apply infrastructure changes
@@ -173,8 +173,8 @@ infra-apply:  ## Apply infrastructure changes
 	@set -a && . ./$(DEPLOY_ENV) && set +a && \
 		cd infra && \
 		TF_VAR_do_token=$$DO_TOKEN \
-		TF_VAR_spaces_access_id=$$SPACES_ACCESS_ID \
-		TF_VAR_spaces_secret_key=$$SPACES_SECRET_KEY \
+		TF_VAR_spaces_access_id=$${SPACES_ACCESS_KEY:-$${SPACES_ACCESS_ID:-$${AWS_ACCESS_KEY_ID}}} \
+		TF_VAR_spaces_secret_key=$${SPACES_SECRET_KEY:-$${AWS_SECRET_ACCESS_KEY}} \
 		tofu apply
 
 infra-destroy:  ## Destroy all infrastructure (DANGEROUS)
@@ -185,8 +185,8 @@ infra-destroy:  ## Destroy all infrastructure (DANGEROUS)
 	@set -a && . ./$(DEPLOY_ENV) && set +a && \
 		cd infra && \
 		TF_VAR_do_token=$$DO_TOKEN \
-		TF_VAR_spaces_access_id=$$SPACES_ACCESS_ID \
-		TF_VAR_spaces_secret_key=$$SPACES_SECRET_KEY \
+		TF_VAR_spaces_access_id=$${SPACES_ACCESS_KEY:-$${SPACES_ACCESS_ID:-$${AWS_ACCESS_KEY_ID}}} \
+		TF_VAR_spaces_secret_key=$${SPACES_SECRET_KEY:-$${AWS_SECRET_ACCESS_KEY}} \
 		tofu destroy
 
 # --- Kubernetes (DOKS) ---
@@ -203,8 +203,8 @@ k8s-kubeconfig:  ## Export kubeconfig for DOKS cluster
 	@set -a && . ./$(DEPLOY_ENV) && set +a && \
 		cd infra && \
 		TF_VAR_do_token=$$DO_TOKEN \
-		TF_VAR_spaces_access_id=$$SPACES_ACCESS_ID \
-		TF_VAR_spaces_secret_key=$$SPACES_SECRET_KEY \
+		TF_VAR_spaces_access_id=$${SPACES_ACCESS_KEY:-$${SPACES_ACCESS_ID:-$${AWS_ACCESS_KEY_ID}}} \
+		TF_VAR_spaces_secret_key=$${SPACES_SECRET_KEY:-$${AWS_SECRET_ACCESS_KEY}} \
 		tofu output -raw k8s_kubeconfig > $(KUBECONFIG_FILE) && \
 		chmod 600 $(KUBECONFIG_FILE) && \
 		echo "Kubeconfig written to $(KUBECONFIG_FILE)" && \
