@@ -12,6 +12,7 @@ from app.models.database import User
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.message_repository import MessageRepository
 from app.api.auth import get_current_user
+from app.utils.message_sanitizer import strip_internal_markers
 
 router = APIRouter()
 
@@ -89,7 +90,7 @@ async def get_conversation(
             MessageResponse(
                 id=m.id,
                 role=m.role,
-                content=m.content,
+                content=strip_internal_markers(m.content) if m.role == "assistant" else m.content,
                 created_at=m.created_at,
             )
             for m in messages

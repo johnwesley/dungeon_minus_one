@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-notify
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-notify k8s-clean-markers
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -134,7 +134,8 @@ release-staging:  ## Build+publish assets, push image, and deploy to staging
 	ASSET_ENV=staging \
 	ASSET_CDN_DOMAIN=$${ASSET_CDN_DOMAIN:-$${ASSET_CDN_DOMAIN_STAGING:-$(ASSET_CDN_DOMAIN_STAGING)}} \
 	$(MAKE) docker-release TAG=$(TAG) ASSET_ENV=staging ASSET_CDN_DOMAIN=$${ASSET_CDN_DOMAIN:-$${ASSET_CDN_DOMAIN_STAGING:-$(ASSET_CDN_DOMAIN_STAGING)}}; \
-	$(MAKE) k8s-deploy TAG=$(TAG)
+	$(MAKE) k8s-deploy TAG=$(TAG); \
+	$(MAKE) k8s-clean-markers
 
 release-prod:  ## Build+publish assets, push image, and deploy to production
 	@set -a; [ -f $(DEPLOY_ENV) ] && . ./$(DEPLOY_ENV); set +a; \
@@ -277,3 +278,6 @@ k8s-reset:  ## Reset game sessions in k8s (keeps users)
 
 k8s-notify:  ## Create notification in k8s (usage: make k8s-notify TITLE="title" MSG="message")
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)
+
+k8s-clean-markers:  ## Strip internal [State]/[Tools used] markers from assistant messages in k8s DB
+	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/clean_message_markers.py

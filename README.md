@@ -68,7 +68,9 @@ make release-prod TAG=v0.7.0
 ```
 
 These targets will build/upload assets to Spaces, push the Docker image,
-and deploy the updated image tag to Kubernetes.
+and deploy the updated image tag to Kubernetes. Staging releases also run
+`make k8s-clean-markers` (added for v0.8.0) to scrub internal `[State]`/`[Tools used]`
+markers from stored assistant messages.
 
 ## Frontend Assets (Spaces + CDN)
 
@@ -116,6 +118,7 @@ Run `make help` to see all available commands.
 | `make k8s-status` | Show pods, services, secrets |
 | `make k8s-logs` | Stream pod logs |
 | `make k8s-invite` | Generate invite code in cluster |
+| `make k8s-clean-markers` | Strip internal state/tool markers from assistant messages in cluster DB |
 
 ## Debug Logging
 

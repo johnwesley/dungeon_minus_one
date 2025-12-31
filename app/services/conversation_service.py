@@ -27,6 +27,7 @@ from app.clients.llm_client import LLMClient
 from app.models.database import Conversation, Message
 from app.services.game_tools import GameToolHandlers
 from app.config import get_settings
+from app.utils.message_sanitizer import strip_internal_markers
 
 
 ENDING_ASCII = "[ PROCESS COMPLETE ]\n[ NO FURTHER INPUT ]\n\n>"
@@ -799,11 +800,7 @@ class ConversationService:
         await self.conversation_repo.touch(conversation.id)
 
         # Emit done event (strip internal state markers from user output)
-        user_content = assistant_msg.content
-        if "\n\n---\n[State:" in user_content:
-            user_content = user_content.split("\n\n---\n[State:")[0]
-        elif "\n\n---\n[Tools used:" in user_content:
-            user_content = user_content.split("\n\n---\n[Tools used:")[0]
+        user_content = strip_internal_markers(assistant_msg.content)
 
         yield StreamEvent(
             type="done",
