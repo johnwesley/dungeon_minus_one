@@ -951,6 +951,9 @@ class ConversationService:
         # Track if restart was triggered during this request
         restart_triggered = False
 
+        # Track location lookups for desync detection
+        locations_looked_up = []
+
         # Wrap handlers to inject correct conversation_id
         # The LLM often hallucinates 'default' or omits it, causing foreign key errors.
         # We must ensure the handler receives the *actual* database conversation ID.
@@ -964,6 +967,12 @@ class ConversationService:
                 # get_location_data does not (it uses location_id).
                 if "conversation_id" in input_data or tool_name in ["get_game_state", "update_game_state", "restart_game"]:
                     input_data["conversation_id"] = conversation.id
+
+                # Track location lookups for desync detection
+                if tool_name == "get_location_data":
+                    loc_id = input_data.get("location_id")
+                    if loc_id and loc_id != location_before:
+                        locations_looked_up.append(loc_id)
 
                 result = await handler(input_data)
 
@@ -1062,6 +1071,19 @@ class ConversationService:
         state_after = await self.game_repo.get_state(conversation.id)
         location_after = state_after.current_location if state_after else None
         inventory_after = set(i['id'] for i in (state_after.inventory or []) if isinstance(i, dict) and 'id' in i) if state_after else set()
+
+        # Detect movement desync: LLM looked up a different location but didn't update state
+        if locations_looked_up and location_before == location_after:
+            if "update_game_state" not in tools_called:
+                log_service_debug({
+                    "event": "movement_desync_detected",
+                    "timestamp": int(time.time() * 1000),
+                    "conversation_id": conversation.id,
+                    "locations_looked_up": locations_looked_up,
+                    "stayed_at": location_before,
+                    "tools_called": tools_called,
+                    "message": message,
+                })
 
         changes = []
 

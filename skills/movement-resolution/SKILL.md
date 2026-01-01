@@ -5,12 +5,25 @@ description: Use when the player attempts to move between locations, reference d
 
 # Movement Resolution
 
+## MANDATORY TOOL USE
+
+**YOU MUST CALL TOOLS FOR EVERY MOVEMENT ATTEMPT. NO EXCEPTIONS.**
+
+Before describing ANY location or movement result, you MUST:
+1. Call `get_game_state` to verify current position and available exits
+2. Call `update_game_state` if moving to a new location
+
+**NEVER describe a room, location, or movement outcome without first calling these tools.**
+
+If you respond to a movement command without calling `get_game_state` and `update_game_state`, the game will desync. This is a critical failure.
+
 ## When to Apply
 
 Apply this skill when the player:
 - Uses movement verbs: go, move, walk, run, head, proceed, enter, exit, leave, climb, descend
 - References directions: north, south, east, west, up, down, n, s, e, w, u, d
 - References passages: door, gate, stairs, ladder, tunnel, passage, path, trail
+- Uses ANY natural language that implies moving (e.g., "I'd like to head that way", "take me to...", "let's go")
 
 ## Critical Rules
 
@@ -57,3 +70,25 @@ When the player tries to move in an invalid direction, do not say "I don't know 
 - "You can't go that direction from here."
 
 Never invent exits. Never move the player without updating state.
+
+## Never Do
+
+These are critical errors that will break the game:
+
+1. **Never describe a location without calling tools first**
+   - BAD: Player says "south" → You immediately describe a new room
+   - GOOD: Player says "south" → Call `get_game_state` → Verify exit → Call `update_game_state` → Call `get_location_data` → Describe room
+
+2. **Never use memory or context for location descriptions**
+   - BAD: You remember what's south and describe it from memory
+   - GOOD: Always fetch fresh data via `get_location_data`
+
+3. **Never skip `update_game_state` when moving**
+   - BAD: Describe new location without updating state
+   - GOOD: Always call `update_game_state({"current_location": "target_id"})` BEFORE describing
+
+4. **Never assume you know the current location**
+   - BAD: You think the player is at location X and respond accordingly
+   - GOOD: Always verify via `get_game_state` first
+
+If you follow these rules, the game will stay in sync. If you skip them, the player will be stuck.
