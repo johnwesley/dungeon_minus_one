@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import os
 import json
 import time
+import re
 
 from app.repositories.conversation_repository import ConversationRepository
 
@@ -24,7 +25,7 @@ def log_service_debug(data: dict):
 from app.repositories.message_repository import MessageRepository
 from app.repositories.game_repository import GameRepository
 from app.clients.llm_client import LLMClient
-from app.models.database import Conversation, Message
+from app.models.database import Conversation, Message, GameState
 from app.services.game_tools import GameToolHandlers
 from app.config import get_settings
 from app.utils.message_sanitizer import strip_internal_markers
@@ -47,9 +48,144 @@ TREASURE_IDS = {
     "scarab",
 }
 
+NPC_DIALOGUE_DEFAULTS = {
+    "max_turns": 4,
+    "decay_seconds": 300,
+    "cooldown_seconds": 120,
+    "exhausted_response": "{name} loses focus and turns away, no longer engaging.",
+    "cooldown_response": "{name} remains unavailable for now.",
+    "kill_player": False,
+}
+
+NPC_TALK_WORDS = {
+    "talk",
+    "speak",
+    "ask",
+    "say",
+    "tell",
+    "chat",
+    "converse",
+    "greet",
+    "address",
+}
+
+NPC_GREETINGS = {
+    "hello",
+    "hi",
+    "hey",
+    "greetings",
+}
+
 
 def _normalize_command(message: str) -> str:
     return " ".join(message.strip().lower().split())
+
+
+def _contains_word(text: str, word: str) -> bool:
+    if not text or not word:
+        return False
+    return re.search(r"\b" + re.escape(word) + r"\b", text) is not None
+
+
+def _npc_state_key(npc: dict) -> str:
+    npc_id = str(npc.get("id") or "").strip().lower()
+    if npc_id:
+        return npc_id
+    return str(npc.get("name") or "npc").strip().lower()
+
+
+def _message_mentions_npc(cmd: str, npc: dict) -> bool:
+    npc_id = str(npc.get("id") or "").strip().lower()
+    npc_name = str(npc.get("name") or "").strip().lower()
+
+    if npc_id and _contains_word(cmd, npc_id):
+        return True
+    if npc_name:
+        if " " in npc_name:
+            return npc_name in cmd
+        return _contains_word(cmd, npc_name)
+    return False
+
+
+def _is_npc_engagement(message: str, npc: dict, npcs: list[dict]) -> bool:
+    cmd = _normalize_command(message)
+    if not cmd:
+        return False
+
+    if _message_mentions_npc(cmd, npc):
+        return True
+
+    if _has_any_word(cmd, NPC_TALK_WORDS | NPC_GREETINGS):
+        return len(npcs) == 1
+
+    if cmd.endswith("?") or cmd.startswith('"') or cmd.startswith("'"):
+        return len(npcs) == 1
+
+    return False
+
+
+def _has_any_word(cmd: str, words: set[str]) -> bool:
+    return any(_contains_word(cmd, word) for word in words)
+
+
+def _select_dialogue_npc(message: str, npcs: list[dict]) -> Optional[dict]:
+    if not npcs:
+        return None
+    if len(npcs) == 1:
+        return npcs[0]
+
+    cmd = _normalize_command(message)
+    for npc in npcs:
+        if _message_mentions_npc(cmd, npc):
+            return npc
+
+    return npcs[0]
+
+
+def _int_or_default(value: Optional[object], default: int) -> int:
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+
+
+def _resolve_dialogue_config(npc: dict) -> dict:
+    config = npc.get("dialogue_limits") or {}
+    if config.get("enabled") is False:
+        return {}
+
+    max_turns = _int_or_default(config.get("max_turns"), NPC_DIALOGUE_DEFAULTS["max_turns"])
+    if max_turns <= 0:
+        return {}
+
+    decay_seconds = _int_or_default(config.get("decay_seconds"), NPC_DIALOGUE_DEFAULTS["decay_seconds"])
+    cooldown_seconds = _int_or_default(
+        config.get("cooldown_seconds"),
+        NPC_DIALOGUE_DEFAULTS["cooldown_seconds"],
+    )
+
+    return {
+        "max_turns": max_turns,
+        "decay_seconds": max(0, decay_seconds),
+        "cooldown_seconds": max(0, cooldown_seconds),
+        "exhausted_response": config.get(
+            "exhausted_response",
+            NPC_DIALOGUE_DEFAULTS["exhausted_response"],
+        ),
+        "cooldown_response": config.get(
+            "cooldown_response",
+            NPC_DIALOGUE_DEFAULTS["cooldown_response"],
+        ),
+        "kill_player": bool(config.get("kill_player", NPC_DIALOGUE_DEFAULTS["kill_player"])),
+    }
+
+
+def _format_npc_response(template: str, npc: dict) -> str:
+    name = npc.get("name") or npc.get("id") or "The figure"
+    try:
+        return template.format(name=name)
+    except (KeyError, IndexError, ValueError):
+        return template.replace("{name}", str(name))
 
 
 def _is_restart_request(message: str) -> bool:
@@ -141,6 +277,13 @@ class StreamEvent:
     data: dict
 
 
+@dataclass
+class NpcDialogueLimitResult:
+    response: Optional[str] = None
+    kill_player: bool = False
+    note: Optional[str] = None
+
+
 class ConversationService:
     """Service for handling chat conversations."""
 
@@ -170,6 +313,119 @@ class ConversationService:
         if len(first_message) > 50:
             title += "..."
         return title
+
+    async def _apply_npc_dialogue_limits(
+        self,
+        *,
+        message: str,
+        conversation_id: str,
+        state: GameState,
+        location_data: Optional[dict],
+    ) -> Optional[NpcDialogueLimitResult]:
+        if not self.game_repo or not location_data:
+            return None
+
+        npcs = location_data.get("npcs") or []
+        if not npcs:
+            return None
+
+        npc = _select_dialogue_npc(message, npcs)
+        if not npc:
+            return None
+
+        config = _resolve_dialogue_config(npc)
+        if not config:
+            return None
+
+        npc_id = _npc_state_key(npc)
+        if not npc_id:
+            return None
+
+        flags = state.flags or {}
+        npc_dialogue = flags.get("npc_dialogue")
+        if not isinstance(npc_dialogue, dict):
+            npc_dialogue = {}
+
+        entry = npc_dialogue.get(npc_id)
+        if not isinstance(entry, dict):
+            entry = {}
+
+        now = int(time.time())
+        engaged = _is_npc_engagement(message, npc, npcs)
+        count = _int_or_default(entry.get("count"), 0)
+        last_exchange_at = _int_or_default(entry.get("last_exchange_at"), 0)
+        cooldown_until = _int_or_default(entry.get("cooldown_until"), 0)
+
+        decay_seconds = config["decay_seconds"]
+        if last_exchange_at and decay_seconds > 0 and now - last_exchange_at >= decay_seconds:
+            count = 0
+            cooldown_until = 0
+
+        if cooldown_until and now < cooldown_until:
+            npc_dialogue[npc_id] = {
+                "count": count,
+                "last_exchange_at": last_exchange_at,
+                "cooldown_until": cooldown_until,
+            }
+            new_flags = dict(flags)
+            new_flags["npc_dialogue"] = npc_dialogue
+            await self.game_repo.update_state(conversation_id, {"flags": new_flags})
+            if engaged:
+                return NpcDialogueLimitResult(
+                    response=_format_npc_response(config["cooldown_response"], npc),
+                )
+            return None
+
+        count += 1
+        last_exchange_at = now
+
+        if count >= config["max_turns"]:
+            count = config["max_turns"]
+            npc_dialogue[npc_id] = {
+                "count": count,
+                "last_exchange_at": last_exchange_at,
+                "cooldown_until": cooldown_until,
+            }
+            new_flags = dict(flags)
+            new_flags["npc_dialogue"] = npc_dialogue
+            await self.game_repo.update_state(conversation_id, {"flags": new_flags})
+            if not engaged:
+                return None
+
+            if config.get("kill_player"):
+                name = npc.get("name") or npc.get("id") or "The figure"
+                note = (
+                    f"{name} has reached their patience limit and kills the player. "
+                    "Narrate the death clearly and end the scene."
+                )
+                return NpcDialogueLimitResult(
+                    kill_player=True,
+                    note=note,
+                )
+
+            cooldown_seconds = config["cooldown_seconds"]
+            cooldown_until = now + cooldown_seconds if cooldown_seconds > 0 else 0
+            npc_dialogue[npc_id] = {
+                "count": count,
+                "last_exchange_at": last_exchange_at,
+                "cooldown_until": cooldown_until,
+            }
+            new_flags = dict(flags)
+            new_flags["npc_dialogue"] = npc_dialogue
+            await self.game_repo.update_state(conversation_id, {"flags": new_flags})
+            return NpcDialogueLimitResult(
+                response=_format_npc_response(config["exhausted_response"], npc),
+            )
+
+        npc_dialogue[npc_id] = {
+            "count": count,
+            "last_exchange_at": last_exchange_at,
+            "cooldown_until": cooldown_until,
+        }
+        new_flags = dict(flags)
+        new_flags["npc_dialogue"] = npc_dialogue
+        await self.game_repo.update_state(conversation_id, {"flags": new_flags})
+        return None
 
     async def chat(
         self,
@@ -474,10 +730,12 @@ class ConversationService:
 
         # Inject current game state into system prompt for context refreshment
         state_summary = ""
+        location_data = None
         if state:
             location_name = state.current_location
             # Fetch location details for richer context
             loc_data = await self.game_repo.get_location(state.current_location)
+            location_data = loc_data
             exits_map = loc_data.get("exits", {}) if loc_data else {}
             exits = ", ".join(exits_map.keys()) if exits_map else "Unknown"
             interactables = loc_data.get("interactables", []) if loc_data else []
@@ -635,6 +893,46 @@ class ConversationService:
                 "user_message_id": user_msg.id,
             },
         )
+
+        npc_limit_result = None
+        force_restart_after_stream = False
+        if state:
+            npc_limit_result = await self._apply_npc_dialogue_limits(
+                message=message,
+                conversation_id=conversation.id,
+                state=state,
+                location_data=location_data,
+            )
+
+        if npc_limit_result and npc_limit_result.response:
+            assistant_msg = await self.message_repo.create(
+                conversation_id=conversation.id,
+                role="assistant",
+                content=npc_limit_result.response,
+            )
+            await self.conversation_repo.touch(conversation.id)
+            user_content = strip_internal_markers(assistant_msg.content)
+
+            yield StreamEvent(type="delta", data={"content": user_content})
+            yield StreamEvent(
+                type="done",
+                data={
+                    "message": {
+                        "id": assistant_msg.id,
+                        "role": assistant_msg.role,
+                        "content": user_content,
+                        "created_at": assistant_msg.created_at.isoformat(),
+                    }
+                },
+            )
+            return
+        if npc_limit_result and npc_limit_result.kill_player:
+            force_restart_after_stream = True
+            if npc_limit_result.note:
+                if state_summary:
+                    state_summary = f"{state_summary}\n\nNPC OVERRIDE:\n{npc_limit_result.note}"
+                else:
+                    state_summary = f"NPC OVERRIDE:\n{npc_limit_result.note}"
 
         # Load history
         history = await self.message_repo.list_by_conversation(conversation.id)
@@ -815,7 +1113,7 @@ class ConversationService:
         )
 
         # If restart was triggered, emit restart event after done
-        if restart_triggered:
+        if restart_triggered or force_restart_after_stream:
             yield StreamEvent(
                 type="restart",
                 data={"conversation_id": conversation.id},
