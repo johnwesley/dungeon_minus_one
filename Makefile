@@ -115,7 +115,7 @@ docker-push:  ## Push Docker image (usage: make docker-push TAG=v0.5.0)
 
 docker-release:  ## Build and push Docker image for amd64 (usage: make docker-release TAG=v0.5.0)
 	@if [ -n "$(ASSET_BASE_URL)" ]; then $(MAKE) assets-publish TAG=$(TAG) ASSET_BASE_URL="$(ASSET_BASE_URL)"; fi
-	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME):$(TAG) --build-arg ASSET_BASE_URL=$(ASSET_BASE_URL) --push .
+	docker buildx build --platform linux/amd64 -t $(IMAGE_NAME):$(TAG) --build-arg ASSET_BASE_URL=$(ASSET_BASE_URL) --no-cache --push .
 
 # --- Asset Publishing (Spaces) ---
 
