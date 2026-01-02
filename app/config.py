@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str
     database_url: str = "sqlite+aiosqlite:///./chat.db"
     model_name: str = "claude-opus-4-5-20251101"
+    llm_max_tokens: int = 16000
+    thinking_enabled: bool = True
+    thinking_budget_tokens: int = 10000
 
     # Default tenant/user for single-tenant POC
     default_tenant_id: str = "default"
@@ -37,6 +40,9 @@ class Settings(BaseSettings):
 
     # Skills configuration (prompt concatenation approach)
     skills_enabled: bool = False  # Set to True to include skill files in system prompt
+
+    # Debug logging (LLM)
+    debug_llm: bool = False
 
     # Feedback feature (only enable in staging/dev)
     feedback_enabled: bool = False

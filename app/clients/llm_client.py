@@ -9,8 +9,8 @@ from app.config import get_settings
 from prompts import load_prompt, NARRATOR_PROMPT
 from app.clients.tools import GAME_TOOLS
 
-# Debug flag - set DEBUG_LLM=true to log detailed API payloads
-DEBUG_LLM = os.environ.get("DEBUG_LLM", "").lower() == "true"
+# Debug flag - set DEBUG_LLM=true in .env to log detailed API payloads
+DEBUG_LLM = get_settings().debug_llm
 DEBUG_LLM_LOG_PATH = os.path.join(os.path.dirname(__file__), "../../.cursor/llm_debug.log")
 
 
@@ -81,7 +81,12 @@ class AnthropicClient(LLMClient):
             api_key=api_key or settings.anthropic_api_key
         )
         self.model = model or settings.model_name
-        self.max_tokens = 4096
+        self.max_tokens = settings.llm_max_tokens
+        self.thinking_enabled = settings.thinking_enabled
+        self.thinking_budget_tokens = settings.thinking_budget_tokens
+        if self.thinking_enabled and self.thinking_budget_tokens >= self.max_tokens:
+            # Keep budget below max_tokens to satisfy API constraints.
+            self.thinking_budget_tokens = max(1, self.max_tokens - 1)
         
         # Load prompts and combine them
         narrator_prompt = load_prompt(NARRATOR_PROMPT)
@@ -100,19 +105,56 @@ class AnthropicClient(LLMClient):
             }
         ]
 
+    def _thinking_param(self) -> Optional[dict[str, int | str]]:
+        """Build the thinking parameter when enabled."""
+        if not self.thinking_enabled:
+            return None
+        return {
+            "type": "enabled",
+            "budget_tokens": self.thinking_budget_tokens,
+        }
+
+    def _extract_text(self, content: list[Any]) -> str:
+        """Return the first text block from a Claude response."""
+        for block in content:
+            if getattr(block, "type", None) == "text":
+                return block.text
+        return ""
+
+    def _content_block_types(self, content: list[Any]) -> list[str]:
+        """Return the list of content block types for debug logging."""
+        return [
+            str(getattr(block, "type", "unknown"))
+            for block in content
+        ]
+
     async def chat(
         self,
         messages: list[dict[str, str]],
         system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> str:
         """Send messages and return the complete response."""
-        response = await self.client.messages.create(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            system=system_prompt or self.default_system_prompt,
-            messages=messages,
-        )
-        return response.content[0].text
+        params: dict[str, Any] = {
+            "model": self.model,
+            "max_tokens": self.max_tokens,
+            "system": system_prompt or self.default_system_prompt,
+            "messages": messages,
+        }
+        thinking = self._thinking_param()
+        if thinking:
+            params["thinking"] = thinking
+
+        response = await self.client.messages.create(**params)
+        if DEBUG_LLM:
+            block_types = self._content_block_types(response.content)
+            log_llm_debug({
+                "event": "llm_response_summary",
+                "timestamp": int(time.time() * 1000),
+                "stop_reason": response.stop_reason,
+                "block_types": block_types,
+                "thinking_present": "thinking" in block_types,
+            })
+        return self._extract_text(response.content)
 
     async def chat_stream(
         self,
@@ -120,12 +162,17 @@ class AnthropicClient(LLMClient):
         system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> AsyncIterator[str]:
         """Send messages and yield response chunks."""
-        async with self.client.messages.stream(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            system=system_prompt or self.default_system_prompt,
-            messages=messages,
-        ) as stream:
+        params: dict[str, Any] = {
+            "model": self.model,
+            "max_tokens": self.max_tokens,
+            "system": system_prompt or self.default_system_prompt,
+            "messages": messages,
+        }
+        thinking = self._thinking_param()
+        if thinking:
+            params["thinking"] = thinking
+
+        async with self.client.messages.stream(**params) as stream:
             async for text in stream.text_stream:
                 yield text
 
@@ -152,13 +199,18 @@ class AnthropicClient(LLMClient):
         working_messages = list(messages)
 
         # Initial request with tools
-        response = await self.client.messages.create(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            system=system_prompt or self.default_system_prompt,
-            tools=GAME_TOOLS,
-            messages=working_messages,
-        )
+        params: dict[str, Any] = {
+            "model": self.model,
+            "max_tokens": self.max_tokens,
+            "system": system_prompt or self.default_system_prompt,
+            "tools": GAME_TOOLS,
+            "messages": working_messages,
+        }
+        thinking = self._thinking_param()
+        if thinking:
+            params["thinking"] = thinking
+
+        response = await self.client.messages.create(**params)
 
         # Handle tool use loop
         while response.stop_reason == "tool_use":
@@ -207,20 +259,19 @@ class AnthropicClient(LLMClient):
             working_messages.append({"role": "user", "content": tool_results})
 
             # Continue conversation with tool results
-            response = await self.client.messages.create(
-                model=self.model,
-                max_tokens=self.max_tokens,
-                system=system_prompt or self.default_system_prompt,
-                tools=GAME_TOOLS,
-                messages=working_messages,
-            )
+            response = await self.client.messages.create(**params)
 
         # Extract final text response
-        for block in response.content:
-            if hasattr(block, "text"):
-                return block.text
-
-        return ""
+        if DEBUG_LLM:
+            block_types = self._content_block_types(response.content)
+            log_llm_debug({
+                "event": "llm_response_summary",
+                "timestamp": int(time.time() * 1000),
+                "stop_reason": response.stop_reason,
+                "block_types": block_types,
+                "thinking_present": "thinking" in block_types,
+            })
+        return self._extract_text(response.content)
 
     async def chat_stream_with_tools(
         self,
@@ -267,6 +318,9 @@ class AnthropicClient(LLMClient):
             "system": system_prompt or self.default_system_prompt,
             "tools": GAME_TOOLS,
         }
+        thinking = self._thinking_param()
+        if thinking:
+            base_params["thinking"] = thinking
 
         while True:
             iteration += 1
@@ -308,6 +362,15 @@ class AnthropicClient(LLMClient):
                 "stop_reason": final_message.stop_reason,
                 "content_blocks": len(final_message.content),
             })
+            if DEBUG_LLM:
+                block_types = self._content_block_types(final_message.content)
+                log_llm_debug({
+                    "event": "llm_response_summary",
+                    "timestamp": int(time.time() * 1000),
+                    "stop_reason": final_message.stop_reason,
+                    "block_types": block_types,
+                    "thinking_present": "thinking" in block_types,
+                })
 
             # Append assistant response to history
             working_messages.append({"role": final_message.role, "content": final_message.content})

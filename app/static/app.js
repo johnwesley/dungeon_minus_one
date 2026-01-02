@@ -289,7 +289,7 @@ class ChatApp {
                                 break;
                             case 'progress':
                                 if (data.step === 'using_tool') {
-                                    this.showProgress(assistantMsgEl, `Using tool: ${data.tool}`);
+                                    this.showProgress(assistantMsgEl, 'System running...');
                                 } else if (data.step === 'tool_done') {
                                     this.hideProgress(assistantMsgEl);
                                 }
