@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     environment: str = "dev"
     anthropic_api_key: str
     database_url: str = "sqlite+aiosqlite:///./chat.db"
-    model_name: str = "claude-opus-4-5-20251101"
+    model_name: str = "claude-sonnet-4-5-20250929"
     llm_max_tokens: int = 16000
     thinking_enabled: bool = True
     thinking_budget_tokens: int = 10000
