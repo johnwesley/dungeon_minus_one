@@ -23,10 +23,10 @@ A conversational text-adventure game powered by Claude.
 ```bash
 make setup
 cp .env.example .env  # Add ANTHROPIC_API_KEY
-make run
+make dev-full
 ```
 
-Access at `http://localhost:8000`. Set `ENVIRONMENT=dev` for local development.
+Access at `http://localhost:5173`. Runs backend + frontend with hot reload.
 
 ---
 
@@ -139,7 +139,7 @@ kubectl create secret generic doppler-token -n dungeon --from-literal=serviceTok
 
 | Command | Description |
 |---------|-------------|
-| `make run` | Start dev server |
+| `make dev-full` | Start backend + frontend with hot reload |
 | `make reset` | Clear game state (keep locations) |
 | `make hard-reset` | Wipe DB and re-seed |
 | `make invite` | Generate invite code |
