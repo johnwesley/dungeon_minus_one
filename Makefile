@@ -227,8 +227,13 @@ k8s-setup:  ## One-time cluster setup (Doppler operator + namespace)
 
 k8s-deploy:  ## Deploy/update app to DOKS (usage: make k8s-deploy [TAG=v0.5.0])
 	@if [ -n "$(TAG)" ]; then \
-		echo "==> Deploying with image tag: $(TAG)"; \
-		sed -i.bak 's/newTag: .*/newTag: $(TAG)/' k8s/kustomization.yaml && rm -f k8s/kustomization.yaml.bak; \
+		CURRENT_TAG=$$(grep 'newTag:' k8s/kustomization.yaml | awk '{print $$2}'); \
+		if [ "$$CURRENT_TAG" = "$(TAG)" ]; then \
+			echo "==> Tag already set to $(TAG), skipping update"; \
+		else \
+			echo "==> Updating image tag: $$CURRENT_TAG -> $(TAG)"; \
+			sed -i.bak 's/newTag: .*/newTag: $(TAG)/' k8s/kustomization.yaml && rm -f k8s/kustomization.yaml.bak; \
+		fi; \
 	fi
 	kubectl apply -k k8s/
 	@echo ""
