@@ -2,130 +2,156 @@
 
 A conversational text-adventure game powered by Claude.
 
-## System Architecture
+## Architecture
 
-```mermaid
-flowchart TB
-    subgraph Local["Local Development"]
-        L_Browser[Browser] <--> L_App[FastAPI :8000]
-        L_App <--> L_DB[(SQLite)]
-    end
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Local Development                                          │
+│  Browser ↔ FastAPI :8000 ↔ SQLite                           │
+└─────────────────────────────────────────────────────────────┘
 
-    subgraph DOKS["Kubernetes (DOKS)"]
-        K_LB[Load Balancer :443] <--> K_App[App Pods]
-        K_App <--> K_DB[(Managed Postgres)]
-    end
-
-    L_App -.-> Claude[Anthropic API]
-    K_App -.-> Claude
+┌─────────────────────────────────────────────────────────────┐
+│  Production (DOKS)                                          │
+│  Browser → DO Load Balancer :443 → App Pods → Postgres      │
+│                                        ↓                    │
+│                          Anthropic API (Claude)             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Quick Start (Local)
 
-1.  **Setup**: Create venv and install dependencies.
-    ```bash
-    make setup
-    cp .env.example .env  # Add your ANTHROPIC_API_KEY
-    ```
-    Set `ENVIRONMENT=dev` and leave `DB_AUTO_CREATE=true` for local use.
-
-2.  **Run**: Start the dev server.
-    ```bash
-    make run
-    ```
-    Access at `http://localhost:8000`.
-
-## Kubernetes Deployment
-
-The application is deployed to DigitalOcean Kubernetes (DOKS) with a managed PostgreSQL database.
-
 ```bash
-# Build and push Docker image
-make docker-release TAG=v0.6.0
-
-# Deploy to cluster
-make k8s-deploy TAG=v0.6.0
-
-# Check status
-make k8s-status
+make setup
+cp .env.example .env  # Add ANTHROPIC_API_KEY
+make run
 ```
 
--   **TLS**: DO Load Balancer with managed certificate
--   **Database**: Managed PostgreSQL
--   **Secrets**: Doppler Kubernetes Operator
--   **Auth**: Invite-only (`make k8s-invite`)
+Access at `http://localhost:8000`. Set `ENVIRONMENT=dev` for local development.
 
-## One-Command Releases
+---
 
-If your `infra/.env.deploy` includes Spaces credentials, you can deploy in one step:
+## Deployment
 
+### GitHub Actions (Recommended)
+
+Trigger from GitHub UI: **Actions → Build and Push Docker Image → Run workflow**
+
+| Input | Description |
+|-------|-------------|
+| `tag` | Version tag (e.g., `v0.9.2`) |
+| `asset_env` | `staging` or `prod` (selects CDN domain) |
+
+The workflow:
+1. Builds frontend with correct CDN URL
+2. Publishes assets to DO Spaces
+3. Verifies assets accessible on CDN
+4. Builds and pushes Docker image
+5. Commits `k8s/kustomization.yaml` with new tag
+
+After workflow completes:
 ```bash
-# Staging (assets-staging.dungeonminusone.com)
-make release-staging TAG=v0.7.0
-
-# Production (assets.dungeonminusone.com)
-make release-prod TAG=v0.7.0
+make k8s-deploy TAG=v0.9.2
 ```
 
-These targets will build/upload assets to Spaces, push the Docker image,
-and deploy the updated image tag to Kubernetes. Staging releases also run
-`make k8s-clean-markers` (added for v0.8.0) to scrub internal `[State]`/`[Tools used]`
-markers from stored assistant messages.
+### Manual Deployment (Alternative)
 
-## Frontend Assets (Spaces + CDN)
-
-Frontend assets are published to DigitalOcean Spaces (NYC3) and served via CDN to avoid
-asset hash mismatches during rolling deploys. The app still serves HTML with
-`Cache-Control: no-store`.
-
-Setup (one-time):
-
-1. Create a Space named `dungeon-minus-one-assets` in `nyc3` and enable the CDN.
-2. Add custom CDN domains (recommended):
-   - Staging: `assets-staging.dungeonminusone.com`
-   - Production: `assets.dungeonminusone.com`
-3. Configure Spaces CORS to allow GET/HEAD from your app domains.
-4. Create a Spaces access key and export:
-   - `SPACES_ACCESS_KEY`
-   - `SPACES_SECRET_KEY`
-
-Deploy example (staging):
+Requires `infra/.env.deploy` with Spaces credentials:
 
 ```bash
-ASSET_ENV=staging \
-ASSET_CDN_DOMAIN=assets-staging.dungeonminusone.com \
-make docker-release TAG=v0.6.2
+# Staging
+make release-staging TAG=v0.9.2
 
-make k8s-deploy TAG=v0.6.2
+# Production
+make release-prod TAG=v0.9.2
 ```
 
-`make docker-release` will call `make assets-publish` automatically when
-`ASSET_BASE_URL` is set (derived from `ASSET_CDN_DOMAIN`, `ASSET_ENV`, and `TAG`).
+---
 
-## Commands
+## Infrastructure Setup (One-Time)
 
-Run `make help` to see all available commands.
+### Prerequisites
+
+- [OpenTofu](https://opentofu.org/) installed
+- [kubectl](https://kubernetes.io/docs/tasks/tools/) installed
+- [Helm](https://helm.sh/) installed
+- DigitalOcean API token
+- SSL certificate uploaded to DO (name: `dungeon-cert`)
+
+### 1. Create Environment File
+
+```bash
+cp infra/.env.deploy.example infra/.env.deploy
+# Edit with DO_TOKEN, SPACES_ACCESS_KEY, SPACES_SECRET_KEY
+```
+
+### 2. Provision Infrastructure
+
+```bash
+make infra-init
+make infra-plan
+make infra-apply
+make k8s-kubeconfig
+export KUBECONFIG=~/.kube/doks-dungeon
+```
+
+### 3. Setup Doppler (Secrets)
+
+1. Create Doppler project: `staging-deployment` with config `stg`
+2. Add secrets: `ANTHROPIC_API_KEY`, `AUTH_SECRET_KEY`, `DATABASE_URL`, etc.
+3. Generate service token for k8s operator
+
+```bash
+make k8s-setup  # Installs Doppler operator
+kubectl create secret generic doppler-token -n dungeon --from-literal=serviceToken=YOUR_TOKEN
+```
+
+### 4. Setup CDN Assets
+
+1. Create Space: `dungeon-minus-one-assets` in `nyc3`, enable CDN
+2. Add CDN domains:
+   - `assets-staging.dungeonminusone.com`
+   - `assets.dungeonminusone.com`
+3. Configure CORS for your app domains
+4. Add GitHub secrets: `SPACES_ACCESS_KEY`, `SPACES_SECRET_KEY`, `DIGITALOCEAN_ACCESS_TOKEN`
+
+---
+
+## Cluster Management
 
 | Command | Description |
-| :--- | :--- |
-| `make run` | Run local dev server |
-| `make reset` | Clear game state (keep locations) |
-| `make hard-reset` | Wipe DB and re-seed locations |
-| `make verify-movement` | Run automated test for movement logic |
-| `make validate-config` | Validate configuration (set `DB_CHECK=true` to test DB) |
-| `make invite` | Generate invite code (local) |
-| `make k8s-deploy` | Deploy app to DOKS cluster |
+|---------|-------------|
 | `make k8s-status` | Show pods, services, secrets |
 | `make k8s-logs` | Stream pod logs |
-| `make k8s-invite` | Generate invite code in cluster |
-| `make k8s-clean-markers` | Strip internal state/tool markers from assistant messages in cluster DB |
+| `make k8s-restart` | Rolling restart deployment |
+| `make k8s-rollback` | Rollback to previous revision |
+| `make k8s-shell` | Open shell in running pod |
+
+## Application Management
+
+| Command | Description |
+|---------|-------------|
+| `make k8s-invite` | Generate invite code |
+| `make k8s-seed` | Sync location fixtures |
+| `make k8s-reset` | Reset game sessions |
+| `make k8s-notify TITLE="..." MSG="..."` | Create notification |
+
+## Local Commands
+
+| Command | Description |
+|---------|-------------|
+| `make run` | Start dev server |
+| `make reset` | Clear game state (keep locations) |
+| `make hard-reset` | Wipe DB and re-seed |
+| `make invite` | Generate invite code |
+| `make verify-movement` | Run movement regression test |
+| `make validate-config` | Validate configuration |
+
+---
 
 ## Debug Logging
 
-The API output includes debug prints only when explicitly enabled. Leave these unset/false for clean responses.
-
-- `DEBUG_LLM=true` enables LLM context debug prints and writes JSON lines to `.cursor/llm_debug.log`.
-- `DEBUG_GAME_TOOLS=true` enables tool handler debug prints and writes JSON lines to `.cursor/debug.log`.
-- `DEBUG_SERVICE=true` enables service debug JSON logging to `.cursor/service_debug.log` (no console output).
-
-To silence Uvicorn access logs, run with `--log-level warning` (for example, update `make run`).
+| Variable | Description |
+|----------|-------------|
+| `DEBUG_LLM=true` | LLM context logging → `.cursor/llm_debug.log` |
+| `DEBUG_GAME_TOOLS=true` | Tool handler logging → `.cursor/debug.log` |
+| `DEBUG_SERVICE=true` | Service logging → `.cursor/service_debug.log` |
