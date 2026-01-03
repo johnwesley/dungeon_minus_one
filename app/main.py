@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
 from sqlalchemy import select, text
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api.router import api_router
 from app.database import init_db, async_session_factory
@@ -12,6 +13,16 @@ from app.config import get_settings, validate_settings
 from app.models.database import User
 from app.services.auth_service import get_password_hash
 from app.connection_manager import connection_manager
+
+# Prometheus instrumentator for HTTP metrics
+instrumentator = Instrumentator(
+    should_group_status_codes=True,
+    should_ignore_untemplated=True,
+    should_instrument_requests_inprogress=True,
+    excluded_handlers=["/metrics", "/health"],
+    inprogress_name="http_requests_inprogress",
+    inprogress_labels=True,
+)
 
 
 @asynccontextmanager
@@ -51,6 +62,10 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# Instrument the app and expose /metrics endpoint
+instrumentator.instrument(app).expose(app, include_in_schema=True)
+
 
 def _html_response(path: Path) -> FileResponse:
     return FileResponse(

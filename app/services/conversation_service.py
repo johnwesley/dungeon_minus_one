@@ -28,6 +28,7 @@ from app.clients.llm_client import LLMClient
 from app.models.database import Conversation, Message, GameState
 from app.services.game_tools import GameToolHandlers
 from app.config import get_settings
+from app.metrics import LLM_SESSIONS_TOTAL
 from app.utils.message_sanitizer import strip_internal_markers
 
 
@@ -718,6 +719,9 @@ class ConversationService:
                 user_id=user_id,
                 title=self._generate_title(message),
             )
+            # Track new game session
+            settings = get_settings()
+            LLM_SESSIONS_TOTAL.labels(model=settings.model_name).inc()
 
         # App-enforced victory/game-over handling (hard stop).
         # This guarantees deterministic output and prevents the LLM from mutating state post-victory.
