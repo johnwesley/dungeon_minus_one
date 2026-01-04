@@ -94,24 +94,3 @@ class NotificationResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-# Feedback schemas
-class FeedbackEnabledResponse(BaseModel):
-    """Response for GET /api/feedback/enabled."""
-
-    enabled: bool
-
-
-class FeedbackRequest(BaseModel):
-    """Request body for POST /api/feedback."""
-
-    message: str = Field(..., min_length=1, max_length=5000)
-    rating: int = Field(..., ge=1, le=5)
-
-
-class FeedbackResponse(BaseModel):
-    """Response for successful feedback submission."""
-
-    success: bool
-    message: str
