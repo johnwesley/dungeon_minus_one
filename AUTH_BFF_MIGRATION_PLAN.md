@@ -2,7 +2,9 @@
 
 This file is an implementation plan for migrating the app from SPA-stored JWTs
 to a BFF session model, with 24h email-bound invites, single-use redemption,
-7-day account lifetimes, and 2-4 hour session idle timeouts.
+7-day account lifetimes, and 2-4 hour session idle timeouts. It also includes
+support for non-expiring accounts (e.g., admins), indefinite invites (explicit),
+and account suspension/deletion.
 
 ## Requirements (fixed)
 - Invite code TTL: 24 hours
@@ -10,6 +12,10 @@ to a BFF session model, with 24h email-bound invites, single-use redemption,
 - Account lifetime: 7 days (hard disable on expiry, no recovery)
 - Session idle timeout: 2-4 hours (configurable, default 4 hours)
 - No reverse proxy/WAF protections assumed
+## Requirements (options)
+- Non-expiring accounts supported (e.g., admins): `expires_at = NULL`
+- Indefinite invites supported only when explicitly requested/admin-created
+- Suspend and delete accounts (immediate access removal)
 
 ---
 
@@ -26,6 +32,8 @@ Tasks:
   - `session_cookie_samesite = "Lax"` (or "Strict")
   - `session_cookie_domain` (optional)
   - `session_absolute_ttl_days` (optional if you want absolute session cap)
+  - `allow_indefinite_invites = false` (optional guardrail)
+  - `default_account_expires = true` (optional guardrail)
 - Add config validation for staging/prod:
   - Fail startup if `dev_auth_bypass` is True outside dev.
   - Fail startup if `auth_secret_key` remains default (still used for invite HMAC or CSRF).
@@ -40,17 +48,22 @@ Acceptance:
 ---
 
 ## Chunk 1: Data model updates (Invite + User + Sessions)
-Goal: support email-bound single-use invites, account TTL, and server-side sessions.
+Goal: support email-bound single-use invites, account TTL, non-expiring accounts,
+account suspension/deletion, and server-side sessions.
 
 Tasks:
 1) Update `InviteCode` model in `app/models/database.py`:
    - Add `invite_email` (String, index, required).
    - Add `token_hash` (String, unique, index, required).
-   - Add `expires_at` (DateTime, index, required).
+   - Add `expires_at` (DateTime, index, nullable) for optional indefinite invites.
    - Add `sent_at` (DateTime, nullable).
+   - Add `revoked_at` (DateTime, nullable).
    - Keep `is_used`, `used_at`, `used_by_user_id`.
 2) Update `User` model in `app/models/database.py`:
-   - Add `expires_at` (DateTime, index, nullable).
+   - Add `expires_at` (DateTime, index, nullable) for non-expiring accounts.
+   - Add `suspended_at` (DateTime, nullable).
+   - Add `suspended_reason` (String/Text, nullable).
+   - Add `deleted_at` (DateTime, nullable) for soft delete.
    - Ensure `email` is stored and unique for invite-created accounts.
 3) Add new `UserSession` model in `app/models/database.py`:
    - `id` (String, primary key) -> random session id
@@ -103,8 +116,9 @@ Tasks:
 - Replace `get_current_user` logic in `app/api/auth.py`:
   - Read session cookie (`session_cookie_name`).
   - Validate via `SessionService`.
-  - Enforce `user.expires_at` (hard disable on expiry).
-  - Ensure `user.is_active` is true.
+  - Enforce `user.expires_at` only when set (non-expiring accounts skip this).
+  - Ensure `user.is_active` is true and `user.suspended_at` is null.
+  - Ensure `user.deleted_at` is null.
   - On failure, raise 401 and clear cookie.
 - Remove JWT decode and OAuth2PasswordBearer dependencies.
 - Remove dev bypass logic in non-dev or guard it with config validation.
@@ -125,7 +139,8 @@ Goal: endpoints for BFF sessions + CSRF.
 Tasks:
 - Update `POST /api/auth/login`:
   - Verify username/password (bcrypt ok for now).
-  - Deny if `user.expires_at < now`.
+  - Deny if `user.expires_at < now` (skip if null).
+  - Deny if `user.suspended_at` or `user.deleted_at` is set.
   - Create session + set cookie.
   - Return minimal user info.
 - Add `POST /api/auth/logout`:
@@ -152,16 +167,17 @@ Goal: enforce the invite lifecycle and binding to email.
 Tasks:
 - Update `POST /api/auth/invite/generate`:
   - Require admin.
-  - Input: email.
+  - Input: email, `never_expires` (optional, default false).
   - Generate random invite token (>=128 bits).
-  - Store only hash + `invite_email` + `expires_at = now + 24h`.
+  - Store only hash + `invite_email` + `expires_at = now + 24h` unless `never_expires`.
   - Send email containing the invite token (via existing SMTP).
 - Update `POST /api/auth/register`:
   - Input: `invite_token`, `username`, `password`.
   - Hash token and find invite where:
     - `token_hash` matches
-    - `expires_at > now`
+    - `expires_at > now` or `expires_at` is null
     - `is_used = false`
+    - `revoked_at` is null
   - Create user with `email = invite.invite_email` and `expires_at = now + 7 days`.
   - Mark invite used.
   - Create session cookie and return user info.
@@ -174,10 +190,35 @@ Files:
 
 Acceptance:
 - Invite can be redeemed once, within 24 hours, and only creates a 7-day account.
+- If `never_expires` is set, invite remains valid until used or revoked.
 
 ---
 
-## Chunk 6: Rate limiting (login/register)
+## Chunk 6: Admin lifecycle controls (suspend/delete/extend)
+Goal: allow admins to suspend/delete users and revoke/extend invites.
+
+Tasks:
+- Add admin-only endpoints:
+  - `POST /api/admin/users/{id}/suspend` -> set `suspended_at`, `is_active = false`, revoke sessions.
+  - `POST /api/admin/users/{id}/unsuspend` -> clear `suspended_at`, set `is_active = true`.
+  - `DELETE /api/admin/users/{id}` -> set `deleted_at`, revoke sessions.
+  - `POST /api/admin/users/{id}/extend` -> set `expires_at` (or null for non-expiring).
+  - `POST /api/admin/invites/{id}/revoke` -> set `revoked_at`.
+  - `POST /api/admin/invites/{id}/extend` -> set `expires_at` or null.
+- Add DB queries for session revocation by user id.
+
+Files:
+- `app/api/admin.py` (new) or `app/api/auth.py` (if keeping in one file)
+- `app/services/session_service.py`
+- `app/models/database.py`
+
+Acceptance:
+- Suspended/deleted users lose access immediately.
+- Admin can extend or revoke invites and set non-expiring accounts.
+
+---
+
+## Chunk 7: Rate limiting (login/register)
 Goal: enforce brute-force and abuse protections without WAF.
 
 Tasks:
@@ -196,7 +237,7 @@ Acceptance:
 
 ---
 
-## Chunk 7: Frontend migration to BFF
+## Chunk 8: Frontend migration to BFF
 Goal: remove localStorage tokens and use cookie-backed sessions.
 
 Tasks:
@@ -225,7 +266,7 @@ Acceptance:
 
 ---
 
-## Chunk 8: Cleanup + validation
+## Chunk 9: Cleanup + validation
 Goal: align startup rules and remove dead paths.
 
 Tasks:
@@ -250,6 +291,9 @@ Acceptance:
 - Account expires after 7 days and access is denied immediately.
 - Session idle timeout forces re-login after 4 hours of inactivity.
 - Rate limits trigger 429 for brute-force attempts.
+- Suspended users are denied immediately.
+- Non-expiring admin accounts remain accessible.
+- Indefinite invites work only when explicitly requested and not revoked.
 
 ---
 
