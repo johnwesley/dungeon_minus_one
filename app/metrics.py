@@ -70,3 +70,10 @@ LLM_ERRORS_TOTAL = Counter(
     "Total LLM errors",
     ["model", "error_type"],
 )
+
+# Thinking metrics
+LLM_THINKING_REQUESTS_TOTAL = Counter(
+    "llm_thinking_requests_total",
+    "Total requests that used extended thinking",
+    ["model"],
+)

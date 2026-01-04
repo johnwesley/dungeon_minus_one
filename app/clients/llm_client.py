@@ -17,6 +17,7 @@ from app.metrics import (
     LLM_TOKENS_CACHE_CREATION_TOTAL,
     LLM_TOOL_CALLS_TOTAL,
     LLM_ERRORS_TOTAL,
+    LLM_THINKING_REQUESTS_TOTAL,
 )
 
 # Debug flag - set DEBUG_LLM=true in .env to log detailed API payloads
@@ -405,8 +406,13 @@ class AnthropicClient(LLMClient):
                 "stop_reason": final_message.stop_reason,
                 "content_blocks": len(final_message.content),
             })
+
+            # Check for thinking blocks and record metric
+            block_types = self._content_block_types(final_message.content)
+            if "thinking" in block_types:
+                LLM_THINKING_REQUESTS_TOTAL.labels(model=self.model).inc()
+
             if DEBUG_LLM:
-                block_types = self._content_block_types(final_message.content)
                 log_llm_debug({
                     "event": "llm_response_summary",
                     "timestamp": int(time.time() * 1000),
