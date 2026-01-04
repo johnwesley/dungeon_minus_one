@@ -155,3 +155,56 @@ kubectl create secret generic doppler-token -n dungeon --from-literal=serviceTok
 | `DEBUG_LLM=true` | LLM context logging → `.cursor/llm_debug.log` |
 | `DEBUG_GAME_TOOLS=true` | Tool handler logging → `.cursor/debug.log` |
 | `DEBUG_SERVICE=true` | Service logging → `.cursor/service_debug.log` |
+
+---
+
+## Observability
+
+The application includes Prometheus metrics and a Grafana dashboard deployed via kube-prometheus-stack.
+
+### Access Grafana
+
+```bash
+kubectl port-forward -n monitoring svc/prometheus-grafana 3000:80
+```
+
+Open `http://localhost:3000` (credentials: `admin` / `prom-operator`)
+
+Dashboard: **Dungeon Minus One - LLM Metrics**
+
+### Metrics Reference
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `llm_sessions_total` | Counter | Total game sessions started |
+| `llm_session_active` | Gauge | Currently active SSE connections (mid-conversation) |
+| `llm_api_requests_total` | Counter | Total Anthropic API calls |
+| `llm_api_duration_seconds` | Histogram | API call latency (P50/P95/P99) |
+| `llm_tokens_input_total` | Counter | Input tokens consumed (cost driver) |
+| `llm_tokens_output_total` | Counter | Output tokens generated |
+| `llm_tokens_cache_read_total` | Counter | Tokens served from prompt cache (savings) |
+| `llm_tool_calls_total` | Counter | Tool executions by name and status |
+| `llm_errors_total` | Counter | API errors by type |
+| `llm_thinking_requests_total` | Counter | Requests using extended thinking |
+
+### Dashboard Panels
+
+| Panel | What It Shows |
+|-------|---------------|
+| **API Latency (P50/P95/P99)** | Response time distribution - high P95 = slow |
+| **Request Rate** | API calls per minute |
+| **Error Rate %** | Failures as percentage of requests |
+| **Active Sessions** | Players currently mid-conversation |
+| **Token Usage** | Input/output/cache tokens per minute |
+| **Tool Calls by Status** | Game tool success/failure rates |
+| **Total Registered Players** | All-time registered users (from PostgreSQL) |
+| **Active Last 24h** | Unique players with activity in last 24 hours |
+| **Thinking Usage** | Extended thinking feature usage over time |
+
+### Interpreting the Data
+
+**"Is the dungeon scary, or just slow and broken?"**
+
+- **Slow** = High P95 latency in API Latency panel
+- **Broken** = High Error Rate % or red bars in Tool Calls
+- **Scary** = Low latency + low errors (working as intended)
