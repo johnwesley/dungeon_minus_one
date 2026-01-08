@@ -1,21 +1,32 @@
+from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+
+from pydantic import BaseModel, EmailStr, Field
+from pydantic import AliasChoices
+from pydantic import ConfigDict
 
 
 class UserLogin(BaseModel):
-    username: str
+    model_config = ConfigDict(populate_by_name=True)
+
+    identifier: str = Field(validation_alias=AliasChoices("identifier", "username", "email"))
     password: str
 
 
 class UserRegister(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     username: str
     password: str
-    invite_code: str
+    invite_token: str = Field(validation_alias=AliasChoices("invite_token", "invite_code"))
 
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
+class AuthSessionResponse(BaseModel):
+    authenticated: bool
+    username: Optional[str] = None
+    account_expires_at: Optional[datetime] = None
+    session_expires_at: Optional[datetime] = None
+    csrf_token: Optional[str] = None
 
 
 class TokenData(BaseModel):
@@ -24,5 +35,40 @@ class TokenData(BaseModel):
 
 
 class InviteCreate(BaseModel):
-    code: Optional[str] = None  # If None, auto-generated
+    email: EmailStr
+    never_expires: bool = False
+    send_email: bool = False
 
+
+class InviteRequestCreate(BaseModel):
+    email: EmailStr
+    turnstile_token: str
+
+
+class InviteRequestDecision(BaseModel):
+    send_email: bool = False
+    never_expires: bool = False
+    notes: Optional[str] = None
+
+
+class InviteRequestResponse(BaseModel):
+    id: str
+    email: str
+    status: str
+    requested_at: Optional[datetime] = None
+    approved_at: Optional[datetime] = None
+    rejected_at: Optional[datetime] = None
+    invite_id: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class UserSuspend(BaseModel):
+    reason: Optional[str] = None
+
+
+class UserExtend(BaseModel):
+    expires_at: Optional[datetime] = None
+
+
+class InviteExtend(BaseModel):
+    expires_at: Optional[datetime] = None

@@ -1,42 +1,140 @@
-// JWT Token Management
+// Session + CSRF management
 
-const TOKEN_KEY = 'token';
+const CSRF_KEY = 'csrf_token';
+let cachedSession = null;
 
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+function isUnsafeMethod(method) {
+  const m = (method || 'GET').toUpperCase();
+  return ['POST', 'PUT', 'PATCH', 'DELETE'].includes(m);
 }
 
-export function setToken(token) {
-  localStorage.setItem(TOKEN_KEY, token);
+export function getCsrfToken() {
+  return sessionStorage.getItem(CSRF_KEY);
 }
 
-export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY);
-}
-
-export function isAuthenticated() {
-  return !!getToken();
-}
-
-export function getUsername() {
-  const token = getToken();
-  if (!token) return null;
-
-  try {
-    // JWT format: header.payload.signature
-    const payload = token.split('.')[1];
-    const decoded = JSON.parse(atob(payload));
-    return decoded.username || null;
-  } catch (e) {
-    console.error('Failed to decode token:', e);
-    return null;
+export function setCsrfToken(token) {
+  if (token) {
+    sessionStorage.setItem(CSRF_KEY, token);
+  } else {
+    sessionStorage.removeItem(CSRF_KEY);
   }
 }
 
-// Check if dev mode is enabled (for auto-login)
+export function clearSession() {
+  cachedSession = null;
+  setCsrfToken(null);
+}
+
+export async function getSession() {
+  if (cachedSession) return cachedSession;
+
+  try {
+    const response = await fetch('/api/auth/session', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      clearSession();
+      return { authenticated: false };
+    }
+
+    const data = await response.json();
+    if (data && data.authenticated) {
+      cachedSession = data;
+      if (data.csrf_token) {
+        setCsrfToken(data.csrf_token);
+      }
+      return data;
+    }
+  } catch (e) {
+    // Ignore errors, treat as unauthenticated
+  }
+
+  clearSession();
+  return { authenticated: false };
+}
+
+export async function requireAuth() {
+  const session = await getSession();
+  if (!session.authenticated) {
+    window.location.href = '/login.html';
+    return null;
+  }
+  return session;
+}
+
+export async function redirectIfAuthenticated() {
+  const session = await getSession();
+  if (session.authenticated) {
+    window.location.href = '/';
+    return true;
+  }
+  return false;
+}
+
+export async function fetchWithAuth(url, options = {}) {
+  const headers = {
+    ...options.headers,
+  };
+
+  if (isUnsafeMethod(options.method)) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+    credentials: 'same-origin',
+  });
+
+  if (response.status === 401) {
+    clearSession();
+    window.location.href = '/login.html';
+    throw new Error('Session expired');
+  }
+
+  if (response.status === 403 && isUnsafeMethod(options.method)) {
+    // Attempt to refresh CSRF token once
+    await refreshCsrfToken();
+  }
+
+  return response;
+}
+
+export async function refreshCsrfToken() {
+  try {
+    const response = await fetch('/api/auth/csrf', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.csrf_token) {
+        setCsrfToken(data.csrf_token);
+      }
+    }
+  } catch (e) {
+    // Ignore
+  }
+}
+
+export async function logout() {
+  try {
+    await fetchWithAuth('/api/auth/logout', { method: 'POST' });
+  } catch (e) {
+    // Ignore
+  }
+  clearSession();
+  window.location.href = '/login.html';
+}
+
 export async function checkDevMode() {
   try {
-    const response = await fetch('/api/auth/dev-mode');
+    const response = await fetch('/api/auth/dev-mode', { cache: 'no-store' });
     if (response.ok) {
       const data = await response.json();
       return data.enabled;
@@ -46,55 +144,3 @@ export async function checkDevMode() {
   }
   return false;
 }
-
-// Redirect to login if not authenticated
-export function requireAuth() {
-  if (!isAuthenticated()) {
-    window.location.href = '/login.html';
-    return false;
-  }
-  return true;
-}
-
-// Redirect to app if already authenticated
-export function redirectIfAuthenticated() {
-  if (isAuthenticated()) {
-    window.location.href = '/';
-    return true;
-  }
-  return false;
-}
-
-// Add auth header to fetch requests
-export async function fetchWithAuth(url, options = {}) {
-  const token = getToken();
-  const headers = {
-    ...options.headers,
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
-
-  // Handle 401 - token expired or invalid
-  if (response.status === 401) {
-    clearToken();
-    window.location.href = '/login.html';
-    throw new Error('Session expired');
-  }
-
-  return response;
-}
-
-// Logout
-export function logout() {
-  clearToken();
-  window.location.href = '/login.html';
-}
-
-// HTMX helpers removed - auth pages now use fetch directly

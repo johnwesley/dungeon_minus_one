@@ -1,6 +1,6 @@
 // SSE Handler for Chat Streaming with Reconnection Support
 
-import { getToken, clearToken } from './auth.js';
+import { getCsrfToken, clearSession } from './auth.js';
 
 // Retry configuration
 const RETRY_CONFIG = {
@@ -57,19 +57,24 @@ export class SSEHandler {
   }
 
   async _sendWithRetry() {
-    const token = getToken();
     const { message, conversationId } = this._currentRequest;
 
     while (this._retryCount <= RETRY_CONFIG.maxRetries) {
       try {
         this.onConnectionStatus('connecting');
 
+        const headers = {
+          'Content-Type': 'application/json',
+        };
+        const csrfToken = getCsrfToken();
+        if (csrfToken) {
+          headers['X-CSRF-Token'] = csrfToken;
+        }
+
         const response = await fetch('/api/chat', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
+          headers,
+          credentials: 'same-origin',
           body: JSON.stringify({
             message: message,
             conversation_id: conversationId,
@@ -77,7 +82,7 @@ export class SSEHandler {
         });
 
         if (response.status === 401) {
-          clearToken();
+          clearSession();
           window.location.href = '/login.html';
           throw new Error('Session expired');
         }

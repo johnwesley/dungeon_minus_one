@@ -169,6 +169,14 @@ a:hover {
   margin: var(--space-sm) 0;
 }
 
+.bbs-success {
+  color: var(--success, #4caf50);
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid var(--success, #4caf50);
+  padding: var(--space-sm);
+  margin: var(--space-sm) 0;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;

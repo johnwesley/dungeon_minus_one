@@ -117,6 +117,12 @@ async def serve_register():
     return _html_response(static_path / "register.html")
 
 
+@app.get("/admin/invites")
+async def serve_admin_invites():
+    """Serve the admin invite approvals page."""
+    return _html_response(static_path / "admin-invites.html")
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint for load balancers."""

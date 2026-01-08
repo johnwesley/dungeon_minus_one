@@ -38,7 +38,18 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """Initialize the database, creating all tables."""
-    from app.models.database import Conversation, Message, InviteCode, User, GameState, Location, LocationExit, RateLimitEntry  # noqa: F401
+    from app.models.database import (  # noqa: F401
+        Conversation,
+        Message,
+        InviteCode,
+        InviteRequest,
+        User,
+        UserSession,
+        GameState,
+        Location,
+        LocationExit,
+        RateLimitEntry,
+    )
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

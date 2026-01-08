@@ -328,10 +328,31 @@
   gap: var(--space-md);
 }
 
+.auth-divider {
+  border-top: 1px dashed var(--text-dim);
+  margin: var(--space-lg) 0;
+}
+
+.auth-subtitle {
+  font-size: 1rem;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: var(--space-sm);
+}
+
+.turnstile-container {
+  display: flex;
+  justify-content: center;
+}
+
 .auth-link {
   text-align: center;
   margin-top: var(--space-md);
-  color: var(--text-dim);
+  color: var(--text-primary);
+}
+
+.auth-link a {
+  color: var(--text-bright);
 }
 
 .auth-version {

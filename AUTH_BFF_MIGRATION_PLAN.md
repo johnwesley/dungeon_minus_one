@@ -19,6 +19,20 @@ and account suspension/deletion.
 
 ---
 
+## Progress tracker
+- [x] Chunk 0: config + validation (implemented)
+- [x] Chunk 1: schema + migration (implemented, not yet applied in staging)
+- [x] Chunk 2: session service
+- [x] Chunk 3: auth dependency
+- [x] Chunk 4: auth endpoints
+- [x] Chunk 5: invite requests + approvals + email delivery
+- [x] Chunk 6: admin lifecycle controls
+- [x] Chunk 7: rate limiting updates
+- [x] Chunk 8: frontend migration to BFF (source updated; rebuild required for dist)
+- [~] Chunk 9: cleanup + validation (README/config docs pending)
+
+---
+
 ## Chunk 0: Scope + config wiring
 Goal: centralize new auth/session/invite TTL settings.
 
@@ -30,13 +44,26 @@ Tasks:
   - `session_cookie_name = "session"`
   - `session_cookie_secure = True` (override for local dev)
   - `session_cookie_samesite = "Lax"` (or "Strict")
-  - `session_cookie_domain` (optional)
+  - `session_cookie_domain = None` (host-only cookie; staging/prod serve UI + API on same host)
   - `session_absolute_ttl_days` (optional if you want absolute session cap)
   - `allow_indefinite_invites = false` (optional guardrail)
   - `default_account_expires = true` (optional guardrail)
+  - Turnstile config:
+    - `turnstile_site_key`
+    - `turnstile_secret_key`
+  - Postmark config:
+    - `postmark_server_token`
+    - `postmark_from_email`
+    - `postmark_message_stream = "outbound"` (optional)
+  - Invite email delivery:
+    - `invite_email_send_mode = "auto"` (auto or manual)
+    - `public_app_url` (used to build invite links in email)
 - Add config validation for staging/prod:
   - Fail startup if `dev_auth_bypass` is True outside dev.
   - Fail startup if `auth_secret_key` remains default (still used for invite HMAC or CSRF).
+  - Fail startup if Turnstile keys are missing.
+  - Fail startup if `invite_email_send_mode = "auto"` and Postmark token/from email are missing.
+  - Fail startup if `session_cookie_secure = False`.
 
 Files:
 - `app/config.py`
@@ -54,6 +81,7 @@ account suspension/deletion, and server-side sessions.
 Tasks:
 1) Update `InviteCode` model in `app/models/database.py`:
    - Add `invite_email` (String, index, required).
+   - Add `invite_email_normalized` (String, index, required).
    - Add `token_hash` (String, unique, index, required).
    - Add `expires_at` (DateTime, index, nullable) for optional indefinite invites.
    - Add `sent_at` (DateTime, nullable).
@@ -65,6 +93,7 @@ Tasks:
    - Add `suspended_reason` (String/Text, nullable).
    - Add `deleted_at` (DateTime, nullable) for soft delete.
    - Ensure `email` is stored and unique for invite-created accounts.
+   - Add `email_normalized` (String, unique, index) for case-insensitive login.
 3) Add new `UserSession` model in `app/models/database.py`:
    - `id` (String, primary key) -> random session id
    - `user_id` (FK)
@@ -73,7 +102,14 @@ Tasks:
    - `ip`, `user_agent` (optional)
    - Indexes on `user_id`, `expires_at`, `revoked_at`.
 
-4) Create alembic migration(s) in `alembic/versions/`.
+4) Add new `InviteRequest` model in `app/models/database.py`:
+   - `id` (PK), `email`, `email_normalized`, `status` (pending/approved/rejected)
+   - `requested_at`, `approved_at`, `rejected_at`, `approved_by_user_id`
+   - `invite_id` (FK to InviteCode), `notes` (optional)
+   - `captcha_verified_at`, `ip`, `user_agent`
+   - Indexes on `email_normalized`, `status`.
+
+5) Create alembic migration(s) in `alembic/versions/`.
 
 Files:
 - `app/models/database.py`
@@ -81,6 +117,7 @@ Files:
 
 Acceptance:
 - Migrations apply cleanly; new tables/columns exist.
+- Staging reset plan: wipe users/invites/sessions, create new admin, resend invites.
 
 ---
 
@@ -138,7 +175,8 @@ Goal: endpoints for BFF sessions + CSRF.
 
 Tasks:
 - Update `POST /api/auth/login`:
-  - Verify username/password (bcrypt ok for now).
+  - Accept username OR email + password (bcrypt ok for now).
+  - Normalize email input for lookup (lowercase).
   - Deny if `user.expires_at < now` (skip if null).
   - Deny if `user.suspended_at` or `user.deleted_at` is set.
   - Create session + set cookie.
@@ -161,16 +199,34 @@ Acceptance:
 
 ---
 
-## Chunk 5: Invite flow (email-bound, 24h TTL, single-use)
-Goal: enforce the invite lifecycle and binding to email.
+## Chunk 5: Invite requests + approvals + email delivery (Postmark)
+Goal: accept access requests, approve in admin UI, send email-bound invites.
 
 Tasks:
+- Add public request endpoint:
+  - `POST /api/auth/invite-request` with `{email, turnstile_token}`.
+  - Verify Turnstile server-side.
+  - Create `InviteRequest` (status = pending) with IP/user-agent.
+  - Rate-limit by IP + email.
+- Add admin UI for approvals:
+  - Page to list pending requests, approve/reject, and optionally send manually.
+  - On approve: generate invite token, store hash + invite_email, set expires_at.
+  - If `invite_email_send_mode = "auto"` and admin chooses send: send via Postmark.
+  - If manual send: return token to admin UI (do not persist plaintext).
+- Add admin endpoints:
+  - `GET /api/admin/invite-requests` (filter by status).
+  - `POST /api/admin/invite-requests/{id}/approve` (optionally `send_email`).
+  - `POST /api/admin/invite-requests/{id}/reject` (with optional reason).
+- Add Postmark email service:
+  - New `app/services/email_service.py` using Postmark API.
+  - Email template includes invite code and/or link using `public_app_url`.
+
 - Update `POST /api/auth/invite/generate`:
   - Require admin.
-  - Input: email, `never_expires` (optional, default false).
+  - Input: email, `never_expires` (optional, default false), `send_email` (optional).
   - Generate random invite token (>=128 bits).
-  - Store only hash + `invite_email` + `expires_at = now + 24h` unless `never_expires`.
-  - Send email containing the invite token (via existing SMTP).
+  - Store only hash + `invite_email` + `invite_email_normalized` + `expires_at = now + 24h` unless `never_expires`.
+  - If `send_email` and `invite_email_send_mode = "auto"`, send via Postmark.
 - Update `POST /api/auth/register`:
   - Input: `invite_token`, `username`, `password`.
   - Hash token and find invite where:
@@ -178,19 +234,22 @@ Tasks:
     - `expires_at > now` or `expires_at` is null
     - `is_used = false`
     - `revoked_at` is null
-  - Create user with `email = invite.invite_email` and `expires_at = now + 7 days`.
+  - Create user with `email = invite.invite_email`, `email_normalized`, and `expires_at = now + 7 days`.
   - Mark invite used.
   - Create session cookie and return user info.
 - Explicitly reject expired or already-used invites.
 
 Files:
 - `app/api/auth.py`
+- `app/api/admin.py` (if split)
 - `app/models/database.py`
-- `app/services/email_service.py` (if used for invite mails)
+- `app/services/email_service.py`
+- `app/static/*` or `frontend/src/*` (invite request form + admin approvals UI)
 
 Acceptance:
 - Invite can be redeemed once, within 24 hours, and only creates a 7-day account.
 - If `never_expires` is set, invite remains valid until used or revoked.
+- Request flow is captcha-protected and approval is admin-only.
 
 ---
 
@@ -218,15 +277,16 @@ Acceptance:
 
 ---
 
-## Chunk 7: Rate limiting (login/register)
+## Chunk 7: Rate limiting (login/register/invite-request)
 Goal: enforce brute-force and abuse protections without WAF.
 
 Tasks:
 - Extend `app/services/rate_limit_service.py` with generic helpers:
   - `enforce_login_rate_limit(ip, username)`
   - `enforce_register_rate_limit(ip, invite_token_hash)`
+  - `enforce_invite_request_rate_limit(ip, email)`
 - Use per-IP + per-identifier buckets.
-- Enforce in `POST /api/auth/login` and `POST /api/auth/register`.
+- Enforce in `POST /api/auth/login`, `POST /api/auth/register`, and `POST /api/auth/invite-request`.
 
 Files:
 - `app/services/rate_limit_service.py`
@@ -248,6 +308,8 @@ Tasks:
   - `checkDevMode` can be removed if dev bypass is removed.
 - Update `frontend/src/login.html` + `register.html`:
   - On success, redirect without storing token.
+- Add invite request form to login page with Turnstile widget.
+- Add admin approvals UI (page + JS).
 - Update `frontend/src/js/sse-handler.js`, `frontend/src/js/main.js`:
   - Remove Bearer header usage.
   - Ensure `fetch` uses cookies.
@@ -294,6 +356,8 @@ Acceptance:
 - Suspended users are denied immediately.
 - Non-expiring admin accounts remain accessible.
 - Indefinite invites work only when explicitly requested and not revoked.
+- Invite request is captcha-protected and can be approved in admin UI.
+- Postmark email sends invite; manual-send path works for test players.
 
 ---
 

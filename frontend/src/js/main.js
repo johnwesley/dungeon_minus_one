@@ -1,12 +1,11 @@
 // Main App Entry Point
 
-import { requireAuth, fetchWithAuth, logout, getUsername } from './auth.js';
+import { requireAuth, fetchWithAuth, logout } from './auth.js';
 import { SSEHandler } from './sse-handler.js';
 
 class DungeonApp {
   constructor() {
-    // Check auth first
-    if (!requireAuth()) return;
+    this.session = null;
 
     this.currentConversationId = null;
     this.isStreaming = false;
@@ -31,6 +30,8 @@ class DungeonApp {
   }
 
   async init() {
+    this.session = await requireAuth();
+    if (!this.session) return;
     this.bindEvents();
     this.displayUserHandle();
     await this.loadNotifications();
@@ -43,7 +44,7 @@ class DungeonApp {
   }
 
   displayUserHandle() {
-    const username = getUsername();
+    const username = this.session?.username;
     if (this.userHandleEl) {
       this.userHandleEl.textContent = username || 'Unknown';
     }

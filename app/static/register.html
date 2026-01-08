@@ -6,12 +6,11 @@
     <title>Register - Dungeon -1</title>
     <link rel="stylesheet" href="/static/styles.css">
     <style>
-        /* Reuse styles from login.html */
         .auth-container {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             background-color: var(--bg-primary);
         }
         .auth-box {
@@ -84,16 +83,16 @@
     <div class="auth-container">
         <div class="auth-box">
             <div class="auth-header">
-                <h1>Adventurer Registration</h1>
-                <p>Claim your invite code.</p>
+                <h1>Register</h1>
+                <p>Use your invite token to enter.</p>
             </div>
-            
+
             <div id="error-msg" class="error-msg"></div>
 
             <form id="register-form">
                 <div class="form-group">
-                    <label for="invite_code">Invite Code</label>
-                    <input type="text" id="invite_code" required placeholder="XXXX-XXXX">
+                    <label for="invite-token">Invite Token</label>
+                    <input type="text" id="invite-token" required>
                 </div>
                 <div class="form-group">
                     <label for="username">Username</label>
@@ -103,7 +102,7 @@
                     <label for="password">Password</label>
                     <input type="password" id="password" required>
                 </div>
-                <button type="submit" class="auth-btn">Create Account</button>
+                <button type="submit" class="auth-btn">Register</button>
             </form>
 
             <div class="auth-footer">
@@ -113,15 +112,43 @@
     </div>
 
     <script>
+        const CSRF_KEY = 'csrf_token';
         const form = document.getElementById('register-form');
         const errorMsg = document.getElementById('error-msg');
+        const inviteInput = document.getElementById('invite-token');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+
+        (async function redirectIfAuthenticated() {
+            try {
+                const response = await fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store' });
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data && data.authenticated) {
+                    if (data.csrf_token) {
+                        sessionStorage.setItem(CSRF_KEY, data.csrf_token);
+                    }
+                    window.location.href = '/';
+                }
+            } catch (err) {
+                // ignore
+            }
+        })();
+
+        (function prefillInviteToken() {
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('invite_token');
+            if (token) {
+                inviteInput.value = token;
+            }
+        })();
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const invite_code = document.getElementById('invite_code').value;
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
+            const invite_token = inviteInput.value;
+            const username = usernameInput.value;
+            const password = passwordInput.value;
+
             errorMsg.style.display = 'none';
             errorMsg.textContent = '';
 
@@ -129,13 +156,16 @@
                 const response = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ invite_code, username, password })
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ invite_token, username, password })
                 });
 
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
 
-                if (response.ok) {
-                    localStorage.setItem('token', data.access_token);
+                if (response.ok && data.authenticated) {
+                    if (data.csrf_token) {
+                        sessionStorage.setItem(CSRF_KEY, data.csrf_token);
+                    }
                     window.location.href = '/';
                 } else {
                     errorMsg.textContent = data.detail || 'Registration failed';
@@ -149,4 +179,3 @@
     </script>
 </body>
 </html>
-

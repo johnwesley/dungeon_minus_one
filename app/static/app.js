@@ -1,17 +1,12 @@
 /**
- * LLM Chat Application - Frontend
+ * LLM Chat Application - Frontend (legacy static)
  */
 
 class ChatApp {
     constructor() {
         this.currentConversationId = null;
         this.isStreaming = false;
-        this.token = localStorage.getItem('token');
-
-        if (!this.token) {
-            window.location.href = '/static/login.html';
-            return;
-        }
+        this.csrfToken = sessionStorage.getItem('csrf_token');
 
         // DOM elements
         this.conversationList = document.getElementById('conversation-list');
@@ -24,19 +19,46 @@ class ChatApp {
 
         this.init();
     }
-    
+
+    async ensureSession() {
+        try {
+            const response = await fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store' });
+            if (!response.ok) {
+                window.location.href = '/static/login.html';
+                return false;
+            }
+            const data = await response.json();
+            if (!data.authenticated) {
+                window.location.href = '/static/login.html';
+                return false;
+            }
+            if (data.csrf_token) {
+                sessionStorage.setItem('csrf_token', data.csrf_token);
+                this.csrfToken = data.csrf_token;
+            }
+            return true;
+        } catch (error) {
+            window.location.href = '/static/login.html';
+            return false;
+        }
+    }
+
     createLogoutButton() {
         const btn = document.createElement('button');
         btn.textContent = 'Logout';
-        btn.className = 'new-chat-btn'; // Reuse style for now
+        btn.className = 'new-chat-btn';
         btn.style.marginTop = 'auto';
         btn.style.backgroundColor = '#4a4a4a';
-        btn.addEventListener('click', () => {
-            localStorage.removeItem('token');
+        btn.addEventListener('click', async () => {
+            try {
+                await this.fetchWithAuth('/api/auth/logout', { method: 'POST' });
+            } catch (error) {
+                // ignore
+            }
+            sessionStorage.removeItem('csrf_token');
             window.location.href = '/static/login.html';
         });
-        
-        // Add to sidebar footer if sidebar exists
+
         const sidebar = document.querySelector('.sidebar');
         if (sidebar) {
             sidebar.appendChild(btn);
@@ -45,24 +67,23 @@ class ChatApp {
     }
 
     async init() {
+        const ok = await this.ensureSession();
+        if (!ok) return;
         this.bindEvents();
         await this.loadConversations();
     }
 
     bindEvents() {
-        // Form submission
         this.chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
             this.sendMessage();
         });
 
-        // Auto-resize textarea
         this.messageInput.addEventListener('input', () => {
             this.messageInput.style.height = 'auto';
             this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 200) + 'px';
         });
 
-        // Enter to send (Shift+Enter for newline)
         this.messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -70,27 +91,31 @@ class ChatApp {
             }
         });
 
-        // New chat button
         this.newChatBtn.addEventListener('click', () => {
             this.startNewChat();
         });
     }
-    
+
     async fetchWithAuth(url, options = {}) {
         const headers = {
             ...options.headers,
-            'Authorization': `Bearer ${this.token}`
         };
-        
-        const response = await fetch(url, { ...options, headers });
-        
+
+        if (options.method && options.method.toUpperCase() !== 'GET') {
+            this.csrfToken = sessionStorage.getItem('csrf_token');
+            if (this.csrfToken) {
+                headers['X-CSRF-Token'] = this.csrfToken;
+            }
+        }
+
+        const response = await fetch(url, { ...options, headers, credentials: 'same-origin' });
+
         if (response.status === 401) {
-            // Token expired or invalid
-            localStorage.removeItem('token');
+            sessionStorage.removeItem('csrf_token');
             window.location.href = '/static/login.html';
             return null;
         }
-        
+
         return response;
     }
 
@@ -98,8 +123,9 @@ class ChatApp {
         try {
             const response = await this.fetchWithAuth('/api/conversations');
             if (!response) return;
-            
+
             const conversations = await response.json();
+            this.conversations = conversations;
 
             this.conversationList.innerHTML = '';
 
@@ -129,14 +155,12 @@ class ChatApp {
             <button class="conversation-delete" title="Delete">&times;</button>
         `;
 
-        // Click to select
         item.addEventListener('click', (e) => {
             if (!e.target.classList.contains('conversation-delete')) {
                 this.selectConversation(conversation.id);
             }
         });
 
-        // Delete button
         const deleteBtn = item.querySelector('.conversation-delete');
         deleteBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -149,7 +173,6 @@ class ChatApp {
     async selectConversation(conversationId) {
         this.currentConversationId = conversationId;
 
-        // Update active state in sidebar
         document.querySelectorAll('.conversation-item').forEach(item => {
             item.classList.remove('active');
         });
@@ -161,7 +184,6 @@ class ChatApp {
             activeItem.classList.add('active');
         }
 
-        // Load messages
         try {
             const response = await this.fetchWithAuth(`/api/conversations/${conversationId}`);
             if (!response) return;
@@ -200,13 +222,6 @@ class ChatApp {
     startNewChat() {
         this.currentConversationId = null;
         this.chatMessages.innerHTML = '';
-
-        // Remove active state from sidebar
-        document.querySelectorAll('.conversation-item').forEach(item => {
-            item.classList.remove('active');
-        });
-
-        // Auto-send "Wake up" to start the game
         this.sendMessage('Wake up');
     }
 
@@ -214,101 +229,59 @@ class ChatApp {
         const message = messageText || this.messageInput.value.trim();
         if (!message || this.isStreaming) return;
 
-        // Clear input only if it was the source
         if (!messageText) {
             this.messageInput.value = '';
             this.messageInput.style.height = 'auto';
         }
 
-        // Remove empty state if present
-        const emptyState = this.chatMessages.querySelector('.empty-state');
-        if (emptyState) {
-            emptyState.remove();
-        }
-
-        // Append user message
         this.appendMessage('user', message);
 
-        // Create assistant message placeholder
-        const assistantMsgEl = this.appendMessage('assistant', '');
-        const contentEl = assistantMsgEl.querySelector('.message-content');
-        contentEl.innerHTML = '<span class="streaming-indicator"></span>';
-
-        // Disable input during streaming
         this.setStreaming(true);
 
         try {
-            const response = await fetch('/api/chat', {
+            const response = await this.fetchWithAuth('/api/chat', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.token}`
-                },
-                body: JSON.stringify({
-                    message: message,
-                    conversation_id: this.currentConversationId,
-                }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, conversation_id: this.currentConversationId }),
             });
-            
-            if (response.status === 401) {
-                 localStorage.removeItem('token');
-                 window.location.href = '/static/login.html';
-                 return;
-            }
+
+            if (!response) return;
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            let assistantContent = '';
             let buffer = '';
+            let currentEventType = '';
+            let assistantContent = '';
+            const assistantMsgEl = this.appendMessage('assistant', '');
+            const contentEl = assistantMsgEl.querySelector('.message-content');
 
             while (true) {
                 const { value, done } = await reader.read();
                 if (done) break;
 
                 buffer += decoder.decode(value, { stream: true });
-
-                // Process SSE events
                 const lines = buffer.split('\n');
-                buffer = lines.pop() || ''; // Keep incomplete line in buffer
+                buffer = lines.pop() || '';
 
                 for (const line of lines) {
                     if (line.startsWith('event:')) {
-                        // Store event type for next data line
-                        this.currentEventType = line.substring(6).trim();
+                        currentEventType = line.substring(6).trim();
                     } else if (line.startsWith('data:')) {
                         const data = JSON.parse(line.substring(5).trim());
-
-                        switch (this.currentEventType) {
-                            case 'start':
-                                this.currentConversationId = data.conversation_id;
-                                break;
-                            case 'delta':
-                                assistantContent += data.content;
-                                contentEl.textContent = assistantContent;
-                                this.scrollToBottom();
-                                break;
-                            case 'progress':
-                                if (data.step === 'using_tool') {
-                                    this.showProgress(assistantMsgEl, 'System running...');
-                                } else if (data.step === 'tool_done') {
-                                    this.hideProgress(assistantMsgEl);
-                                }
-                                break;
-                            case 'done':
-                                this.hideProgress(assistantMsgEl); // Ensure clean up
-                                // Refresh conversation list
-                                await this.loadConversations();
-                                break;
-                            case 'error':
-                                contentEl.textContent = `Error: ${data.error}`;
-                                break;
+                        if (currentEventType === 'delta') {
+                            assistantContent += data.content;
+                            contentEl.textContent = assistantContent;
+                            this.scrollToBottom();
+                        } else if (currentEventType === 'start') {
+                            this.currentConversationId = data.conversation_id;
+                        } else if (currentEventType === 'done') {
+                            await this.loadConversations();
                         }
                     }
                 }
             }
         } catch (error) {
             console.error('Failed to send message:', error);
-            contentEl.textContent = `Error: ${error.message}`;
         } finally {
             this.setStreaming(false);
         }
@@ -326,29 +299,13 @@ class ChatApp {
         return messageEl;
     }
 
-    showProgress(messageEl, text) {
-        let progressEl = messageEl.querySelector('.streaming-progress');
-        if (!progressEl) {
-            progressEl = document.createElement('div');
-            progressEl.className = 'streaming-progress';
-            // Insert before content
-            const contentEl = messageEl.querySelector('.message-content');
-            messageEl.insertBefore(progressEl, contentEl);
-        }
-        progressEl.textContent = text;
-    }
-
-    hideProgress(messageEl) {
-        const progressEl = messageEl.querySelector('.streaming-progress');
-        if (progressEl) {
-            progressEl.remove();
-        }
-    }
-
     setStreaming(streaming) {
         this.isStreaming = streaming;
         this.sendBtn.disabled = streaming;
         this.messageInput.disabled = streaming;
+        if (!streaming) {
+            this.messageInput.focus();
+        }
     }
 
     scrollToBottom() {
@@ -363,6 +320,6 @@ class ChatApp {
 }
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
-    window.chatApp = new ChatApp();
+window.addEventListener('DOMContentLoaded', () => {
+    new ChatApp();
 });

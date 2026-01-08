@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invite Approvals - Dungeon -1</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="scanlines crt-vignette">
+  <div class="auth-container">
+    <div class="auth-box" style="max-width: 720px;">
+      <h1 class="auth-title glow">Invite Approvals</h1>
+
+      <div class="auth-form" style="gap: var(--space-sm);">
+        <div>
+          <label class="bbs-label" for="status-filter">Status</label>
+          <select id="status-filter" class="bbs-input">
+            <option value="pending" selected>Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div>
+          <label class="bbs-label">
+            <input type="checkbox" id="send-email" checked>
+            Send email automatically (Postmark)
+          </label>
+        </div>
+        <button id="refresh-btn" class="bbs-btn">Refresh</button>
+        <div id="status-msg"></div>
+      </div>
+
+      <div id="requests" style="margin-top: var(--space-lg);"></div>
+
+      <p class="auth-link"><a href="/">Back to game</a></p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const CSRF_KEY = 'csrf_token';
+      const statusFilter = document.getElementById('status-filter');
+      const refreshBtn = document.getElementById('refresh-btn');
+      const statusMsg = document.getElementById('status-msg');
+      const requestsEl = document.getElementById('requests');
+      const sendEmailToggle = document.getElementById('send-email');
+
+      function showStatus(message, ok = true) {
+        statusMsg.innerHTML = `<div class="${ok ? 'bbs-success' : 'bbs-error'}">${message}</div>`;
+      }
+
+      async function ensureSession() {
+        try {
+          const response = await fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store' });
+          if (!response.ok) throw new Error();
+          const data = await response.json();
+          if (!data.authenticated) throw new Error();
+          if (data.csrf_token) {
+            sessionStorage.setItem(CSRF_KEY, data.csrf_token);
+          }
+          return true;
+        } catch (err) {
+          window.location.href = '/login.html';
+          return false;
+        }
+      }
+
+      function getCsrfToken() {
+        return sessionStorage.getItem(CSRF_KEY);
+      }
+
+      async function fetchRequests() {
+        const status = statusFilter.value;
+        const response = await fetch(`/api/admin/invite-requests?status=${encodeURIComponent(status)}`, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          showStatus(data.detail || 'Failed to load requests', false);
+          return [];
+        }
+
+        return await response.json();
+      }
+
+      function renderRequests(requests) {
+        if (!requests.length) {
+          requestsEl.innerHTML = '<p class="auth-link">No requests found.</p>';
+          return;
+        }
+
+        requestsEl.innerHTML = requests.map(req => `
+          <div class="notification" data-id="${req.id}">
+            <div class="notification-header">
+              <span class="notification-title">${req.email}</span>
+              <span class="auth-link">${req.status}</span>
+            </div>
+            <div class="notification-message">Requested: ${req.requested_at || ''}</div>
+            <div class="notification-message">Notes: ${req.notes || '-'}</div>
+            <div style="margin-top: var(--space-sm); display: flex; gap: var(--space-sm);">
+              <button class="bbs-btn approve-btn" data-id="${req.id}">Approve</button>
+              <button class="bbs-btn-danger reject-btn" data-id="${req.id}">Reject</button>
+            </div>
+          </div>
+        `).join('');
+
+        requestsEl.querySelectorAll('.approve-btn').forEach(btn => {
+          btn.addEventListener('click', () => approveRequest(btn.dataset.id));
+        });
+        requestsEl.querySelectorAll('.reject-btn').forEach(btn => {
+          btn.addEventListener('click', () => rejectRequest(btn.dataset.id));
+        });
+      }
+
+      async function approveRequest(requestId) {
+        const notes = prompt('Optional approval notes (leave blank):') || null;
+        const sendEmail = sendEmailToggle.checked;
+        const response = await fetch(`/api/admin/invite-requests/${requestId}/approve`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken() || '',
+          },
+          body: JSON.stringify({ send_email: sendEmail, notes }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showStatus(data.detail || 'Approval failed', false);
+          return;
+        }
+
+        if (!data.sent && data.invite_token) {
+          showStatus(`Invite token: ${data.invite_token}`, true);
+        } else {
+          showStatus('Invite approved and sent.', true);
+        }
+        await load();
+      }
+
+      async function rejectRequest(requestId) {
+        const notes = prompt('Optional rejection notes (leave blank):') || null;
+        const response = await fetch(`/api/admin/invite-requests/${requestId}/reject`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken() || '',
+          },
+          body: JSON.stringify({ notes }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showStatus(data.detail || 'Rejection failed', false);
+          return;
+        }
+        showStatus('Invite request rejected.', true);
+        await load();
+      }
+
+      async function load() {
+        const ok = await ensureSession();
+        if (!ok) return;
+        const requests = await fetchRequests();
+        renderRequests(requests);
+      }
+
+      refreshBtn.addEventListener('click', load);
+      statusFilter.addEventListener('change', load);
+
+      load();
+    })();
+  </script>
+</body>
+</html>

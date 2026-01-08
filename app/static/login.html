@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Dungeon -1</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         .auth-container {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             background-color: var(--bg-primary);
         }
         .auth-box {
@@ -18,13 +19,13 @@
             padding: 2rem;
             border-radius: 8px;
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             border: 1px solid var(--border-color);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
         .auth-header {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
         .auth-header h1 {
             color: var(--text-accent);
@@ -77,6 +78,22 @@
             font-size: 0.9rem;
             display: none;
         }
+        .success-msg {
+            color: #4caf50;
+            margin-top: 0.5rem;
+            text-align: center;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .section-divider {
+            border-top: 1px dashed var(--border-color);
+            margin: 1.5rem 0;
+        }
+        .turnstile-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -86,13 +103,13 @@
                 <h1>Dungeon Login</h1>
                 <p>Enter the dungeon if you dare...</p>
             </div>
-            
+
             <div id="error-msg" class="error-msg"></div>
 
             <form id="login-form">
                 <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" required>
+                    <label for="identifier">Email or Username</label>
+                    <input type="text" id="identifier" required>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
@@ -101,35 +118,89 @@
                 <button type="submit" class="auth-btn">Login</button>
             </form>
 
+            <div class="section-divider"></div>
+
+            <form id="invite-request-form">
+                <div class="auth-header">
+                    <h2>Request Access</h2>
+                </div>
+                <div class="form-group">
+                    <label for="request-email">Email</label>
+                    <input type="email" id="request-email" required>
+                </div>
+                <div id="turnstile-container" class="turnstile-container"></div>
+                <button type="submit" class="auth-btn">Request Invite</button>
+                <div id="request-msg" class="success-msg"></div>
+            </form>
+
             <div class="auth-footer">
-                <p>Need an account? <a href="/static/register.html">Register here</a></p>
+                <p>Already have an invite? <a href="/static/register.html">Register here</a></p>
             </div>
         </div>
     </div>
 
     <script>
+        const CSRF_KEY = 'csrf_token';
         const form = document.getElementById('login-form');
         const errorMsg = document.getElementById('error-msg');
-        const usernameInput = document.getElementById('username');
+        const identifierInput = document.getElementById('identifier');
         const passwordInput = document.getElementById('password');
+        const requestForm = document.getElementById('invite-request-form');
+        const requestEmailInput = document.getElementById('request-email');
+        const requestMsg = document.getElementById('request-msg');
+        const turnstileContainer = document.getElementById('turnstile-container');
+        let turnstileWidgetId = null;
 
-        // Check if dev mode is enabled and pre-fill credentials
+        (async function redirectIfAuthenticated() {
+            try {
+                const response = await fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store' });
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data && data.authenticated) {
+                    if (data.csrf_token) {
+                        sessionStorage.setItem(CSRF_KEY, data.csrf_token);
+                    }
+                    window.location.href = '/';
+                }
+            } catch (err) {
+                // ignore
+            }
+        })();
+
         (async function checkDevMode() {
             try {
                 const response = await fetch('/api/auth/dev-mode');
                 const data = await response.json();
                 if (data.enabled) {
-                    usernameInput.value = 'dev';
+                    identifierInput.value = 'dev';
                     passwordInput.value = 'dev';
                 }
             } catch (err) {
-                // Ignore errors, just don't pre-fill
+                // Ignore errors
             }
         })();
 
+        async function initTurnstile() {
+            try {
+                const response = await fetch('/api/auth/turnstile-key', { cache: 'no-store' });
+                if (!response.ok) return;
+                const data = await response.json();
+                if (!data.site_key) return;
+
+                const waitForTurnstile = setInterval(() => {
+                    if (window.turnstile) {
+                        clearInterval(waitForTurnstile);
+                        turnstileWidgetId = window.turnstile.render(turnstileContainer, { sitekey: data.site_key });
+                    }
+                }, 100);
+            } catch (err) {
+                // ignore
+            }
+        }
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const username = usernameInput.value;
+            const identifier = identifierInput.value;
             const password = passwordInput.value;
 
             errorMsg.style.display = 'none';
@@ -139,13 +210,16 @@
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ identifier, password })
                 });
 
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
 
-                if (response.ok) {
-                    localStorage.setItem('token', data.access_token);
+                if (response.ok && data.authenticated) {
+                    if (data.csrf_token) {
+                        sessionStorage.setItem(CSRF_KEY, data.csrf_token);
+                    }
                     window.location.href = '/';
                 } else {
                     errorMsg.textContent = data.detail || 'Login failed';
@@ -156,7 +230,46 @@
                 errorMsg.style.display = 'block';
             }
         });
+
+        requestForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            requestMsg.style.display = 'none';
+            requestMsg.textContent = '';
+
+            const turnstileToken = turnstileWidgetId !== null && window.turnstile
+                ? window.turnstile.getResponse(turnstileWidgetId)
+                : '';
+
+            try {
+                const response = await fetch('/api/auth/invite-request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        email: requestEmailInput.value,
+                        turnstile_token: turnstileToken,
+                    })
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (response.ok) {
+                    requestMsg.textContent = 'Request received. We will email you if approved.';
+                    requestMsg.style.display = 'block';
+                    requestEmailInput.value = '';
+                    if (turnstileWidgetId !== null && window.turnstile) {
+                        window.turnstile.reset(turnstileWidgetId);
+                    }
+                } else {
+                    errorMsg.textContent = data.detail || 'Request failed';
+                    errorMsg.style.display = 'block';
+                }
+            } catch (err) {
+                errorMsg.textContent = 'An error occurred. Please try again.';
+                errorMsg.style.display = 'block';
+            }
+        });
+
+        initTurnstile();
     </script>
 </body>
 </html>
-

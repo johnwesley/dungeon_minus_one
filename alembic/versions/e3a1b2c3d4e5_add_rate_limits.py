@@ -7,6 +7,7 @@ Create Date: 2025-12-25
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 
 # revision identifiers, used by Alembic.
@@ -16,16 +17,30 @@ branch_labels = None
 depends_on = None
 
 
+def _table_exists(table_name: str) -> bool:
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    return table_name in inspector.get_table_names()
+
+
+def _index_exists(table_name: str, index_name: str) -> bool:
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    return any(idx.get("name") == index_name for idx in inspector.get_indexes(table_name))
+
+
 def upgrade() -> None:
-    op.create_table(
-        "rate_limits",
-        sa.Column("key", sa.String(length=255), primary_key=True),
-        sa.Column("count", sa.Integer(), nullable=False),
-        sa.Column("window_start", sa.DateTime(), nullable=False),
-        sa.Column("expires_at", sa.DateTime(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=True),
-    )
-    op.create_index("idx_rate_limits_expires_at", "rate_limits", ["expires_at"], unique=False)
+    if not _table_exists("rate_limits"):
+        op.create_table(
+            "rate_limits",
+            sa.Column("key", sa.String(length=255), primary_key=True),
+            sa.Column("count", sa.Integer(), nullable=False),
+            sa.Column("window_start", sa.DateTime(), nullable=False),
+            sa.Column("expires_at", sa.DateTime(), nullable=False),
+            sa.Column("created_at", sa.DateTime(), nullable=True),
+        )
+    if not _index_exists("rate_limits", "idx_rate_limits_expires_at"):
+        op.create_index("idx_rate_limits_expires_at", "rate_limits", ["expires_at"], unique=False)
 
 
 def downgrade() -> None:

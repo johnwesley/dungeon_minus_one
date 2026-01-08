@@ -20,10 +20,15 @@ class User(Base):
     id = Column(String(36), primary_key=True, default=generate_uuid)
     username = Column(String(50), unique=True, nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=True)
+    email_normalized = Column(String(255), unique=True, nullable=True)
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True, index=True)
+    suspended_at = Column(DateTime, nullable=True)
+    suspended_reason = Column(Text, nullable=True)
+    deleted_at = Column(DateTime, nullable=True)
     
     conversations = relationship("Conversation", back_populates="user")
 
@@ -35,10 +40,52 @@ class InviteCode(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     code = Column(String(50), unique=True, nullable=False, index=True)
+    invite_email = Column(String(255), nullable=True, index=True)
+    invite_email_normalized = Column(String(255), nullable=True, index=True)
+    token_hash = Column(String(255), unique=True, nullable=True)
+    expires_at = Column(DateTime, nullable=True, index=True)
+    sent_at = Column(DateTime, nullable=True)
+    revoked_at = Column(DateTime, nullable=True, index=True)
     is_used = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     used_at = Column(DateTime, nullable=True)
     used_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+
+
+class UserSession(Base):
+    """UserSession model - server-side sessions for BFF auth."""
+
+    __tablename__ = "user_sessions"
+
+    id = Column(String(128), primary_key=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_seen_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True, index=True)
+    revoked_at = Column(DateTime, nullable=True, index=True)
+    csrf_token_hash = Column(String(255), nullable=False)
+    ip = Column(String(45), nullable=True)
+    user_agent = Column(String(255), nullable=True)
+
+
+class InviteRequest(Base):
+    """InviteRequest model - captures access requests for admin approval."""
+
+    __tablename__ = "invite_requests"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    email = Column(String(255), nullable=False)
+    email_normalized = Column(String(255), nullable=False, index=True)
+    status = Column(String(20), nullable=False, default="pending", index=True)
+    requested_at = Column(DateTime, default=datetime.utcnow)
+    approved_at = Column(DateTime, nullable=True)
+    rejected_at = Column(DateTime, nullable=True)
+    approved_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+    invite_id = Column(String(36), ForeignKey("invite_codes.id"), nullable=True)
+    notes = Column(Text, nullable=True)
+    captcha_verified_at = Column(DateTime, nullable=True)
+    ip = Column(String(45), nullable=True)
+    user_agent = Column(String(255), nullable=True)
 
 
 class RateLimitEntry(Base):

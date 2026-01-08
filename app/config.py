@@ -26,6 +26,33 @@ class Settings(BaseSettings):
     # Development mode: bypass login when True
     dev_auth_bypass: bool = False
 
+    # Auth/session TTLs (BFF migration)
+    invite_ttl_hours: int = 24
+    account_ttl_days: int = 7
+    session_idle_timeout_minutes: int = 240
+    session_absolute_ttl_days: Optional[int] = None
+
+    # Session cookie settings
+    session_cookie_name: str = "session"
+    session_cookie_secure: bool = False
+    session_cookie_samesite: str = "Lax"
+    session_cookie_domain: Optional[str] = None
+
+    # Invite guardrails
+    allow_indefinite_invites: bool = False
+    default_account_expires: bool = True
+
+    # Turnstile captcha
+    turnstile_site_key: Optional[str] = None
+    turnstile_secret_key: Optional[str] = None
+
+    # Postmark email delivery
+    postmark_server_token: Optional[str] = None
+    postmark_from_email: Optional[str] = None
+    postmark_message_stream: str = "outbound"
+    invite_email_send_mode: str = "manual"  # auto or manual
+    public_app_url: Optional[str] = None
+
     # Proxy/IP handling
     trust_proxy_headers: bool = False
     trusted_proxy_ips: Optional[str] = None  # Comma-separated IPs/CIDRs for LB/proxy
@@ -38,6 +65,14 @@ class Settings(BaseSettings):
     invite_rate_limit_max: int = 10
     invite_rate_limit_window_seconds: int = 60
 
+    # Auth rate limits
+    login_rate_limit_max: int = 10
+    login_rate_limit_window_seconds: int = 60
+    register_rate_limit_max: int = 10
+    register_rate_limit_window_seconds: int = 60
+    invite_request_rate_limit_max: int = 5
+    invite_request_rate_limit_window_seconds: int = 300
+
     # Skills configuration (prompt concatenation approach)
     skills_enabled: bool = False  # Set to True to include skill files in system prompt
 
@@ -47,6 +82,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        env_ignore_empty = True
         extra = "ignore"  # Allow extra env vars (like POSTGRES_*) without validation error
 
 
@@ -68,3 +104,16 @@ def validate_settings(settings: Settings) -> None:
             raise ValueError("AUTH_SECRET_KEY must be set to a non-default value for staging/production.")
         if settings.db_auto_create:
             raise ValueError("DB_AUTO_CREATE must be false for staging/production.")
+        if settings.dev_auth_bypass:
+            raise ValueError("DEV_AUTH_BYPASS must be false for staging/production.")
+        if not settings.session_cookie_secure:
+            raise ValueError("SESSION_COOKIE_SECURE must be true for staging/production.")
+        if not settings.turnstile_site_key or not settings.turnstile_secret_key:
+            raise ValueError("Turnstile keys must be set for staging/production.")
+        if settings.invite_email_send_mode not in {"auto", "manual"}:
+            raise ValueError("INVITE_EMAIL_SEND_MODE must be 'auto' or 'manual'.")
+        if settings.invite_email_send_mode == "auto":
+            if not settings.postmark_server_token or not settings.postmark_from_email:
+                raise ValueError("Postmark settings must be set when invite email send mode is auto.")
+            if not settings.public_app_url:
+                raise ValueError("PUBLIC_APP_URL must be set when invite email send mode is auto.")

@@ -98,6 +98,39 @@ async def enforce_invite_rate_limit(db: AsyncSession, client_ip: Optional[str]) 
     await _enforce_rate_limit(db, f"invite:{identifier}", max_requests, window_seconds)
 
 
+async def enforce_login_rate_limit(db: AsyncSession, client_ip: Optional[str], identifier: str) -> None:
+    settings = get_settings()
+    max_requests = settings.login_rate_limit_max
+    window_seconds = settings.login_rate_limit_window_seconds
+    if max_requests <= 0 or window_seconds <= 0:
+        return
+
+    key = f"login:{client_ip or 'unknown'}:{identifier.lower()}"
+    await _enforce_rate_limit(db, key, max_requests, window_seconds)
+
+
+async def enforce_register_rate_limit(db: AsyncSession, client_ip: Optional[str], invite_token_hash: str) -> None:
+    settings = get_settings()
+    max_requests = settings.register_rate_limit_max
+    window_seconds = settings.register_rate_limit_window_seconds
+    if max_requests <= 0 or window_seconds <= 0:
+        return
+
+    key = f"register:{client_ip or 'unknown'}:{invite_token_hash}"
+    await _enforce_rate_limit(db, key, max_requests, window_seconds)
+
+
+async def enforce_invite_request_rate_limit(db: AsyncSession, client_ip: Optional[str], email: str) -> None:
+    settings = get_settings()
+    max_requests = settings.invite_request_rate_limit_max
+    window_seconds = settings.invite_request_rate_limit_window_seconds
+    if max_requests <= 0 or window_seconds <= 0:
+        return
+
+    key = f"invite_request:{client_ip or 'unknown'}:{email.lower()}"
+    await _enforce_rate_limit(db, key, max_requests, window_seconds)
+
+
 async def _enforce_rate_limit(
     db: AsyncSession,
     key_prefix: str,

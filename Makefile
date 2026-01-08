@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-notify
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite auth-reset frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-auth-reset k8s-create-admin k8s-notify
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -53,8 +53,11 @@ verify-movement:  ## Verify narrator tool usage for movement
 validate-config:  ## Validate config (set DB_CHECK=true for DB connectivity)
 	$(PYTHON) scripts/validate_config.py $(if $(DB_CHECK),--db-check,)
 
-invite:  ## Generate a new invite code (local DB)
-	$(PYTHON) scripts/generate_invite.py
+invite:  ## Generate a new invite token (usage: make invite EMAIL="user@example.com")
+	$(PYTHON) scripts/generate_invite.py $(EMAIL)
+
+auth-reset:  ## Reset auth-related tables (dangerous; add FORCE=true)
+	$(PYTHON) scripts/reset_auth.py $(if $(FORCE),--force,)
 
 notify:  ## Create a notification (usage: make notify TITLE="title" MSG="message")
 	$(PYTHON) scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)
@@ -274,11 +277,17 @@ k8s-seed:  ## Sync location fixtures to k8s database
 k8s-seed-prune:  ## Sync + prune location fixtures in k8s database
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/sync_locations.py --prune
 
-k8s-invite:  ## Generate invite code in k8s
-	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/generate_invite.py
+k8s-invite:  ## Generate invite token in k8s (usage: make k8s-invite EMAIL="user@example.com")
+	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/generate_invite.py $(EMAIL)
 
 k8s-reset:  ## Reset game sessions in k8s (keeps users)
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/reset_game_state.py
+
+k8s-auth-reset:  ## Reset auth tables in k8s (dangerous; add FORCE=true)
+	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/reset_auth.py $(if $(FORCE),--force,)
+
+k8s-create-admin:  ## Create admin user in k8s (usage: make k8s-create-admin USERNAME="admin" PASSWORD="pass" EMAIL="admin@example.com")
+	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/create_admin.py $(USERNAME) $(PASSWORD) $(if $(EMAIL),--email $(EMAIL),)
 
 k8s-notify:  ## Create notification in k8s (usage: make k8s-notify TITLE="title" MSG="message")
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)

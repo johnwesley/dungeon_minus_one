@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Dungeon -1</title>
   <link rel="stylesheet" href="/css/main.css">
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body class="scanlines crt-vignette">
   <div class="auth-container">
@@ -15,10 +16,10 @@
 
       <form id="login-form" class="auth-form">
         <div>
-          <label class="bbs-label" for="username">Username</label>
+          <label class="bbs-label" for="identifier">Email or Username</label>
           <input type="text"
-                 id="username"
-                 name="username"
+                 id="identifier"
+                 name="identifier"
                  class="bbs-input"
                  required
                  autocomplete="username">
@@ -37,24 +38,59 @@
         <button type="submit" class="bbs-btn">Enter</button>
       </form>
 
+      <div class="auth-divider"></div>
+
+      <form id="invite-request-form" class="auth-form">
+        <h2 class="auth-subtitle">Request Access</h2>
+        <div>
+          <label class="bbs-label" for="request-email">Email</label>
+          <input type="email"
+                 id="request-email"
+                 name="request-email"
+                 class="bbs-input"
+                 required
+                 autocomplete="email">
+        </div>
+        <div id="turnstile-container" class="turnstile-container"></div>
+        <button type="submit" class="bbs-btn">Request Invite</button>
+        <div id="request-msg"></div>
+      </form>
+
       <p class="auth-link">
-        No account? <a href="/register.html">Request access</a>
+        Have an invite? <a href="/register.html">Register here</a>
       </p>
+
       <p class="auth-version">© 2026 John Wesley · Streaming permitted</p>
     </div>
   </div>
 
   <script>
     (function () {
-      const TOKEN_KEY = 'token';
+      const CSRF_KEY = 'csrf_token';
       const form = document.getElementById('login-form');
       const errorMsg = document.getElementById('error-msg');
-      const usernameInput = document.getElementById('username');
+      const identifierInput = document.getElementById('identifier');
       const passwordInput = document.getElementById('password');
+      const requestForm = document.getElementById('invite-request-form');
+      const requestEmailInput = document.getElementById('request-email');
+      const requestMsg = document.getElementById('request-msg');
+      const turnstileContainer = document.getElementById('turnstile-container');
+      let turnstileWidgetId = null;
 
-      if (localStorage.getItem(TOKEN_KEY)) {
-        window.location.href = '/';
-        return;
+      async function redirectIfAuthenticated() {
+        try {
+          const response = await fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store' });
+          if (!response.ok) return;
+          const data = await response.json();
+          if (data && data.authenticated) {
+            if (data.csrf_token) {
+              sessionStorage.setItem(CSRF_KEY, data.csrf_token);
+            }
+            window.location.href = '/';
+          }
+        } catch (err) {
+          // ignore
+        }
       }
 
       async function initDevMode() {
@@ -63,7 +99,7 @@
           if (!response.ok) return;
           const data = await response.json();
           if (data.enabled) {
-            usernameInput.value = 'dev';
+            identifierInput.value = 'dev';
             passwordInput.value = 'dev';
           }
         } catch (err) {
@@ -75,6 +111,36 @@
         errorMsg.innerHTML = `<div class="bbs-error">${message}</div>`;
       }
 
+      function showRequestMessage(message, ok = true) {
+        requestMsg.innerHTML = `<div class="${ok ? 'bbs-success' : 'bbs-error'}">${message}</div>`;
+      }
+
+      function renderTurnstile(siteKey) {
+        if (!siteKey || !window.turnstile || !turnstileContainer) {
+          return;
+        }
+        turnstileContainer.innerHTML = '';
+        turnstileWidgetId = window.turnstile.render(turnstileContainer, { sitekey: siteKey });
+      }
+
+      async function initTurnstile() {
+        try {
+          const response = await fetch('/api/auth/turnstile-key', { cache: 'no-store' });
+          if (!response.ok) return;
+          const data = await response.json();
+          if (!data.site_key) return;
+
+          const waitForTurnstile = setInterval(() => {
+            if (window.turnstile) {
+              clearInterval(waitForTurnstile);
+              renderTurnstile(data.site_key);
+            }
+          }, 100);
+        } catch (err) {
+          // Ignore
+        }
+      }
+
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
         errorMsg.innerHTML = '';
@@ -83,16 +149,19 @@
           const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify({
-              username: usernameInput.value,
+              identifier: identifierInput.value,
               password: passwordInput.value,
             }),
           });
 
           const data = await response.json().catch(() => ({}));
 
-          if (response.ok && data.access_token) {
-            localStorage.setItem(TOKEN_KEY, data.access_token);
+          if (response.ok && data.authenticated) {
+            if (data.csrf_token) {
+              sessionStorage.setItem(CSRF_KEY, data.csrf_token);
+            }
             window.location.href = '/';
             return;
           }
@@ -103,7 +172,43 @@
         }
       });
 
+      requestForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        requestMsg.innerHTML = '';
+
+        const turnstileToken = turnstileWidgetId !== null && window.turnstile
+          ? window.turnstile.getResponse(turnstileWidgetId)
+          : '';
+
+        try {
+          const response = await fetch('/api/auth/invite-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              email: requestEmailInput.value,
+              turnstile_token: turnstileToken,
+            }),
+          });
+
+          const data = await response.json().catch(() => ({}));
+          if (response.ok) {
+            showRequestMessage('Request received. We will email you if approved.', true);
+            requestEmailInput.value = '';
+            if (turnstileWidgetId !== null && window.turnstile) {
+              window.turnstile.reset(turnstileWidgetId);
+            }
+            return;
+          }
+          showRequestMessage(data.detail || 'Request failed', false);
+        } catch (err) {
+          showRequestMessage('An error occurred. Please try again.', false);
+        }
+      });
+
+      redirectIfAuthenticated();
       initDevMode();
+      initTurnstile();
     })();
   </script>
 </body>

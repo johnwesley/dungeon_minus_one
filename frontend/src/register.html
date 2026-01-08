@@ -15,10 +15,10 @@
 
       <form id="register-form" class="auth-form">
         <div>
-          <label class="bbs-label" for="invite_code">Invite Code</label>
+          <label class="bbs-label" for="invite_token">Invite Token</label>
           <input type="text"
-                 id="invite_code"
-                 name="invite_code"
+                 id="invite_token"
+                 name="invite_token"
                  class="bbs-input"
                  required
                  autocomplete="off">
@@ -55,20 +55,39 @@
 
   <script>
     (function () {
-      const TOKEN_KEY = 'token';
+      const CSRF_KEY = 'csrf_token';
       const form = document.getElementById('register-form');
       const errorMsg = document.getElementById('error-msg');
-      const inviteInput = document.getElementById('invite_code');
+      const inviteInput = document.getElementById('invite_token');
       const usernameInput = document.getElementById('username');
       const passwordInput = document.getElementById('password');
 
-      if (localStorage.getItem(TOKEN_KEY)) {
-        window.location.href = '/';
-        return;
+      async function redirectIfAuthenticated() {
+        try {
+          const response = await fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store' });
+          if (!response.ok) return;
+          const data = await response.json();
+          if (data && data.authenticated) {
+            if (data.csrf_token) {
+              sessionStorage.setItem(CSRF_KEY, data.csrf_token);
+            }
+            window.location.href = '/';
+          }
+        } catch (err) {
+          // ignore
+        }
       }
 
       function showError(message) {
         errorMsg.innerHTML = `<div class="bbs-error">${message}</div>`;
+      }
+
+      function prefillInviteToken() {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('invite_token');
+        if (token) {
+          inviteInput.value = token;
+        }
       }
 
       form.addEventListener('submit', async (event) => {
@@ -79,8 +98,9 @@
           const response = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify({
-              invite_code: inviteInput.value,
+              invite_token: inviteInput.value,
               username: usernameInput.value,
               password: passwordInput.value,
             }),
@@ -88,8 +108,10 @@
 
           const data = await response.json().catch(() => ({}));
 
-          if (response.ok && data.access_token) {
-            localStorage.setItem(TOKEN_KEY, data.access_token);
+          if (response.ok && data.authenticated) {
+            if (data.csrf_token) {
+              sessionStorage.setItem(CSRF_KEY, data.csrf_token);
+            }
             window.location.href = '/';
             return;
           }
@@ -99,6 +121,9 @@
           showError('An error occurred. Please try again.');
         }
       });
+
+      redirectIfAuthenticated();
+      prefillInviteToken();
     })();
   </script>
 </body>
