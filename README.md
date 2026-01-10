@@ -135,6 +135,12 @@ kubectl create secret generic doppler-token -n dungeon --from-literal=serviceTok
 | `make k8s-reset` | Reset game sessions |
 | `make k8s-notify TITLE="..." MSG="..."` | Create notification |
 
+## Admin Pages
+
+| URL | Description |
+|-----|-------------|
+| `/admin/invites` | Manage invite requests (approve/reject) |
+
 ## Local Commands
 
 | Command | Description |
