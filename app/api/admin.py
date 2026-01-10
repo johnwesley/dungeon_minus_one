@@ -82,8 +82,11 @@ async def approve_invite_request(
     send_email = decision.send_email and settings.invite_email_send_mode == "auto"
     if send_email:
         email_service = EmailService()
-        await email_service.send_invite_email(invite.invite_email, token)
-        invite.sent_at = datetime.utcnow()
+        try:
+            await email_service.send_invite_email(invite.invite_email, token)
+            invite.sent_at = datetime.utcnow()
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Email send failed: {e}")
         return {"sent": True, "invite_id": invite.id}
 
     return {"sent": False, "invite_token": token, "invite_id": invite.id}

@@ -48,4 +48,11 @@ class EmailService:
 
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.post(POSTMARK_URL, json=payload, headers=headers)
-            response.raise_for_status()
+            if response.status_code != 200:
+                error_detail = response.text
+                try:
+                    error_json = response.json()
+                    error_detail = error_json.get("Message", response.text)
+                except Exception:
+                    pass
+                raise RuntimeError(f"Postmark error ({response.status_code}): {error_detail}")
