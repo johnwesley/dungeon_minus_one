@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from pathlib import Path
 from sqlalchemy import select, text
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -117,10 +117,16 @@ async def serve_register():
     return _html_response(static_path / "register.html")
 
 
+@app.get("/admin")
+async def serve_admin():
+    """Serve the unified admin dashboard."""
+    return _html_response(static_path / "admin.html")
+
+
 @app.get("/admin/invites")
-async def serve_admin_invites():
-    """Serve the admin invite approvals page."""
-    return _html_response(static_path / "admin-invites.html")
+async def redirect_admin_invites():
+    """Redirect legacy invite URL to unified admin dashboard."""
+    return RedirectResponse(url="/admin", status_code=301)
 
 
 @app.get("/health")

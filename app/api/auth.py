@@ -204,6 +204,7 @@ async def register(data: UserRegister, request: Request, response: Response, db:
     return AuthSessionResponse(
         authenticated=True,
         username=new_user.username,
+        is_admin=new_user.is_admin,
         account_expires_at=new_user.expires_at,
         session_expires_at=session.expires_at,
         csrf_token=csrf_token,
@@ -244,6 +245,7 @@ async def login(data: UserLogin, request: Request, response: Response, db: Async
     return AuthSessionResponse(
         authenticated=True,
         username=user.username,
+        is_admin=user.is_admin,
         account_expires_at=user.expires_at,
         session_expires_at=session.expires_at,
         csrf_token=csrf_token,
@@ -285,6 +287,7 @@ async def session_info(request: Request, response: Response, db: AsyncSession = 
     return AuthSessionResponse(
         authenticated=True,
         username=user.username,
+        is_admin=user.is_admin,
         account_expires_at=user.expires_at,
         session_expires_at=session.expires_at,
         csrf_token=csrf_token,

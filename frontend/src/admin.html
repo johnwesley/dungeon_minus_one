@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Dungeon -1</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .admin-tabs {
+      display: flex;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+      border-bottom: 1px solid var(--phosphor-green);
+      padding-bottom: var(--space-sm);
+    }
+    .admin-tab {
+      padding: var(--space-xs) var(--space-md);
+      background: transparent;
+      border: 1px solid var(--phosphor-green);
+      color: var(--phosphor-green);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: inherit;
+    }
+    .admin-tab:hover {
+      background: rgba(51, 255, 51, 0.1);
+    }
+    .admin-tab.active {
+      background: var(--phosphor-green);
+      color: var(--terminal-bg);
+    }
+    .admin-panel {
+      display: none;
+    }
+    .admin-panel.active {
+      display: block;
+    }
+    .admin-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+      align-items: flex-end;
+      margin-bottom: var(--space-md);
+    }
+    .admin-controls > div {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .user-card {
+      border: 1px solid var(--phosphor-green);
+      padding: var(--space-sm);
+      margin-bottom: var(--space-sm);
+    }
+    .user-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-xs);
+    }
+    .user-card-username {
+      color: var(--phosphor-amber);
+      font-weight: bold;
+    }
+    .user-card-status {
+      font-size: 0.9em;
+    }
+    .user-card-details {
+      font-size: 0.9em;
+      opacity: 0.8;
+    }
+    .user-card-actions {
+      margin-top: var(--space-sm);
+      display: flex;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+    }
+    .status-active { color: var(--phosphor-green); }
+    .status-suspended { color: var(--phosphor-amber); }
+    .status-deleted { color: #ff5555; }
+    .status-admin { color: #55ffff; }
+  </style>
+</head>
+<body class="scanlines crt-vignette">
+  <div class="auth-container">
+    <div class="auth-box" style="max-width: 800px;">
+      <h1 class="auth-title glow">Admin Dashboard</h1>
+
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="invites">Invite Requests</button>
+        <button class="admin-tab" data-tab="users">Users</button>
+      </div>
+
+      <div id="status-msg"></div>
+
+      <!-- Invite Requests Panel -->
+      <div id="invites-panel" class="admin-panel active">
+        <div class="admin-controls">
+          <div>
+            <label class="bbs-label" for="invite-status-filter">Status</label>
+            <select id="invite-status-filter" class="bbs-input">
+              <option value="pending" selected>Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+          <div>
+            <label class="bbs-label">
+              <input type="checkbox" id="send-email" checked>
+              Send email automatically
+            </label>
+          </div>
+          <button id="invite-refresh-btn" class="bbs-btn">Refresh</button>
+        </div>
+        <div id="invite-requests"></div>
+      </div>
+
+      <!-- Users Panel -->
+      <div id="users-panel" class="admin-panel">
+        <div class="admin-controls">
+          <div>
+            <label class="bbs-label" for="user-status-filter">Status</label>
+            <select id="user-status-filter" class="bbs-input">
+              <option value="" selected>All</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+              <option value="deleted">Deleted</option>
+            </select>
+          </div>
+          <div>
+            <label class="bbs-label" for="user-search">Search</label>
+            <input type="text" id="user-search" class="bbs-input" placeholder="Username or email">
+          </div>
+          <button id="user-refresh-btn" class="bbs-btn">Refresh</button>
+        </div>
+        <div id="user-list"></div>
+      </div>
+
+      <p class="auth-link" style="margin-top: var(--space-lg);"><a href="/">Back to game</a></p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const CSRF_KEY = 'csrf_token';
+
+      // DOM Elements
+      const statusMsg = document.getElementById('status-msg');
+      const tabs = document.querySelectorAll('.admin-tab');
+      const panels = document.querySelectorAll('.admin-panel');
+
+      // Invite elements
+      const inviteStatusFilter = document.getElementById('invite-status-filter');
+      const inviteRefreshBtn = document.getElementById('invite-refresh-btn');
+      const inviteRequestsEl = document.getElementById('invite-requests');
+      const sendEmailToggle = document.getElementById('send-email');
+
+      // User elements
+      const userStatusFilter = document.getElementById('user-status-filter');
+      const userSearchInput = document.getElementById('user-search');
+      const userRefreshBtn = document.getElementById('user-refresh-btn');
+      const userListEl = document.getElementById('user-list');
+
+      // Utility functions
+      function showStatus(message, ok = true) {
+        statusMsg.innerHTML = `<div class="${ok ? 'bbs-success' : 'bbs-error'}">${message}</div>`;
+        setTimeout(() => { statusMsg.innerHTML = ''; }, 5000);
+      }
+
+      function getCsrfToken() {
+        return sessionStorage.getItem(CSRF_KEY);
+      }
+
+      async function ensureSession() {
+        try {
+          const response = await fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store' });
+          if (!response.ok) throw new Error();
+          const data = await response.json();
+          if (!data.authenticated) throw new Error();
+          if (!data.is_admin) {
+            showStatus('Admin access required', false);
+            setTimeout(() => { window.location.href = '/'; }, 2000);
+            return false;
+          }
+          if (data.csrf_token) {
+            sessionStorage.setItem(CSRF_KEY, data.csrf_token);
+          }
+          return true;
+        } catch (err) {
+          window.location.href = '/login.html';
+          return false;
+        }
+      }
+
+      function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        return new Date(dateStr).toLocaleString();
+      }
+
+      // Tab switching
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          panels.forEach(p => p.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById(`${tab.dataset.tab}-panel`).classList.add('active');
+        });
+      });
+
+      // =====================
+      // INVITE REQUESTS
+      // =====================
+      async function fetchInviteRequests() {
+        const status = inviteStatusFilter.value;
+        const response = await fetch(`/api/admin/invite-requests?status=${encodeURIComponent(status)}`, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          showStatus(data.detail || 'Failed to load requests', false);
+          return [];
+        }
+        return await response.json();
+      }
+
+      function renderInviteRequests(requests) {
+        if (!requests.length) {
+          inviteRequestsEl.innerHTML = '<p class="auth-link">No requests found.</p>';
+          return;
+        }
+
+        inviteRequestsEl.innerHTML = requests.map(req => `
+          <div class="notification" data-id="${req.id}">
+            <div class="notification-header">
+              <span class="notification-title">${req.email}</span>
+              <span class="auth-link">${req.status}</span>
+            </div>
+            <div class="notification-message">Requested: ${formatDate(req.requested_at)}</div>
+            <div class="notification-message">Notes: ${req.notes || '-'}</div>
+            ${req.status === 'pending' ? `
+              <div style="margin-top: var(--space-sm); display: flex; gap: var(--space-sm);">
+                <button class="bbs-btn approve-btn" data-id="${req.id}">Approve</button>
+                <button class="bbs-btn-danger reject-btn" data-id="${req.id}">Reject</button>
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+
+        inviteRequestsEl.querySelectorAll('.approve-btn').forEach(btn => {
+          btn.addEventListener('click', () => approveRequest(btn.dataset.id));
+        });
+        inviteRequestsEl.querySelectorAll('.reject-btn').forEach(btn => {
+          btn.addEventListener('click', () => rejectRequest(btn.dataset.id));
+        });
+      }
+
+      async function approveRequest(requestId) {
+        const notes = prompt('Optional approval notes (leave blank):') || null;
+        const sendEmail = sendEmailToggle.checked;
+        const response = await fetch(`/api/admin/invite-requests/${requestId}/approve`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken() || '',
+          },
+          body: JSON.stringify({ send_email: sendEmail, notes }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showStatus(data.detail || 'Approval failed', false);
+          return;
+        }
+
+        if (!data.sent && data.invite_token) {
+          showStatus(`Invite token: ${data.invite_token}`, true);
+        } else {
+          showStatus('Invite approved and sent.', true);
+        }
+        await loadInviteRequests();
+      }
+
+      async function rejectRequest(requestId) {
+        const notes = prompt('Optional rejection notes (leave blank):') || null;
+        const response = await fetch(`/api/admin/invite-requests/${requestId}/reject`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken() || '',
+          },
+          body: JSON.stringify({ notes }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showStatus(data.detail || 'Rejection failed', false);
+          return;
+        }
+        showStatus('Invite request rejected.', true);
+        await loadInviteRequests();
+      }
+
+      async function loadInviteRequests() {
+        const requests = await fetchInviteRequests();
+        renderInviteRequests(requests);
+      }
+
+      // =====================
+      // USERS
+      // =====================
+      async function fetchUsers() {
+        const status = userStatusFilter.value;
+        const search = userSearchInput.value.trim();
+        const params = new URLSearchParams();
+        if (status) params.append('status', status);
+        if (search) params.append('search', search);
+
+        const response = await fetch(`/api/admin/users?${params.toString()}`, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          showStatus(data.detail || 'Failed to load users', false);
+          return [];
+        }
+        return await response.json();
+      }
+
+      function getUserStatus(user) {
+        if (user.deleted_at) return { text: 'Deleted', class: 'status-deleted' };
+        if (user.suspended_at) return { text: 'Suspended', class: 'status-suspended' };
+        if (user.is_active) return { text: 'Active', class: 'status-active' };
+        return { text: 'Inactive', class: 'status-suspended' };
+      }
+
+      function renderUsers(users) {
+        if (!users.length) {
+          userListEl.innerHTML = '<p class="auth-link">No users found.</p>';
+          return;
+        }
+
+        userListEl.innerHTML = users.map(user => {
+          const status = getUserStatus(user);
+          const isDeleted = !!user.deleted_at;
+          const isSuspended = !!user.suspended_at;
+
+          return `
+            <div class="user-card" data-id="${user.id}">
+              <div class="user-card-header">
+                <span class="user-card-username">${user.username}</span>
+                <span class="user-card-status ${status.class}">
+                  ${status.text}${user.is_admin ? ' <span class="status-admin">[Admin]</span>' : ''}
+                </span>
+              </div>
+              <div class="user-card-details">
+                <div>Email: ${user.email || '-'}</div>
+                <div>Created: ${formatDate(user.created_at)}</div>
+                <div>Expires: ${user.expires_at ? formatDate(user.expires_at) : 'Never'}</div>
+                ${user.suspended_at ? `<div>Suspended: ${formatDate(user.suspended_at)}${user.suspended_reason ? ` - ${user.suspended_reason}` : ''}</div>` : ''}
+                ${user.deleted_at ? `<div>Deleted: ${formatDate(user.deleted_at)}</div>` : ''}
+              </div>
+              ${!isDeleted ? `
+                <div class="user-card-actions">
+                  ${isSuspended
+                    ? `<button class="bbs-btn unsuspend-btn" data-id="${user.id}">Unsuspend</button>`
+                    : `<button class="bbs-btn suspend-btn" data-id="${user.id}">Suspend</button>`
+                  }
+                  <button class="bbs-btn extend-btn" data-id="${user.id}">Extend</button>
+                  <button class="bbs-btn-danger delete-btn" data-id="${user.id}">Delete</button>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+
+        // Add event listeners
+        userListEl.querySelectorAll('.suspend-btn').forEach(btn => {
+          btn.addEventListener('click', () => suspendUser(btn.dataset.id));
+        });
+        userListEl.querySelectorAll('.unsuspend-btn').forEach(btn => {
+          btn.addEventListener('click', () => unsuspendUser(btn.dataset.id));
+        });
+        userListEl.querySelectorAll('.extend-btn').forEach(btn => {
+          btn.addEventListener('click', () => extendUser(btn.dataset.id));
+        });
+        userListEl.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', () => deleteUser(btn.dataset.id));
+        });
+      }
+
+      async function suspendUser(userId) {
+        const reason = prompt('Suspension reason (optional):') || null;
+        const response = await fetch(`/api/admin/users/${userId}/suspend`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken() || '',
+          },
+          body: JSON.stringify({ reason }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showStatus(data.detail || 'Suspension failed', false);
+          return;
+        }
+        showStatus('User suspended.', true);
+        await loadUsers();
+      }
+
+      async function unsuspendUser(userId) {
+        const response = await fetch(`/api/admin/users/${userId}/unsuspend`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken() || '',
+          },
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showStatus(data.detail || 'Unsuspend failed', false);
+          return;
+        }
+        showStatus('User unsuspended.', true);
+        await loadUsers();
+      }
+
+      async function extendUser(userId) {
+        const days = prompt('Extend account by how many days? (Leave blank to remove expiration):');
+        if (days === null) return;
+
+        let expiresAt = null;
+        if (days.trim()) {
+          const d = parseInt(days, 10);
+          if (isNaN(d) || d <= 0) {
+            showStatus('Invalid number of days', false);
+            return;
+          }
+          expiresAt = new Date(Date.now() + d * 24 * 60 * 60 * 1000).toISOString();
+        }
+
+        const response = await fetch(`/api/admin/users/${userId}/extend`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken() || '',
+          },
+          body: JSON.stringify({ expires_at: expiresAt }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showStatus(data.detail || 'Extension failed', false);
+          return;
+        }
+        showStatus(expiresAt ? `Account extended until ${formatDate(expiresAt)}` : 'Expiration removed.', true);
+        await loadUsers();
+      }
+
+      async function deleteUser(userId) {
+        if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+          return;
+        }
+
+        const response = await fetch(`/api/admin/users/${userId}`, {
+          method: 'DELETE',
+          credentials: 'same-origin',
+          headers: {
+            'X-CSRF-Token': getCsrfToken() || '',
+          },
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showStatus(data.detail || 'Delete failed', false);
+          return;
+        }
+        showStatus('User deleted.', true);
+        await loadUsers();
+      }
+
+      async function loadUsers() {
+        const users = await fetchUsers();
+        renderUsers(users);
+      }
+
+      // =====================
+      // INITIALIZATION
+      // =====================
+      async function init() {
+        const ok = await ensureSession();
+        if (!ok) return;
+        await loadInviteRequests();
+        await loadUsers();
+      }
+
+      // Event listeners
+      inviteRefreshBtn.addEventListener('click', loadInviteRequests);
+      inviteStatusFilter.addEventListener('change', loadInviteRequests);
+
+      userRefreshBtn.addEventListener('click', loadUsers);
+      userStatusFilter.addEventListener('change', loadUsers);
+      let searchTimeout;
+      userSearchInput.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(loadUsers, 300);
+      });
+
+      init();
+    })();
+  </script>
+</body>
+</html>

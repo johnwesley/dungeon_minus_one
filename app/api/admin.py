@@ -13,6 +13,7 @@ from app.models.auth_schemas import (
     InviteRequestDecision,
     InviteRequestResponse,
     UserExtend,
+    UserResponse,
     UserSuspend,
 )
 from app.models.database import InviteCode, InviteRequest, User
@@ -27,6 +28,53 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
     return current_user
+
+
+@router.get("/users", response_model=list[UserResponse])
+async def list_users(
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """List all users with optional filtering by status and search."""
+    query = select(User)
+
+    if status == "active":
+        query = query.where(
+            User.is_active == True,
+            User.suspended_at.is_(None),
+            User.deleted_at.is_(None),
+        )
+    elif status == "suspended":
+        query = query.where(User.suspended_at.isnot(None))
+    elif status == "deleted":
+        query = query.where(User.deleted_at.isnot(None))
+
+    if search:
+        search_term = f"%{search}%"
+        query = query.where(
+            (User.username.ilike(search_term)) | (User.email.ilike(search_term))
+        )
+
+    result = await db.execute(query.order_by(User.created_at.desc()))
+    users = result.scalars().all()
+
+    return [
+        UserResponse(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            is_active=user.is_active,
+            is_admin=user.is_admin,
+            created_at=user.created_at,
+            suspended_at=user.suspended_at,
+            suspended_reason=user.suspended_reason,
+            deleted_at=user.deleted_at,
+            expires_at=user.expires_at,
+        )
+        for user in users
+    ]
 
 
 @router.get("/invite-requests", response_model=list[InviteRequestResponse])

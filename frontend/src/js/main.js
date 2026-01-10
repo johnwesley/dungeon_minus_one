@@ -25,6 +25,7 @@ class DungeonApp {
     this.trophyCaseListEl = document.getElementById('trophy-case-list');
     this.trophyCountEl = document.getElementById('trophy-count');
     this.notificationsPanelEl = document.getElementById('notifications-panel');
+    this.adminLinkEl = document.getElementById('admin-link');
 
     this.init();
   }
@@ -47,6 +48,10 @@ class DungeonApp {
     const username = this.session?.username;
     if (this.userHandleEl) {
       this.userHandleEl.textContent = username || 'Unknown';
+    }
+    // Show admin link if user is admin
+    if (this.adminLinkEl && this.session?.is_admin) {
+      this.adminLinkEl.style.display = '';
     }
   }
 

@@ -24,6 +24,7 @@ class UserRegister(BaseModel):
 class AuthSessionResponse(BaseModel):
     authenticated: bool
     username: Optional[str] = None
+    is_admin: Optional[bool] = None
     account_expires_at: Optional[datetime] = None
     session_expires_at: Optional[datetime] = None
     csrf_token: Optional[str] = None
@@ -71,4 +72,17 @@ class UserExtend(BaseModel):
 
 
 class InviteExtend(BaseModel):
+    expires_at: Optional[datetime] = None
+
+
+class UserResponse(BaseModel):
+    id: str
+    username: str
+    email: Optional[str] = None
+    is_active: bool
+    is_admin: bool
+    created_at: Optional[datetime] = None
+    suspended_at: Optional[datetime] = None
+    suspended_reason: Optional[str] = None
+    deleted_at: Optional[datetime] = None
     expires_at: Optional[datetime] = None
