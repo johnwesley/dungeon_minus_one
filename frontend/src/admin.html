@@ -244,6 +244,11 @@
                 <button class="bbs-btn-danger reject-btn" data-id="${req.id}">Reject</button>
               </div>
             ` : ''}
+            ${req.status === 'approved' ? `
+              <div style="margin-top: var(--space-sm);">
+                <button class="bbs-btn regenerate-btn" data-id="${req.id}">Regenerate Token</button>
+              </div>
+            ` : ''}
           </div>
         `).join('');
 
@@ -252,6 +257,9 @@
         });
         inviteRequestsEl.querySelectorAll('.reject-btn').forEach(btn => {
           btn.addEventListener('click', () => rejectRequest(btn.dataset.id));
+        });
+        inviteRequestsEl.querySelectorAll('.regenerate-btn').forEach(btn => {
+          btn.addEventListener('click', () => regenerateRequest(btn.dataset.id));
         });
       }
 
@@ -279,6 +287,28 @@
         } else {
           showStatus('Invite approved and sent.', true);
         }
+        await loadInviteRequests();
+      }
+
+      async function regenerateRequest(requestId) {
+        if (!confirm("Regenerate invite token? The old one will be revoked.")) return;
+
+        const response = await fetch(`/api/admin/invite-requests/${requestId}/regenerate`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken() || '',
+          },
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          showStatus(data.detail || 'Regeneration failed', false);
+          return;
+        }
+
+        showStatus(`New Invite Token: ${data.invite_token}`, true);
         await loadInviteRequests();
       }
 

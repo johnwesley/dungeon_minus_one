@@ -161,6 +161,41 @@ async def reject_invite_request(
     return {"status": "rejected"}
 
 
+@router.post("/invite-requests/{request_id}/regenerate")
+async def regenerate_invite_request(
+    request_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Regenerate an invite for an already approved request (e.g. lost token)."""
+    settings = get_settings()
+    invite_request = await db.get(InviteRequest, request_id)
+    if not invite_request:
+        raise HTTPException(status_code=404, detail="Invite request not found")
+    if invite_request.status != "approved":
+        raise HTTPException(status_code=400, detail="Can only regenerate approved requests")
+
+    # Revoke old invite if it exists
+    if invite_request.invite_id:
+        old_invite = await db.get(InviteCode, invite_request.invite_id)
+        if old_invite:
+            old_invite.revoked_at = datetime.utcnow()
+
+    # Create new invite
+    invite_service = InviteService(db, settings)
+    # Defaulting to standard expiration logic, or could infer from old invite if needed
+    # For simplicity, we treat it as a fresh invite.
+    invite, token = await invite_service.create_invite(invite_request.email, never_expires=False)
+
+    # Update request record
+    invite_request.invite_id = invite.id
+    invite_request.approved_at = datetime.utcnow()
+    invite_request.approved_by_user_id = current_user.id
+    invite_request.notes = (invite_request.notes or "") + "\n[Regenerated]"
+
+    return {"sent": False, "invite_token": token, "invite_id": invite.id}
+
+
 @router.post("/users/{user_id}/suspend")
 async def suspend_user(
     user_id: str,
