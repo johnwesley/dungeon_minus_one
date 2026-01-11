@@ -197,21 +197,9 @@ infra-destroy:  ## Destroy all infrastructure (DANGEROUS)
 K8S_NAMESPACE := dungeon
 KUBECONFIG_FILE := ~/.kube/doks-dungeon
 
-k8s-kubeconfig:  ## Export kubeconfig for DOKS cluster
-	@if [ ! -f $(DEPLOY_ENV) ]; then \
-		echo "Error: $(DEPLOY_ENV) not found."; \
-		exit 1; \
-	fi
-	@mkdir -p ~/.kube
-	@set -a && . ./$(DEPLOY_ENV) && set +a && \
-		cd infra && \
-		TF_VAR_do_token=$$DO_TOKEN \
-		TF_VAR_spaces_access_id=$${SPACES_ACCESS_KEY:-$${SPACES_ACCESS_ID:-$${AWS_ACCESS_KEY_ID}}} \
-		TF_VAR_spaces_secret_key=$${SPACES_SECRET_KEY:-$${AWS_SECRET_ACCESS_KEY}} \
-		tofu output -raw k8s_kubeconfig > $(KUBECONFIG_FILE) && \
-		chmod 600 $(KUBECONFIG_FILE) && \
-		echo "Kubeconfig written to $(KUBECONFIG_FILE)" && \
-		echo "Run: export KUBECONFIG=$(KUBECONFIG_FILE)"
+k8s-kubeconfig:  ## Refresh kubeconfig for DOKS cluster via doctl
+	@doctl kubernetes cluster kubeconfig save dungeon-k8s
+	@echo "Kubeconfig refreshed for dungeon-k8s cluster"
 
 k8s-setup:  ## One-time cluster setup (Doppler operator + namespace)
 	@echo "==> Installing Doppler Kubernetes Operator..."
