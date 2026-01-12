@@ -93,20 +93,6 @@
         }
       }
 
-      async function initDevMode() {
-        try {
-          const response = await fetch('/api/auth/dev-mode', { cache: 'no-store' });
-          if (!response.ok) return;
-          const data = await response.json();
-          if (data.enabled) {
-            identifierInput.value = 'dev';
-            passwordInput.value = 'dev';
-          }
-        } catch (err) {
-          // Ignore dev mode errors
-        }
-      }
-
       function showError(message) {
         errorMsg.innerHTML = `<div class="bbs-error">${message}</div>`;
       }
@@ -207,7 +193,6 @@
       });
 
       redirectIfAuthenticated();
-      initDevMode();
       initTurnstile();
     })();
   </script>

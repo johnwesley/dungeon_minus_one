@@ -23,9 +23,6 @@ class Settings(BaseSettings):
     auth_password: Optional[str] = "password"
     auth_secret_key: Optional[str] = "dev_secret_key_change_me_in_prod"
 
-    # Development mode: bypass login when True
-    dev_auth_bypass: bool = False
-
     # Auth/session TTLs (BFF migration)
     invite_ttl_hours: int = 24
     account_ttl_days: int = 7
@@ -56,6 +53,12 @@ class Settings(BaseSettings):
     # Proxy/IP handling
     trust_proxy_headers: bool = False
     trusted_proxy_ips: Optional[str] = None  # Comma-separated IPs/CIDRs for LB/proxy
+    cors_origins: list[str] = [
+        "http://localhost:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8000",
+    ]
 
     # Allow schema auto-create on startup (dev/local only)
     db_auto_create: bool = True
@@ -104,8 +107,6 @@ def validate_settings(settings: Settings) -> None:
             raise ValueError("AUTH_SECRET_KEY must be set to a non-default value for staging/production.")
         if settings.db_auto_create:
             raise ValueError("DB_AUTO_CREATE must be false for staging/production.")
-        if settings.dev_auth_bypass:
-            raise ValueError("DEV_AUTH_BYPASS must be false for staging/production.")
         if not settings.session_cookie_secure:
             raise ValueError("SESSION_COOKIE_SECURE must be true for staging/production.")
         if not settings.turnstile_site_key or not settings.turnstile_secret_key:

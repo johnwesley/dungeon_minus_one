@@ -131,16 +131,3 @@ export async function logout() {
   clearSession();
   window.location.href = '/login.html';
 }
-
-export async function checkDevMode() {
-  try {
-    const response = await fetch('/api/auth/dev-mode', { cache: 'no-store' });
-    if (response.ok) {
-      const data = await response.json();
-      return data.enabled;
-    }
-  } catch (e) {
-    // Dev mode endpoint not available
-  }
-  return false;
-}

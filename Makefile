@@ -21,7 +21,14 @@ $(VENV)/bin/activate: requirements.txt
 install:  ## Install dependencies (requires existing venv)
 	$(PIP) install -r requirements.txt
 
+db-up:  ## Start local Postgres via Docker
+	docker-compose up -d db
+
+db-down:  ## Stop local Postgres
+	docker-compose down
+
 run:  ## Start the local development server (FastAPI only)
+	@echo "Note: If using local Postgres, ensure 'make db-up' is running."
 	$(PYTHON) scripts/sync_locations.py
 	DEV_AUTH_BYPASS=true $(PYTHON) -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
@@ -59,6 +66,9 @@ invite:  ## Generate a new invite token (usage: make invite EMAIL="user@example.
 auth-reset:  ## Reset auth-related tables (dangerous; add FORCE=true)
 	$(PYTHON) scripts/reset_auth.py $(if $(FORCE),--force,)
 
+create-admin:  ## Create a new admin user (usage: make create-admin USER=admin PASS=pass EMAIL=admin@example.com)
+	$(PYTHON) scripts/create_admin.py $(USER) $(PASS) $(if $(EMAIL),--email $(EMAIL),)
+
 notify:  ## Create a notification (usage: make notify TITLE="title" MSG="message")
 	$(PYTHON) scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)
 
@@ -79,7 +89,7 @@ dev-full:  ## Start backend + frontend dev servers (access at localhost:5173)
 	$(PYTHON) scripts/sync_locations.py
 	@echo "Starting backend on :8000 and frontend on :5173..."
 	@echo "Access the app at http://localhost:5173"
-	@DEV_AUTH_BYPASS=true $(PYTHON) -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
+	@$(PYTHON) -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
 	cd $(FRONTEND) && npm run dev
 
 # --- Docker Image ---

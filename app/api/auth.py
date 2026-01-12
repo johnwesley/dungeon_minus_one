@@ -81,13 +81,6 @@ async def get_current_user(
 ) -> User:
     settings = get_settings()
 
-    if settings.dev_auth_bypass:
-        result = await db.execute(select(User).limit(1))
-        user = result.scalar_one_or_none()
-        if user:
-            return user
-        return User(id="dev_user", username="dev", is_admin=True)
-
     session_id = request.cookies.get(settings.session_cookie_name)
     if not session_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
@@ -106,13 +99,6 @@ async def get_current_user(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF token missing or invalid")
 
     return user
-
-
-@router.get("/dev-mode")
-async def check_dev_mode():
-    """Check if dev mode is enabled (for pre-filling login form)."""
-    settings = get_settings()
-    return {"enabled": settings.dev_auth_bypass}
 
 
 @router.get("/turnstile-key")

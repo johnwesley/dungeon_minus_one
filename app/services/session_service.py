@@ -72,7 +72,10 @@ class SessionService:
             await self.revoke_session(session.id)
             return None, None
 
-        session.last_seen_at = now
+        # Optimization: Only update last_seen_at if > 60s to reduce DB writes
+        if session.last_seen_at is None or (now - session.last_seen_at).total_seconds() > 60:
+            session.last_seen_at = now
+
         user = await self.db.get(User, session.user_id)
         return session, user
 

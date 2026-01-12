@@ -1,4 +1,21 @@
 services:
+  db:
+    image: postgres:18-alpine
+    container_name: dungeon_db
+    environment:
+      POSTGRES_USER: dungeon
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: dungeon
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dungeon"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   app:
     build: .
     container_name: dungeon_minus_one
@@ -7,7 +24,13 @@ services:
     volumes:
       - ./docker_data:/data
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:///data/chat.db
+      - DATABASE_URL=postgresql+asyncpg://dungeon:password@db:5432/dungeon
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     env_file:
       - .env
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
