@@ -3,6 +3,7 @@ from pathlib import Path
 
 PROMPTS_DIR = Path(__file__).parent
 SKILLS_DIR = PROMPTS_DIR.parent / "skills"
+SKILLS_COMPILED_PROMPT = "skills_compiled"
 
 
 @lru_cache(maxsize=16)
@@ -29,6 +30,10 @@ def load_all_skills() -> str:
     Returns:
         Concatenated skill content with section headers.
     """
+    compiled_path = PROMPTS_DIR / f"{SKILLS_COMPILED_PROMPT}.md"
+    if compiled_path.exists():
+        return compiled_path.read_text(encoding="utf-8").strip()
+
     if not SKILLS_DIR.exists():
         return ""
 

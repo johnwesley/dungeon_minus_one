@@ -29,8 +29,9 @@ db-down:  ## Stop local Postgres
 
 run:  ## Start the local development server (FastAPI only)
 	@echo "Note: If using local Postgres, ensure 'make db-up' is running."
+	$(PYTHON) scripts/compile_skills.py
 	$(PYTHON) scripts/sync_locations.py
-	DEV_AUTH_BYPASS=true $(PYTHON) -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	$(PYTHON) -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 clean:  ## Remove venv and cache files
 	rm -rf $(VENV)
@@ -86,11 +87,7 @@ frontend-build:  ## Build frontend for staging/prod-style
 	cd $(FRONTEND) && ASSET_BASE_URL="$(ASSET_BASE_URL)" npm run build
 
 dev-full:  ## Start backend + frontend dev servers (access at localhost:5173)
-	$(PYTHON) scripts/sync_locations.py
-	@echo "Starting backend on :8000 and frontend on :5173..."
-	@echo "Access the app at http://localhost:5173"
-	@$(PYTHON) -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
-	cd $(FRONTEND) && npm run dev
+	@./scripts/dev_full.sh $(PYTHON) $(FRONTEND)
 
 # --- Docker Image ---
 

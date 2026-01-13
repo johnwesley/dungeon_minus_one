@@ -1010,12 +1010,10 @@ class ConversationService:
             except FileNotFoundError:
                 base_system_text = narrator_prompt
 
-            # Load skills if enabled (prompt concatenation approach)
-            settings = get_settings()
-            if settings.skills_enabled:
-                skills_content = load_all_skills()
-                if skills_content:
-                    base_system_text = f"{base_system_text}\n\n## Game Mechanics (Skills)\n\n{skills_content}"
+            # Always load compiled skills when present to keep environments consistent.
+            skills_content = load_all_skills()
+            if skills_content:
+                base_system_text = f"{base_system_text}\n\n## Game Mechanics (Skills)\n\n{skills_content}"
 
             final_system_prompt = f"{base_system_text}\n{state_summary}"
 
@@ -1026,7 +1024,7 @@ class ConversationService:
                 "conversation_id": conversation.id,
                 "message_count": len(llm_messages),
                 "state_summary": state_summary,
-                "skills_enabled": settings.skills_enabled,
+                "skills_included": bool(skills_content),
                 "messages_preview": [
                     {"role": m["role"], "content": m["content"][:150] + "..." if len(m["content"]) > 150 else m["content"]}
                     for m in llm_messages[-5:]  # Last 5 messages

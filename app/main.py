@@ -4,14 +4,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
 from pathlib import Path
-from sqlalchemy import select, text
+from sqlalchemy import text
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api.router import api_router
 from app.database import init_db, async_session_factory
 from app.config import get_settings, validate_settings
-from app.models.database import User
-from app.services.auth_service import get_password_hash
 from app.connection_manager import connection_manager
 
 # Prometheus instrumentator for HTTP metrics
@@ -33,15 +31,6 @@ async def lifespan(app: FastAPI):
     validate_settings(settings)
     if settings.db_auto_create:
         await init_db()
-    if settings.dev_auth_bypass:
-        async with async_session_factory() as session:
-            result = await session.execute(select(User).where(User.username == "dev"))
-            dev_user = result.scalar_one_or_none()
-            if not dev_user:
-                dev_user = User(username="dev", hashed_password=get_password_hash("dev"))
-                session.add(dev_user)
-                await session.commit()
-
     yield
 
     # Graceful shutdown: signal connections to close and wait for drain

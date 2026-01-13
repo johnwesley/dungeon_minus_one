@@ -33,6 +33,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 COPY prompts/ ./prompts/
 COPY scripts/ ./scripts/
+COPY skills/ ./skills/
+RUN python scripts/compile_skills.py
 COPY data/ ./data/
 COPY alembic.ini .
 COPY alembic/ ./alembic/

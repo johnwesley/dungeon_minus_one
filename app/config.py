@@ -76,8 +76,8 @@ class Settings(BaseSettings):
     invite_request_rate_limit_max: int = 5
     invite_request_rate_limit_window_seconds: int = 300
 
-    # Skills configuration (prompt concatenation approach)
-    skills_enabled: bool = False  # Set to True to include skill files in system prompt
+    # Skills configuration (deprecated: compiled skills are always included when present)
+    skills_enabled: bool = True
 
     # Debug logging (LLM)
     debug_llm: bool = False

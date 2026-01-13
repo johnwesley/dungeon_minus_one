@@ -59,7 +59,6 @@ Tasks:
     - `invite_email_send_mode = "auto"` (auto or manual)
     - `public_app_url` (used to build invite links in email)
 - Add config validation for staging/prod:
-  - Fail startup if `dev_auth_bypass` is True outside dev.
   - Fail startup if `auth_secret_key` remains default (still used for invite HMAC or CSRF).
   - Fail startup if Turnstile keys are missing.
   - Fail startup if `invite_email_send_mode = "auto"` and Postmark token/from email are missing.
@@ -70,7 +69,6 @@ Files:
 - `app/main.py` (if validation is located there)
 
 Acceptance:
-- App boots in dev with defaults, but fails in staging/prod if `dev_auth_bypass` is true.
 
 ---
 
@@ -332,7 +330,6 @@ Acceptance:
 Goal: align startup rules and remove dead paths.
 
 Tasks:
-- Ensure `dev_auth_bypass` is enforced as dev-only.
 - Remove JWT usage from auth dependency (if not used elsewhere).
 - Add migration/cleanup job for expired invites/sessions (optional).
 - Update `README.md` with new auth flow and config settings.
