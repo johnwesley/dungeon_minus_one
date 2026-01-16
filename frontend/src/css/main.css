@@ -175,6 +175,34 @@
   word-wrap: break-word;
 }
 
+/* Restart confirmation prompt */
+.restart-prompt {
+  margin: var(--space-md) 0;
+  padding: var(--space-md);
+  border: 1px solid var(--error);
+  background: rgba(255, 51, 51, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.restart-prompt__title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--error);
+}
+
+.restart-prompt__text {
+  color: var(--text-bright);
+}
+
+.restart-prompt__actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
 /* Progress/tool indicator */
 .progress-indicator {
   color: var(--text-dim);

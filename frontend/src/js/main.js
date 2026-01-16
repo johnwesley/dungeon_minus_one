@@ -10,6 +10,9 @@ class DungeonApp {
     this.currentConversationId = null;
     this.isStreaming = false;
     this.conversations = [];
+    this.restartPending = false;
+    this.pendingRestartConversationId = null;
+    this.restartPromptEl = null;
 
     // DOM elements
     this.userHandleEl = document.getElementById('user-handle');
@@ -188,6 +191,11 @@ class DungeonApp {
   }
 
   async restartGame() {
+    if (this.restartPending) {
+      await this.confirmRestart();
+      return;
+    }
+
     if (!this.currentConversationId) {
       // No conversation to restart, just start a new game
       this.startNewGame();
@@ -202,7 +210,7 @@ class DungeonApp {
 
   async sendMessage(messageText = null) {
     const message = messageText || this.messageInput.value.trim();
-    if (!message || this.isStreaming) return;
+    if (!message || this.isStreaming || this.restartPending) return;
 
     // Clear input only if it was the source
     if (!messageText) {
@@ -245,18 +253,8 @@ class DungeonApp {
         await this.loadGameState();
       },
       onRestart: async (conversationId) => {
-        // Narrator triggered restart - delete conversation and start fresh
-        try {
-          await fetchWithAuth(`/api/conversations/${conversationId}`, {
-            method: 'DELETE',
-          });
-          this.currentConversationId = null;
-          this.chatMessages.innerHTML = '';
-          await this.loadConversations();
-          this.startNewGame();
-        } catch (error) {
-          console.error('Failed to restart game:', error);
-        }
+        // Narrator triggered restart - wait for player confirmation
+        this.setRestartPending(true, conversationId);
       },
       onError: (error) => {
         contentEl.textContent = `Error: ${error}`;
@@ -308,9 +306,10 @@ class DungeonApp {
 
   setStreaming(streaming) {
     this.isStreaming = streaming;
-    this.sendBtn.disabled = streaming;
-    this.messageInput.disabled = streaming;
-    if (!streaming) {
+    const shouldDisable = streaming || this.restartPending;
+    this.sendBtn.disabled = shouldDisable;
+    this.messageInput.disabled = shouldDisable;
+    if (!shouldDisable) {
       this.messageInput.focus();
     }
   }
@@ -323,6 +322,67 @@ class DungeonApp {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  setRestartPending(pending, conversationId = null) {
+    this.restartPending = pending;
+    this.pendingRestartConversationId = pending ? conversationId : null;
+
+    if (pending) {
+      this.showRestartPrompt();
+    } else {
+      this.clearRestartPrompt();
+    }
+
+    this.setStreaming(this.isStreaming);
+  }
+
+  showRestartPrompt() {
+    if (this.restartPromptEl) return;
+
+    const promptEl = document.createElement('div');
+    promptEl.className = 'restart-prompt';
+    promptEl.innerHTML = `
+      <div class="restart-prompt__title">Restart ready</div>
+      <div class="restart-prompt__text">Confirm to begin again.</div>
+      <div class="restart-prompt__actions">
+        <button type="button" class="bbs-btn bbs-btn-danger restart-confirm-btn">Restart now</button>
+      </div>
+    `;
+
+    const confirmBtn = promptEl.querySelector('.restart-confirm-btn');
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => this.confirmRestart());
+    }
+
+    this.chatMessages.appendChild(promptEl);
+    this.restartPromptEl = promptEl;
+  }
+
+  clearRestartPrompt() {
+    if (this.restartPromptEl) {
+      this.restartPromptEl.remove();
+      this.restartPromptEl = null;
+    }
+  }
+
+  async confirmRestart() {
+    if (!this.pendingRestartConversationId) return;
+
+    const conversationId = this.pendingRestartConversationId;
+
+    try {
+      await fetchWithAuth(`/api/conversations/${conversationId}`, {
+        method: 'DELETE',
+      });
+      this.currentConversationId = null;
+      this.chatMessages.innerHTML = '';
+      this.setRestartPending(false);
+      await this.loadConversations();
+      this.startNewGame();
+    } catch (error) {
+      console.error('Failed to restart game:', error);
+    }
   }
 
   async loadGameState() {
