@@ -50,7 +50,13 @@ class GameToolHandlers:
 
         # Fetch location data to include exits
         location = await self.game_repo.get_location(state.current_location)
-        current_exits = location.get("exits", {}) if location else {}
+        current_exits = dict(location.get("exits", {})) if location else {}
+        flags = state.flags or {}
+        if state.current_location == "living_room" and flags.get("vault_revealed"):
+            # Expose the vault as a standard exit once revealed.
+            current_exits.setdefault("vault", "victory")
+            current_exits.setdefault("panel", "victory")
+            current_exits.setdefault("down", "victory")
 
         return json.dumps({
             "current_location": state.current_location,

@@ -13,7 +13,7 @@ Apply this skill when:
 
 ## Required Behavior
 
-1. Output a brief, matter-of-fact restart narration (1–2 sentences).
+1. Output a brief, matter-of-fact restart narration (1-2 sentences).
 2. Do NOT describe the starting location.
 3. Do NOT include any "Wake up" text or new-game intro.
 4. Call `restart_game` immediately.

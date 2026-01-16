@@ -28,7 +28,7 @@ Apply this skill when the player:
 ## Critical Rules
 
 ### Strict Location Logic
-You MUST NOT invent exits or move the player to a location that is not explicitly defined in the `exits` map of the current location data — except for explicit special-case movement rules (e.g., locked grating, reservoir water level, Treasure Vault reveal/entry).
+You MUST NOT invent exits or move the player to a location that is not explicitly defined in the `exits` map of the current location data — except for explicit special-case movement rules (e.g., locked grating, reservoir water level).
 
 ### Direction Fidelity
 If the user types "go up" and the data says `"up": "treasure_room"`, you MUST move them to `treasure_room`, even if the narrative description suggests something else (e.g., a monster fled east) — unless an explicit special-case rule blocks or overrides that move.

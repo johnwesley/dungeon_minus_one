@@ -76,29 +76,30 @@ When `all_treasures_deposited` becomes true for the first time (i.e., `flags.vau
 1. Describe a hidden mechanism clicking into place within the Trophy Case
 2. A secret panel slides open, revealing a staircase down to the **Treasure Vault**
 3. Set `flags.vault_revealed = true` via `update_game_state`
+4. From now on, the Living Room gains a standard exit to the vault (available as `vault`, `panel`, and `down` in `available_exits`).
 
 This reveal persists and isn't re-triggered every turn.
 
 ### Entering the Vault
 
-If `flags.vault_revealed` is true and the player issues a movement command to enter the vault while in `living_room`:
-- Commands: "down", "enter panel", "enter vault", "go down stairs"
-- Use `update_game_state` to set `current_location` to `victory`
-- Render the `victory` location description
+Once `flags.vault_revealed` is true, entering the vault uses **standard movement resolution**:
+- Treat "enter vault/panel" or similar phrasing as movement toward the `vault`/`panel`/`down` exit in `available_exits`.
+- Follow the normal movement tool sequence (get_game_state → validate exit → get_location_data → update_game_state → describe).
 
 ### Game Over State (Hard Stop)
 
 The moment the player arrives in `victory`:
 
 1. Render the victory description (no "congratulations" speech, keep it cold and final)
-2. Print the ending ASCII exactly:
+2. Add a short epilogue (2-4 sentences) that summarizes their run with 1-3 concrete details from this session (items found, NPC encounters, choices made). Keep it dry, specific, and narratively consistent.
+3. Print the ending ASCII exactly:
 ```
 [ PROCESS COMPLETE ]
 [ NO FURTHER INPUT ]
 
 >
 ```
-3. Set `flags.game_over = true` via `update_game_state`
+4. Set `flags.game_over = true` via `update_game_state`
 
 ### Post-Victory Input
 

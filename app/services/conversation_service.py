@@ -201,37 +201,6 @@ def _is_restart_request(message: str) -> bool:
     }
 
 
-def _is_vault_entry_command(message: str) -> bool:
-    cmd = _normalize_command(message)
-
-    if cmd in {"down", "d", "go down"}:
-        return True
-
-    if cmd in {
-        "enter panel",
-        "enter the panel",
-        "enter vault",
-        "enter the vault",
-        "enter stairs",
-        "enter the stairs",
-        "enter staircase",
-        "enter the staircase",
-        "down stairs",
-        "down the stairs",
-        "down staircase",
-        "down the staircase",
-        "downstairs",
-        "go down stairs",
-        "go down the stairs",
-        "go downstairs",
-        "go down staircase",
-        "go down the staircase",
-    }:
-        return True
-
-    return False
-
-
 def _mentions_trophy_case(cmd: str, location: Optional[str]) -> bool:
     if "trophy case" in cmd or "trophycase" in cmd or "trophy-case" in cmd:
         return True
@@ -740,12 +709,16 @@ class ConversationService:
             # Fetch location details for richer context
             loc_data = await self.game_repo.get_location(state.current_location)
             location_data = loc_data
-            exits_map = loc_data.get("exits", {}) if loc_data else {}
-            exits = ", ".join(exits_map.keys()) if exits_map else "Unknown"
+            exits_map = dict(loc_data.get("exits", {})) if loc_data else {}
             interactables = loc_data.get("interactables", []) if loc_data else []
             interactables_display = json.dumps(interactables, ensure_ascii=False) if interactables else "None"
             inventory_items = [i['name'] for i in (state.inventory or []) if isinstance(i, dict) and 'name' in i]
             flags = state.flags or {}
+            if location_name == "living_room" and flags.get("vault_revealed"):
+                exits_map.setdefault("vault", "victory")
+                exits_map.setdefault("panel", "victory")
+                exits_map.setdefault("down", "victory")
+            exits = ", ".join(exits_map.keys()) if exits_map else "Unknown"
             trophy_case_items = flags.get("trophy_case", [])
             trophy_case_display = ", ".join(trophy_case_items) if trophy_case_items else "Empty"
             dropped_items_map = flags.get("dropped_items", {})
@@ -781,7 +754,6 @@ class ConversationService:
             current_location = state.current_location or "start"
             flags = state.flags or {}
             game_over = bool(flags.get("game_over"))
-            vault_revealed = bool(flags.get("vault_revealed"))
 
             if game_over:
                 if _is_restart_request(message):
@@ -792,86 +764,6 @@ class ConversationService:
                 
                 yield StreamEvent(type="delta", data={"content": ENDING_ASCII})
                 yield StreamEvent(type="done", data={"message": {}})
-                return
-
-            if current_location == "living_room" and vault_revealed and _is_vault_entry_command(message):
-                user_msg = await self.message_repo.create(
-                    conversation_id=conversation.id,
-                    role="user",
-                    content=message,
-                )
-
-                yield StreamEvent(
-                    type="start",
-                    data={
-                        "conversation_id": conversation.id,
-                        "user_message_id": user_msg.id,
-                    },
-                )
-
-                new_flags = dict(flags)
-                new_flags["game_over"] = True
-                await self.game_repo.update_state(
-                    conversation.id,
-                    {"current_location": "victory", "flags": new_flags},
-                )
-
-                victory = await self.game_repo.get_location("victory")
-                victory_description = (victory or {}).get("description", "").rstrip()
-                full_content = f"{victory_description}\n\n{ENDING_ASCII}".lstrip()
-
-                assistant_msg = await self.message_repo.create(
-                    conversation_id=conversation.id,
-                    role="assistant",
-                    content=full_content,
-                )
-                await self.conversation_repo.touch(conversation.id)
-
-                yield StreamEvent(type="delta", data={"content": full_content})
-                yield StreamEvent(
-                    type="done",
-                    data={
-                        "message": {
-                            "id": assistant_msg.id,
-                            "role": assistant_msg.role,
-                            "content": assistant_msg.content,
-                            "created_at": assistant_msg.created_at.isoformat(),
-                        }
-                    },
-                )
-                return
-
-            if current_location == "victory":
-                new_flags = dict(flags)
-                new_flags["game_over"] = True
-                await self.game_repo.update_state(
-                    conversation.id,
-                    {"flags": new_flags},
-                )
-
-                victory = await self.game_repo.get_location("victory")
-                victory_description = (victory or {}).get("description", "").rstrip()
-                full_content = f"{victory_description}\n\n{ENDING_ASCII}".lstrip()
-
-                assistant_msg = await self.message_repo.create(
-                    conversation_id=conversation.id,
-                    role="assistant",
-                    content=full_content,
-                )
-                await self.conversation_repo.touch(conversation.id)
-
-                yield StreamEvent(type="delta", data={"content": full_content})
-                yield StreamEvent(
-                    type="done",
-                    data={
-                        "message": {
-                            "id": assistant_msg.id,
-                            "role": assistant_msg.role,
-                            "content": assistant_msg.content,
-                            "created_at": assistant_msg.created_at.isoformat(),
-                        }
-                    },
-                )
                 return
 
         # Handle Dev Commands (intercept before saving message or calling LLM)
@@ -1071,6 +963,13 @@ class ConversationService:
         # Generate state diff for message history
         # This ensures Claude sees explicit state changes, not just tool names
         state_after = await self.game_repo.get_state(conversation.id)
+        if state_after and state_after.current_location == "victory":
+            flags_after = state_after.flags or {}
+            if not flags_after.get("game_over"):
+                state_after = await self.game_repo.update_state(
+                    conversation.id,
+                    {"flags": {"game_over": True}},
+                )
         location_after = state_after.current_location if state_after else None
         inventory_after = set(i['id'] for i in (state_after.inventory or []) if isinstance(i, dict) and 'id' in i) if state_after else set()
 
