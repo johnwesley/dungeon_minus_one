@@ -1,3 +1,4 @@
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 from typing import Optional
@@ -82,11 +83,12 @@ class Settings(BaseSettings):
     # Debug logging (LLM)
     debug_llm: bool = False
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        env_ignore_empty = True
-        extra = "ignore"  # Allow extra env vars (like POSTGRES_*) without validation error
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_ignore_empty=True,
+        extra="ignore",  # Allow extra env vars (like POSTGRES_*) without validation error
+    )
 
 
 @lru_cache

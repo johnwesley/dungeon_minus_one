@@ -1,6 +1,6 @@
 import asyncio
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 from app.services.conversation_service import ConversationService
@@ -26,7 +26,7 @@ class FakeMessageRepo:
             id=str(self._counter),
             role=role,
             content=content,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         self.messages.append(message)
         return message
@@ -72,13 +72,13 @@ def test_chat_stream_strips_internal_markers_from_history():
             id="1",
             role="assistant",
             content="Room text.\n\n---\n[State: start -> kitchen]",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         ),
         FakeMessage(
             id="2",
             role="user",
             content="look",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         ),
     ]
     message_repo = FakeMessageRepo(messages=history)
