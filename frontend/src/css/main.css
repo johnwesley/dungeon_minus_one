@@ -159,6 +159,10 @@
   color: var(--user-color);
 }
 
+.message.user .message-content {
+  color: var(--user-color);
+}
+
 .message.assistant {
   border-left-color: var(--text-primary);
 }
