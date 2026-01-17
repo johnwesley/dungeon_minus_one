@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite auth-reset frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-auth-reset k8s-create-admin k8s-notify
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite auth-reset frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-auth-reset k8s-create-admin k8s-notify test
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -60,6 +60,10 @@ sync-locations-check:  ## Check DB matches fixtures (no writes; expects exact ma
 
 verify-movement:  ## Verify narrator tool usage for movement
 	$(PYTHON) scripts/verify_movement.py
+
+test:  ## Run local test pipeline (pytest + walkthrough)
+	$(PYTHON) -m pytest app/tests
+	$(MAKE) verify-movement
 
 validate-config:  ## Validate config (set DB_CHECK=true for DB connectivity)
 	$(PYTHON) scripts/validate_config.py $(if $(DB_CHECK),--db-check,)
