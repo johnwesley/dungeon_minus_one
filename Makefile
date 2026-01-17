@@ -27,6 +27,9 @@ db-up:  ## Start local Postgres via Docker
 db-down:  ## Stop local Postgres
 	docker-compose down
 
+db-migrate:  ## Run Alembic migrations against local Postgres
+	DATABASE_URL=postgresql+asyncpg://dungeon:password@localhost:5432/dungeon $(PYTHON) -m alembic upgrade head
+
 run:  ## Start the local development server (FastAPI only)
 	@echo "Note: If using local Postgres, ensure 'make db-up' is running."
 	$(PYTHON) scripts/compile_skills.py
@@ -265,6 +268,9 @@ k8s-rollback:  ## Rollback to previous deployment revision
 
 k8s-shell:  ## Open shell in running pod
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- /bin/bash
+
+k8s-db-migrate:  ## Run Alembic DB schema migrations in k8s
+	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- alembic upgrade head
 
 k8s-seed:  ## Sync location fixtures to k8s database
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/sync_locations.py

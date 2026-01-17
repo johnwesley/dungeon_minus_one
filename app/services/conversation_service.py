@@ -992,6 +992,20 @@ class ConversationService:
         if location_before != location_after:
             changes.append(f"{location_before} → {location_after}")
 
+            from datetime import datetime
+            from app.metrics import LOCATION_DWELL_SECONDS
+
+            # Record dwell time metric
+            if location_before and state and state.location_entered_at:
+                dwell_seconds = (datetime.utcnow() - state.location_entered_at).total_seconds()
+                LOCATION_DWELL_SECONDS.labels(location_id=location_before).observe(dwell_seconds)
+
+            # Update entry timestamp for new location
+            await self.game_repo.update_state(
+                conversation.id,
+                {"location_entered_at": datetime.utcnow()}
+            )
+
         # Inventory changes
         added = inventory_after - inventory_before
         removed = inventory_before - inventory_after

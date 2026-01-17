@@ -164,6 +164,7 @@ class GameState(Base):
     player_stats = Column(JSON, default=dict)
     flags = Column(MutableDict.as_mutable(JSON), default=dict)
     dev_snapshot = Column(JSON, nullable=True)
+    location_entered_at = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

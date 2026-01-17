@@ -1,5 +1,6 @@
 """Repository for game state operations."""
 
+from datetime import datetime
 from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,6 +35,7 @@ class GameRepository:
             visited_locations=[],
             player_stats={},
             flags={},
+            location_entered_at=datetime.utcnow(),
         )
         self.session.add(state)
         await self.session.flush()
@@ -67,6 +69,7 @@ class GameRepository:
             "visited_locations",
             "player_stats",
             "flags",
+            "location_entered_at",
         }
 
         for field, value in changes.items():

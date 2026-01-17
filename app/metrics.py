@@ -77,3 +77,13 @@ LLM_THINKING_REQUESTS_TOTAL = Counter(
     "Total requests that used extended thinking",
     ["model"],
 )
+
+# Game metrics
+DWELL_TIME_BUCKETS = (5, 15, 30, 60, 120, 300, 600, 900, 1800, float("inf"))
+
+LOCATION_DWELL_SECONDS = Histogram(
+    "game_location_dwell_seconds",
+    "Time players spend in each location before moving",
+    ["location_id"],
+    buckets=DWELL_TIME_BUCKETS,
+)
