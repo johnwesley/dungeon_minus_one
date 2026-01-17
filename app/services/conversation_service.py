@@ -426,7 +426,13 @@ class ConversationService:
 
         # Load history and call LLM
         history = await self.message_repo.list_by_conversation(conversation.id)
-        llm_messages = [{"role": m.role, "content": m.content} for m in history]
+        llm_messages = [
+            {
+                "role": m.role,
+                "content": strip_internal_markers(m.content) if m.role == "assistant" else m.content,
+            }
+            for m in history
+        ]
 
         assistant_content = await self.llm_client.chat(llm_messages)
 
@@ -491,7 +497,13 @@ class ConversationService:
 
         # Load history and call LLM
         history = await self.message_repo.list_by_conversation(conversation.id)
-        llm_messages = [{"role": m.role, "content": m.content} for m in history]
+        llm_messages = [
+            {
+                "role": m.role,
+                "content": strip_internal_markers(m.content) if m.role == "assistant" else m.content,
+            }
+            for m in history
+        ]
 
         # Stream response
         full_content = ""
@@ -839,7 +851,13 @@ class ConversationService:
         if len(history) > WINDOW_SIZE:
             history = history[-WINDOW_SIZE:]
             
-        llm_messages = [{"role": m.role, "content": m.content} for m in history]
+        llm_messages = [
+            {
+                "role": m.role,
+                "content": strip_internal_markers(m.content) if m.role == "assistant" else m.content,
+            }
+            for m in history
+        ]
 
         # Get tool handlers
         base_handlers = self.tool_handlers.get_handlers()

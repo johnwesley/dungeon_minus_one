@@ -275,6 +275,11 @@ class ChatApp {
                         } else if (currentEventType === 'start') {
                             this.currentConversationId = data.conversation_id;
                         } else if (currentEventType === 'done') {
+                            if (data.message && typeof data.message.content === 'string') {
+                                assistantContent = data.message.content;
+                                contentEl.textContent = assistantContent;
+                                this.scrollToBottom();
+                            }
                             await this.loadConversations();
                         }
                     }
