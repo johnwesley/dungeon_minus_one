@@ -343,9 +343,6 @@ async def run_verification():
                         "thief_defeated": True,
                         # Entrance to Hades (Spirits) - allows passage south to land_of_the_dead
                         "spirits_banished": True,
-                        "hades_bell_rung": True,
-                        "hades_book_read": True,
-                        "hades_candles_lit": True,
                         # Bat Room - allows taking jade figurine
                         "bat_pacified": True,
                         # Lantern already lit for dark locations
