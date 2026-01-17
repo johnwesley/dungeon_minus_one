@@ -7,7 +7,7 @@ A conversational text-adventure game powered by Claude.
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Local Development                                          │
-│  Browser ↔ FastAPI :8000 ↔ SQLite                           │
+│  Browser ↔ FastAPI :8000 ↔ Postgres                         │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -22,6 +22,7 @@ A conversational text-adventure game powered by Claude.
 
 ```bash
 make setup
+make db-up
 cp .env.example .env  # Add ANTHROPIC_API_KEY
 make dev-full
 ```

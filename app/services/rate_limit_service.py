@@ -5,9 +5,8 @@ from ipaddress import ip_address, ip_network
 from typing import Optional
 
 from fastapi import HTTPException, Request, status
-from sqlalchemy import delete, select
+from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -166,27 +165,17 @@ async def _increment_rate_limit(
     bind = db.get_bind()
     dialect = bind.dialect.name if bind else ""
 
-    if dialect == "postgresql":
-        stmt = (
-            pg_insert(RateLimitEntry)
-            .values(**values)
-            .on_conflict_do_update(
-                index_elements=[RateLimitEntry.key],
-                set_={"count": RateLimitEntry.count + 1},
-            )
-            .returning(RateLimitEntry.count)
-        )
-        result = await db.execute(stmt)
-        return int(result.scalar_one())
+    if dialect != "postgresql":
+        raise RuntimeError(f"Unsupported database dialect for rate limits: {dialect}")
 
     stmt = (
-        sqlite_insert(RateLimitEntry)
+        pg_insert(RateLimitEntry)
         .values(**values)
         .on_conflict_do_update(
             index_elements=[RateLimitEntry.key],
             set_={"count": RateLimitEntry.count + 1},
         )
+        .returning(RateLimitEntry.count)
     )
-    await db.execute(stmt)
-    result = await db.execute(select(RateLimitEntry.count).where(RateLimitEntry.key == key))
+    result = await db.execute(stmt)
     return int(result.scalar_one())

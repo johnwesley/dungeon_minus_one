@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     environment: str = "dev"
     anthropic_api_key: str
-    database_url: str = "sqlite+aiosqlite:///./chat.db"
+    database_url: str = "postgresql+asyncpg://dungeon:password@localhost:5432/dungeon"
     model_name: str = "claude-sonnet-4-5-20250929"
     llm_max_tokens: int = 16000
     thinking_enabled: bool = True
@@ -98,11 +98,11 @@ def get_settings() -> Settings:
 def validate_settings(settings: Settings) -> None:
     """Validate settings for non-dev environments."""
     env = settings.environment.lower().strip()
+    if settings.database_url.lower().startswith("sqlite"):
+        raise ValueError("SQLite is no longer supported. Use Postgres (DATABASE_URL).")
     if env in {"staging", "prod", "production"}:
         if not settings.database_url:
             raise ValueError("DATABASE_URL must be set for staging/production.")
-        if settings.database_url.lower().startswith("sqlite"):
-            raise ValueError("SQLite is not allowed for staging/production.")
         if not settings.auth_secret_key or settings.auth_secret_key == "dev_secret_key_change_me_in_prod":
             raise ValueError("AUTH_SECRET_KEY must be set to a non-default value for staging/production.")
         if settings.db_auto_create:

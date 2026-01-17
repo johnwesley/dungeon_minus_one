@@ -18,8 +18,10 @@ def describe_database_url(url: Optional[str]) -> str:
     if not url:
         return "unset"
     scheme = url.split(":", 1)[0]
+    if scheme.startswith("postgres"):
+        return f"{scheme} (set)"
     if scheme.startswith("sqlite"):
-        return f"{scheme} (local file)"
+        return f"{scheme} (unsupported)"
     return f"{scheme} (set)"
 
 

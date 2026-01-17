@@ -44,8 +44,8 @@ clean:  ## Remove venv and cache files
 reset:  ## Soft reset: clear game state but keep locations
 	$(PYTHON) scripts/reset_game_state.py
 
-hard-reset:  ## Hard reset: delete DB and re-seed locations
-	rm -f chat.db
+hard-reset:  ## Hard reset: drop/recreate tables and re-seed locations
+	$(PYTHON) scripts/reset_database.py --force
 	$(PYTHON) scripts/sync_locations.py --prune
 	@echo "Database reset and re-seeded."
 
