@@ -242,7 +242,7 @@ k8s-deploy:  ## Deploy/update app to DOKS (usage: make k8s-deploy [TAG=v0.5.0])
 	fi
 	kubectl apply -k k8s/
 	@echo ""
-	$(MAKE) k8s-db-migrate
+	$(MAKE) k8s-db-migrate TAG=$(TAG)
 	kubectl rollout status deployment/dungeon-app -n $(K8S_NAMESPACE)
 
 k8s-commit-version:  ## Commit and push updated k8s manifests (usage: make k8s-commit-version [TAG=v0.6.0])
@@ -275,7 +275,22 @@ k8s-shell:  ## Open shell in running pod
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- /bin/bash
 
 k8s-db-migrate:  ## Run Alembic DB schema migrations in k8s
-	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- alembic upgrade head
+	@IMAGE_TAG=$${TAG:-$$(grep 'newTag:' k8s/kustomization.yaml | awk '{print $$2}')}; \
+	POD=""; \
+	for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do \
+		POD=$$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app \
+			-o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[?(@.name=="app")].image}{"\t"}{.status.phase}{"\n"}{end}' \
+			| awk -v tag=":$$IMAGE_TAG" '$$3=="Running" && $$2 ~ tag {print $$1; exit}'); \
+		if [ -n "$$POD" ]; then break; fi; \
+		sleep 3; \
+	done; \
+	if [ -z "$$POD" ]; then \
+		echo "No running dungeon-app pod found with image tag $$IMAGE_TAG"; \
+		kubectl get pods -n $(K8S_NAMESPACE) -l app=dungeon-app -o wide; \
+		exit 1; \
+	fi; \
+	echo "==> Running migrations in $$POD (tag $$IMAGE_TAG)"; \
+	kubectl exec -it $$POD -n $(K8S_NAMESPACE) -c app -- alembic upgrade head
 
 k8s-seed:  ## Sync location fixtures to k8s database
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/sync_locations.py
