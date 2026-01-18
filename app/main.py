@@ -11,6 +11,7 @@ from app.api.router import api_router
 from app.database import init_db, async_session_factory
 from app.config import get_settings, validate_settings
 from app.connection_manager import connection_manager
+from app.services.billing_service import BillingService
 
 # Prometheus instrumentator for HTTP metrics
 instrumentator = Instrumentator(
@@ -31,7 +32,15 @@ async def lifespan(app: FastAPI):
     validate_settings(settings)
     if settings.db_auto_create:
         await init_db()
+    
+    # Start background billing sync
+    billing_service = BillingService()
+    await billing_service.start()
+    
     yield
+
+    # Stop billing sync
+    await billing_service.stop()
 
     # Graceful shutdown: signal connections to close and wait for drain
     print("Shutdown initiated, signaling active connections...")

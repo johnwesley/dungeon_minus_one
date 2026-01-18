@@ -113,3 +113,14 @@ GAME_DEATHS_TOTAL = Counter(
     "Total player deaths",
     ["death_type"],
 )
+
+# Billing Metrics (Month-to-Date)
+BILLING_DO_COST_MTD = Gauge(
+    "billing_digitalocean_cost_mtd_dollars",
+    "DigitalOcean month-to-date balance/cost in USD",
+)
+
+BILLING_CLAUDE_COST_MTD = Gauge(
+    "billing_claude_cost_mtd_dollars",
+    "Anthropic Claude month-to-date cost in USD",
+)
