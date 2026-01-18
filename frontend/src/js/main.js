@@ -357,6 +357,7 @@ class DungeonApp {
 
     this.chatMessages.appendChild(promptEl);
     this.restartPromptEl = promptEl;
+    this.scrollToBottom();
   }
 
   clearRestartPrompt() {
