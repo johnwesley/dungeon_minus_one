@@ -87,3 +87,29 @@ LOCATION_DWELL_SECONDS = Histogram(
     ["location_id"],
     buckets=DWELL_TIME_BUCKETS,
 )
+
+# Session duration buckets: 30s, 1m, 2m, 5m, 10m, 15m, 30m, 1h, 1.5h, 2h
+SESSION_DURATION_BUCKETS = (30, 60, 120, 300, 600, 900, 1800, 3600, 5400, 7200, float("inf"))
+
+GAME_SESSION_DURATION_SECONDS = Histogram(
+    "game_session_duration_seconds",
+    "Duration of player game sessions in seconds",
+    buckets=SESSION_DURATION_BUCKETS,
+)
+
+GAME_VICTORIES_TOTAL = Counter(
+    "game_victories_total",
+    "Total game victories",
+)
+
+GAME_RESTARTS_TOTAL = Counter(
+    "game_restarts_total",
+    "Total game restarts",
+    ["reason"],
+)
+
+GAME_DEATHS_TOTAL = Counter(
+    "game_deaths_total",
+    "Total player deaths",
+    ["death_type"],
+)
