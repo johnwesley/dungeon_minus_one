@@ -86,14 +86,7 @@ The grue cannot exist in light. A lit lantern keeps them at bay.
 
 ## State Tracking
 
-```json
-{
-  "flags": {
-    "lantern_lit": true,    // Is brass lantern currently on?
-    "in_darkness": false    // Is player currently in lethal darkness?
-  }
-}
-```
+The game tracks whether the lantern is lit and whether the player is in lethal darkness internally. These states persist across turns and are checked automatically when entering dark locations.
 
 ## Movement to Dark Areas
 

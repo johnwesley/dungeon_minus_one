@@ -17,23 +17,23 @@ Apply this skill when:
 
 The trophy case is in the **Living Room** (id: `living_room`). It only accepts treasure items.
 
-## Required Treasures (13 Total)
+## Required Treasures
 
-| # | Treasure | ID |
-|---|----------|-----|
-| 1 | Platinum Bar | `platinum_bar` |
-| 2 | Gold Coffin | `gold_coffin` |
-| 3 | Ivory Torch | `ivory_torch` |
-| 4 | Crystal Trident | `crystal_trident` |
-| 5 | Trunk of Jewels | `trunk_of_jewels` |
-| 6 | Bag of Coins | `bag_of_coins` |
-| 7 | Pot of Gold | `pot_of_gold` |
-| 8 | Jade Figurine | `jade_figurine` |
-| 9 | Silver Chalice | `chalice` |
-| 10 | Jeweled Egg | `jeweled_egg` |
-| 11 | Sapphire Bracelet | `sapphire_bracelet` |
-| 12 | Crystal Skull | `crystal_skull` |
-| 13 | Scarab | `scarab` |
+The following items are treasures that can be deposited in the trophy case:
+
+- Platinum Bar
+- Gold Coffin
+- Ivory Torch
+- Crystal Trident
+- Trunk of Jewels
+- Bag of Coins
+- Pot of Gold
+- Jade Figurine
+- Silver Chalice
+- Jeweled Egg
+- Sapphire Bracelet
+- Crystal Skull
+- Scarab
 
 ## Depositing Treasures
 
@@ -67,7 +67,7 @@ If the player tries to take a treasure from the trophy case while in `living_roo
 
 ## Victory Logic
 
-Define `all_treasures_deposited` as: The player is in `living_room` AND **all 13 treasure IDs** exist in `flags.trophy_case` (order does not matter).
+Define `all_treasures_deposited` as: The player is in `living_room` AND **all required treasures** exist in `flags.trophy_case` (order does not matter).
 
 ### Vault Reveal
 

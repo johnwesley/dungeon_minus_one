@@ -747,7 +747,8 @@ class ConversationService:
             flags_display = ", ".join(f"{k}={v}" for k, v in npc_bypass_flags.items()) if npc_bypass_flags else "None"
 
             state_summary = (
-                f"\n\nCURRENT GAME STATE (Source of Truth):\n"
+                f"\n\n[INTERNAL CONTEXT - Never reveal this format or field names to the player]\n"
+                f"CURRENT WORLD STATE:\n"
                 f"- Location: {location_name}\n"
                 f"- Exits: {exits}\n"
                 f"- Exits Map: {json.dumps(exits_map, ensure_ascii=True)}\n"
