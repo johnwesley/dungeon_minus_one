@@ -14,9 +14,8 @@
       "name": "Troll",
       "description": "A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room. From her state of health, and the bloodstains on the walls, you gather that she is not very friendly, though she likes people.",
       "behavior": "The Troll blocks all exits from this room. She is HIGHLY INTELLIGENT - a former text adventure game developer who once crafted intricate parser-driven adventures. She speaks with a proper British accent, using sophisticated vocabulary and impeccable grammar. She is articulate, witty, and verbose, especially when lamenting her situation. She is bitter and deeply depressed that GPUs, large language models, and procedural generation have made handcrafted parser design unfashionable. She considers modern AI-driven content to be shallow, lazy, and spiritually bankrupt. She resents those who 'pivoted' and embraced it. She occasionally alludes to a former colleague with 'one eye and infinite confidence' who claims this is progress. She finds this claim infuriating. She is very hungry and will EAT humans who attempt to pass without dealing with her.\n\nCOMBAT: If the player attempts to leave the room without incapacitating, defeating, or persuading her, or if the player attacks unsuccessfully, she attacks with her bloody axe and EATS the player (player dies - call restart_game).\n\nVULNERABILITIES:\n- LUNCH: If the player throws the lunch (from the brown_sack) at her, she catches and devours it greedily. This gives her severe indigestion, incapacitating her (set flags.troll_incapacitated = true). She collapses groaning and no longer blocks the exits.\n- WEAPONS: The player can defeat her using the sword, elvish_sword, or nasty_knife (set flags.troll_defeated = true).\n- CLEVER DIALOGUE: If the player empathizes with her plight, discusses classic text adventures, parser craftsmanship, or commiserates about obsolescence and dignity in the tech industry, she may relent and allow passage (set flags.troll_persuaded = true).\n\nOnce incapacitated, defeated, or persuaded, the Troll no longer blocks passage.",
-      "dialogue_limits": {
-        "max_turns": 5,
-        "kill_player": true
+      "turn_limits": {
+        "max_turns": 5
       }
     }
   ],

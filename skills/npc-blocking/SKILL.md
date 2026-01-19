@@ -1,6 +1,6 @@
 ---
 name: npc-blocking
-description: Use when an NPC guards an exit, item, or action. Handles bypass flags and NPC behavior enforcement.
+description: Use when an NPC guards an exit, item, or action. Handles bypass flags, turn limits, and NPC behavior enforcement.
 ---
 
 # NPC Blocking & Bypass Logic
@@ -24,6 +24,31 @@ Before applying NPC blocking behavior, check the current `flags` in game state. 
 | `thief_defeated` or `thief_distracted` | Thief | Allows taking chalice |
 | `bat_pacified` or `bat_persuaded` | Bat | Allows taking jade figurine |
 | `spirits_banished` | Spirits | Allows passage to land_of_the_dead |
+
+## Turn Limits
+
+NPCs have turn limits that count EVERY player action while in their location. The system tracks turns in `flags.npc_turns`:
+
+```json
+{
+  "npc_turns": {
+    "troll": 3,
+    "thief": 2
+  }
+}
+```
+
+**How turn limits work:**
+- Every LLM call while in an NPC location increments that NPC's turn counter
+- Turn counts persist across visits (leaving and returning does NOT reset the count)
+- When the count reaches `max_turns` without a bypass flag, the NPC kills the player
+- Once a bypass flag is set, turn counting stops for that NPC
+
+**Default values:**
+- `max_turns`: 5 (10 for spirits due to ritual complexity)
+- `kill_player`: true
+
+Turn limits are defined in the NPC's `turn_limits` field in location data.
 
 ## Critical Rule: Bypass Flags Do NOT Remove Items
 

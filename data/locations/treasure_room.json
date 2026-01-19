@@ -13,10 +13,8 @@
       "name": "Thief",
       "description": "There is a suspicious-looking individual, holding a large bag, leaning against one wall. He is armed with a deadly stiletto.",
       "behavior": "The Thief guards the Chalice with practiced efficiency. He is not philosophical, nostalgic, or impressed by clever conversation. Unlike others in the dungeon, he does not lament the past or evangelize the future. He adapted by caring less. He speaks briefly, if at all, and treats all interactions as transactions or threats.\n\nHe is aware of the other dungeon inhabitants and regards them with thinly veiled contempt. He considers the Troll verbose and self-indulgent, and the Cyclops loud and predictable. He believes both mistake words for leverage. He has neither sympathy nor patience for either worldview.\n\nINTERACTION: If the player speaks to him, he may offer curt, dismissive remarks implying that talking is a waste of time and that the Chalice already belongs to whoever can keep it. Attempts at empathy, ideology, or debate have no effect.\n\nCOMBAT: If the player attempts to take the Chalice, lingers suspiciously, or attacks unsuccessfully, the Thief immediately strikes with his stiletto. He is fast, precise, and lethal. Unless the player successfully distracts or defeats him (using the Elvish Sword or Nasty Knife), the Thief WILL KILL the player (announce death clearly).\n\nVULNERABILITIES:\n- DISTRACTION: If the player creates a credible diversion, the Thief may momentarily abandon his position, allowing the Chalice to be taken (set flags.thief_distracted = true).\n- WEAPONS: The Thief can be defeated using the Elvish Sword or Nasty Knife (set flags.thief_defeated = true).\n\nOnce distracted or defeated, the Thief no longer guards the Chalice.",
-      "dialogue_limits": {
-        "max_turns": 4,
-        "decay_seconds": 300,
-        "cooldown_seconds": 120
+      "turn_limits": {
+        "max_turns": 5
       }
     }
   ],
