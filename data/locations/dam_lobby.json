@@ -3,7 +3,11 @@
   "name": "Dam Lobby",
   "description": "This room appears to have served as a waiting area for organized groups before questions became inconvenient. A reception desk stands near the center, still stocked with guidebooks titled 'Flood Control Dam #3', arranged as if someone expected them to be read. Two open doorways to the north and east are marked 'Private', the signs left in place long after their authority stopped being enforced. A path leads south over the top of the dam, inviting visitors to proceed without supervision. On the desk lies a matchbook advertising 'Visit Beautiful FCD#3', its optimism intact.",
   "interactables": [
-    "guidebooks",
+    {
+      "id": "guidebook",
+      "name": "guidebook",
+      "description": "**FLOOD CONTROL DAM #3**\n*A Guide for Visitors*\n\nConstructed to ensure the continued prosperity of the Frigid River Valley, FCD#3 represents the pinnacle of water management technology. The dam's sluice gates can be operated via the control panel on the dam surface, allowing precise regulation of water flow to the reservoir.\n\n**OPERATING THE SLUICE GATES:**\nTurn the bolt with an appropriate tool to open or close the gates. The green bubble indicates current water level status.\n\nPlease enjoy your visit and remember: Dam Safety Is Everyone's Responsibility!"
+    },
     "matchbook",
     "desk",
     "doorways"
