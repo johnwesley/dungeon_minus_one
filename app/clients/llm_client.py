@@ -185,7 +185,11 @@ class AnthropicClient(LLMClient):
         messages: list[dict[str, str]],
         system_prompt: Optional[str | list[dict[str, Any]]] = None,
     ) -> AsyncIterator[str]:
-        """Send messages and yield response chunks."""
+        """Send messages and yield response chunks.
+
+        Note: Uses explicit event filtering to ensure thinking blocks are never
+        yielded, even if the SDK's text_stream helper has issues.
+        """
         params: dict[str, Any] = {
             "model": self.model,
             "max_tokens": self.max_tokens,
@@ -196,9 +200,25 @@ class AnthropicClient(LLMClient):
         if thinking:
             params["thinking"] = thinking
 
+        # Track current block type to filter thinking content
+        current_block_type = None
+
         async with self.client.messages.stream(**params) as stream:
-            async for text in stream.text_stream:
-                yield text
+            async for event in stream:
+                if event.type == "content_block_start":
+                    current_block_type = event.content_block.type
+                    if current_block_type == "thinking":
+                        log_llm_debug({
+                            "event": "thinking_block_start_chat_stream",
+                            "timestamp": int(time.time() * 1000),
+                        })
+                elif event.type == "content_block_stop":
+                    current_block_type = None
+                elif event.type == "content_block_delta":
+                    # Only yield text from text blocks, never from thinking
+                    if event.delta.type == "text_delta" and current_block_type == "text":
+                        yield event.delta.text
+                    # Explicitly skip thinking_delta (defensive)
 
     async def chat_with_tools(
         self,
@@ -359,6 +379,9 @@ class AnthropicClient(LLMClient):
             LLM_API_REQUESTS_TOTAL.labels(model=self.model, has_tools="true").inc()
             iteration_start_time = time.time()
 
+            # Track current content block type to filter thinking blocks
+            current_block_type = None
+
             try:
                 async with self.client.messages.stream(
                     messages=working_messages,
@@ -366,7 +389,8 @@ class AnthropicClient(LLMClient):
                 ) as stream:
                     async for event in stream:
                         if event.type == "content_block_start":
-                            if event.content_block.type == "tool_use":
+                            current_block_type = event.content_block.type
+                            if current_block_type == "tool_use":
                                 log_llm_debug({
                                     "event": "tool_use_detected",
                                     "timestamp": int(time.time() * 1000),
@@ -377,9 +401,22 @@ class AnthropicClient(LLMClient):
                                     "type": "tool_start",
                                     "tool": event.content_block.name
                                 }
+                            elif current_block_type == "thinking":
+                                # Log thinking block start but never yield its content
+                                log_llm_debug({
+                                    "event": "thinking_block_start",
+                                    "timestamp": int(time.time() * 1000),
+                                    "iteration": iteration,
+                                })
+                        elif event.type == "content_block_stop":
+                            current_block_type = None
                         elif event.type == "content_block_delta":
-                            if event.delta.type == "text_delta":
+                            # EXPLICIT: Only yield text_delta from text blocks, never from thinking
+                            if event.delta.type == "text_delta" and current_block_type == "text":
                                 yield {"type": "text", "content": event.delta.text}
+                            elif event.delta.type == "thinking_delta":
+                                # Explicitly ignore thinking content (defensive)
+                                pass
 
                     # Get the complete message from the stream accumulator
                     final_message = await stream.get_final_message()

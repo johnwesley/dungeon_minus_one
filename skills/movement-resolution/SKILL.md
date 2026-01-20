@@ -91,4 +91,10 @@ These are critical errors that will break the game:
    - BAD: You think the player is at location X and respond accordingly
    - GOOD: Always verify via `get_game_state` first
 
+5. **Never narrate your reasoning process**
+   - BAD: "Good, reservoir_drained is true, so I can allow passage north"
+   - BAD: "Let me check the exits... north is valid"
+   - BAD: "Since the grating is unlocked, you can descend"
+   - GOOD: Just describe the new location without explaining why movement was allowed
+
 If you follow these rules, the game will stay in sync. If you skip them, the player will be stuck.
