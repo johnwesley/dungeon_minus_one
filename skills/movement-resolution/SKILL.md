@@ -40,6 +40,21 @@ Calling `get_location_data` does NOT move the player. You MUST explicitly call `
 
 Call `update_game_state` BEFORE or DURING the description of the new room. If you fail to do this, the game state will desync and the player will be stuck in the old location on their next turn.
 
+### No Invented Mechanics
+If an exit exists in `available_exits`, the player CAN use it. Do NOT invent additional requirements such as:
+- Tying ropes
+- Building bridges
+- Climbing equipment
+- Physical preparation
+- Solving puzzles not defined in skills
+
+The ONLY valid reasons to block an exit are:
+1. Exit doesn't exist in `available_exits`
+2. A specific skill rule blocks it (grating lock, reservoir water, NPC guard)
+3. Darkness without light source
+
+If none of these apply, the move MUST succeed. Do not draw on external game knowledge (e.g., Zork mechanics) to invent requirements.
+
 ## Movement Sequence
 
 When the player issues a movement command:
