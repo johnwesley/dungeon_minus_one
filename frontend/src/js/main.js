@@ -242,7 +242,14 @@ class DungeonApp {
       },
       onProgress: (step, tool) => {
         if (step === 'using_tool') {
-          this.showProgress(assistantMsgEl, `Using ${tool}...`);
+          const toolMessages = {
+            'get_game_state': 'The world remembers...',
+            'get_location_data': 'Somewhere, a map unfolds...',
+            'update_game_state': 'The record adjusts itself...',
+            'restart_game': 'Time rewinds reluctantly...'
+          };
+          const message = toolMessages[tool] || 'Something stirs...';
+          this.showProgress(assistantMsgEl, message);
         } else if (step === 'tool_done') {
           this.hideProgress(assistantMsgEl);
         }
