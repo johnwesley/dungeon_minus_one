@@ -1,9 +1,13 @@
 {
   "id": "engravings_cave",
   "name": "Engravings Cave",
-  "description": "You have entered a low cave where the walls have been deliberately carved rather than naturally worn. Passages lead northwest and east, cutting through the space without regard for the markings around them. The engravings on the walls depict figures, symbols, and sequences arranged with care, suggesting an attempt to record meaning or instruction long after the context for either had faded.",
+  "description": "You are in a low, deliberately carved chamber where the walls were shaped by intent, not erosion. Every surface is etched with figures, symbols, and repeated sequences, laid out with the quiet confidence of people who assumed someone else would understand them later. That confidence did not age well. Passages cut northwest and east, slicing through the engravings without hesitation, as if even the builders eventually stopped caring what was overwritten.",
   "interactables": [
-    "engravings",
+    {
+      "id": "engravings",
+      "name": "engravings",
+      "description": "Up close, the engravings resolve into dense, deliberate work. Rows of symbols repeat with minor variations, interrupted by diagrams that resemble floor plans, flow charts, or instructions for something that refused to stay still. Some lines have been scratched out and re-carved, corrections layered over earlier certainty, as if the wall itself went through revisions.\n\nA few symbols are worn smooth by hands that stopped coming centuries ago. Others are sharp, untouched, waiting for a reader who never arrived. Whatever this was meant to preserve, it clearly expected compliance, literacy, and time. It got none of the above."
+    },
     "walls"
   ],
   "npcs": [],
