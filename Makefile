@@ -230,11 +230,11 @@ k8s-setup:  ## One-time cluster setup (Doppler operator + namespace)
 	@echo "  2. Create the secret: kubectl create secret generic doppler-token -n $(K8S_NAMESPACE) --from-literal=serviceToken=YOUR_TOKEN"
 	@echo "  3. Deploy the app: make k8s-deploy"
 
-k8s-deploy:  ## Deploy/update app to DOKS (usage: make k8s-deploy [TAG=v0.5.0])
+k8s-deploy:  ## Deploy/update app to DOKS (optional: TAG=v1.0.0)
 	@if [ -n "$(TAG)" ]; then \
 		CURRENT_TAG=$$(grep 'newTag:' k8s/kustomization.yaml | awk '{print $$2}'); \
 		if [ "$$CURRENT_TAG" = "$(TAG)" ]; then \
-			echo "==> Tag already set to $(TAG), skipping update"; \
+			echo "==> Tag already set to $(TAG)"; \
 		else \
 			echo "==> Updating image tag: $$CURRENT_TAG -> $(TAG)"; \
 			sed -i.bak 's/newTag: .*/newTag: $(TAG)/' k8s/kustomization.yaml && rm -f k8s/kustomization.yaml.bak; \
@@ -242,16 +242,11 @@ k8s-deploy:  ## Deploy/update app to DOKS (usage: make k8s-deploy [TAG=v0.5.0])
 	fi
 	kubectl apply -k k8s/
 	@echo ""
-	$(MAKE) k8s-db-migrate TAG=$(TAG)
+	$(MAKE) k8s-db-migrate
 	kubectl rollout status deployment/dungeon-app -n $(K8S_NAMESPACE)
 
 k8s-monitoring:  ## Deploy monitoring resources (Grafana dashboard + PodMonitor)
 	kubectl apply -k k8s/monitoring
-
-k8s-commit-version:  ## Commit and push updated k8s manifests (usage: make k8s-commit-version [TAG=v0.6.0])
-	git add k8s/kustomization.yaml
-	git commit -m "chore: bump k8s deployment version to $(TAG)"
-	git push origin $(GIT_BRANCH)
 
 k8s-status:  ## Show pods, services, and secrets
 	@echo "==> Pods:"
