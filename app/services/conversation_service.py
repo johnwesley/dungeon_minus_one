@@ -34,6 +34,7 @@ from app.metrics import (
     GAME_DEATHS_TOTAL,
 )
 from app.utils.message_sanitizer import strip_internal_markers
+from app.utils.input_guard import evaluate_player_input
 
 
 ENDING_ASCII = "[ PROCESS COMPLETE ]\n[ NO FURTHER INPUT ]\n\n>"
@@ -139,6 +140,27 @@ def _is_trophy_case_removal(message: str, location: Optional[str]) -> bool:
 
 def _has_all_treasures(trophy_case: set[str]) -> bool:
     return TREASURE_IDS.issubset(trophy_case)
+
+
+def _build_base_system_prompt(include_skills: bool = True) -> tuple[str, bool]:
+    from prompts import load_prompt, load_all_skills, NARRATOR_PROMPT
+
+    narrator_prompt = load_prompt(NARRATOR_PROMPT)
+    try:
+        premise_prompt = load_prompt("premise")
+        base_system_text = f"{narrator_prompt}\n\n## Game Premise\n{premise_prompt}"
+    except FileNotFoundError:
+        base_system_text = narrator_prompt
+
+    skills_content = ""
+    if include_skills:
+        skills_content = load_all_skills()
+        if skills_content:
+            base_system_text = (
+                f"{base_system_text}\n\n## Game Mechanics (Skills)\n\n{skills_content}"
+            )
+
+    return base_system_text, bool(skills_content)
 
 
 class ConversationNotFoundError(Exception):
@@ -657,6 +679,8 @@ class ConversationService:
                 yield StreamEvent(type="done", data={"message": {}}) # Dummy done
                 return
 
+        guard_result = evaluate_player_input(message)
+
         # Save user message
         user_msg = await self.message_repo.create(
             conversation_id=conversation.id,
@@ -672,6 +696,84 @@ class ConversationService:
                 "user_message_id": user_msg.id,
             },
         )
+
+        if guard_result.soft_reject:
+            # Load history for guard response
+            history = await self.message_repo.list_by_conversation(conversation.id)
+
+            WINDOW_SIZE = 20
+            if len(history) > WINDOW_SIZE:
+                history = history[-WINDOW_SIZE:]
+
+            llm_messages = [
+                {
+                    "role": m.role,
+                    "content": strip_internal_markers(m.content) if m.role == "assistant" else m.content,
+                }
+                for m in history
+            ]
+
+            reason = guard_result.reason or "multiple_commands"
+            if reason == "too_long":
+                reason_label = "input too long"
+            else:
+                reason_label = "multiple actions detected"
+            guard_reason_line = f"Reason: {reason_label}."
+            guard_instructions = (
+                "The player's last input should not advance the game.\n"
+                f"{guard_reason_line}\n"
+                "Respond in narrator voice with a brief, in-character correction.\n"
+                "Tell the player to enter one action per turn and offer 1-3 example commands.\n"
+                "Allow creative roleplay, but only one action can be processed at a time.\n"
+                "Do not describe outcomes, do not change location or inventory, and do not narrate time passing.\n"
+                "Do not quote the reason line verbatim.\n"
+                "Do not mention tools, systems, or hidden limits. Use statements, not questions."
+            )
+
+            base_system_text, _ = _build_base_system_prompt(include_skills=False)
+            guard_system_prompt = f"{base_system_text}\n\n## Input Guard\n{guard_instructions}"
+
+            full_content = ""
+            try:
+                async for chunk in self.llm_client.chat_stream(
+                    llm_messages,
+                    system_prompt=[
+                        {
+                            "type": "text",
+                            "text": guard_system_prompt,
+                            "cache_control": {"type": "ephemeral"},
+                        }
+                    ],
+                ):
+                    full_content += chunk
+                    yield StreamEvent(type="delta", data={"content": chunk})
+            except Exception as e:
+                yield StreamEvent(
+                    type="error",
+                    data={"error": str(e), "code": "LLM_ERROR"},
+                )
+                return
+
+            assistant_msg = await self.message_repo.create(
+                conversation_id=conversation.id,
+                role="assistant",
+                content=full_content,
+            )
+            await self.conversation_repo.touch(conversation.id)
+            user_content = strip_internal_markers(assistant_msg.content)
+
+            yield StreamEvent(
+                type="done",
+                data={
+                    "message": {
+                        "id": assistant_msg.id,
+                        "role": assistant_msg.role,
+                        "content": user_content,
+                        "created_at": assistant_msg.created_at.isoformat(),
+                    }
+                },
+            )
+            return
 
         npc_limit_result = None
         force_restart_after_stream = False
@@ -794,21 +896,7 @@ class ConversationService:
             # Our client implementation takes `system_prompt`. If we pass it, it REPLACES the default.
             # So we must reconstruct the full prompt here if we want to add to it.
             
-            # Better approach: The AnthropicClient loads the default prompt in __init__.
-            # We can create a method to "get_default_system_prompt" or just load it here too.
-            from prompts import load_prompt, load_all_skills, NARRATOR_PROMPT
-            narrator_prompt = load_prompt(NARRATOR_PROMPT)
-            try:
-                premise_prompt = load_prompt("premise")
-                base_system_text = f"{narrator_prompt}\n\n## Game Premise\n{premise_prompt}"
-            except FileNotFoundError:
-                base_system_text = narrator_prompt
-
-            # Always load compiled skills when present to keep environments consistent.
-            skills_content = load_all_skills()
-            if skills_content:
-                base_system_text = f"{base_system_text}\n\n## Game Mechanics (Skills)\n\n{skills_content}"
-
+            base_system_text, skills_included = _build_base_system_prompt(include_skills=True)
             final_system_prompt = f"{base_system_text}\n{state_summary}"
 
             # Debug logging before LLM call
@@ -818,7 +906,7 @@ class ConversationService:
                 "conversation_id": conversation.id,
                 "message_count": len(llm_messages),
                 "state_summary": state_summary,
-                "skills_included": bool(skills_content),
+                "skills_included": skills_included,
                 "messages_preview": [
                     {"role": m["role"], "content": m["content"][:150] + "..." if len(m["content"]) > 150 else m["content"]}
                     for m in llm_messages[-5:]  # Last 5 messages
