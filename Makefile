@@ -242,8 +242,9 @@ k8s-deploy:  ## Deploy/update app to DOKS (optional: TAG=v1.0.0)
 	fi
 	kubectl apply -k k8s/
 	@echo ""
+	@echo "==> Waiting for rollout to complete..."
+	kubectl rollout status deployment/dungeon-app -n $(K8S_NAMESPACE) --timeout=300s
 	$(MAKE) k8s-db-migrate
-	kubectl rollout status deployment/dungeon-app -n $(K8S_NAMESPACE)
 
 k8s-monitoring:  ## Deploy monitoring resources (Grafana dashboard + PodMonitor)
 	kubectl apply -k k8s/monitoring
