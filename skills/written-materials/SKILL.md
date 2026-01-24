@@ -24,6 +24,23 @@ Apply this skill when the player:
 - Letters
 - Plaques
 
+## MANDATORY TOOL USE
+
+**YOU MUST CALL TOOLS TO RETRIEVE ITEM DESCRIPTIONS. NO EXCEPTIONS.**
+
+Before quoting ANY written material, you MUST retrieve the actual `description` from the game data:
+
+1. Call `get_game_state` to check if the item is in `inventory`
+2. If found in inventory: Use the `description` field from that inventory item object
+3. If NOT in inventory: Call `get_location_data` for the current location
+4. Find the item in `interactables` by matching `id` or `name`
+5. Use the `description` field from that interactable object
+6. Quote that description **verbatim**
+
+**NEVER quote written content from memory or imagination.** Always retrieve it from the tool response.
+
+**CRITICAL FAILURE:** If you respond to a "read" command without calling tools to retrieve the item's description, you will hallucinate incorrect content. This breaks the game.
+
 ## Critical Rule: Verbatim Quoting
 
 When the player reads, examines, or opens a written item, you MUST quote its `description` text **exactly as written in the data**.
