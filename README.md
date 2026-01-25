@@ -33,6 +33,16 @@ Access at `http://localhost:5173`. Runs backend + frontend with hot reload.
 
 ## Deployment
 
+### Deployment Flow
+
+This is the single source of truth for keeping the app and DB in sync with `data/`:
+
+1. Build and push a unique image tag (GitHub Actions or manual release).
+2. Deploy the new image: `make k8s-deploy TAG=vX.Y.Z` (rollout + `k8s-db-migrate`).
+3. Sync location fixtures: `make k8s-seed`.
+4. If you removed locations from `data/locations`, run `make k8s-seed-prune` (destructive to stale locations and may reset affected game states).
+5. Smoke test (e.g., read the leaflet or move between rooms).
+
 ### GitHub Actions (Recommended)
 
 Trigger from GitHub UI: **Actions → Build and Push Docker Image → Run workflow**
@@ -42,17 +52,7 @@ Trigger from GitHub UI: **Actions → Build and Push Docker Image → Run workfl
 | `tag` | Version tag (e.g., `v0.9.2`) |
 | `asset_env` | `staging` or `prod` (selects CDN domain) |
 
-The workflow:
-1. Builds frontend with correct CDN URL
-2. Publishes assets to DO Spaces
-3. Verifies assets accessible on CDN
-4. Builds and pushes Docker image
-5. Commits `k8s/kustomization.yaml` with new tag
-
-After workflow completes:
-```bash
-make k8s-deploy TAG=v0.9.2
-```
+After the workflow completes, follow the **Deployment Flow** above.
 
 ### Manual Deployment (Alternative)
 
@@ -65,6 +65,8 @@ make release-staging TAG=v0.9.2
 # Production
 make release-prod TAG=v0.9.2
 ```
+
+Then follow the **Deployment Flow** above.
 
 ---
 
