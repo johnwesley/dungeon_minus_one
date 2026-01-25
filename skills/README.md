@@ -4,7 +4,7 @@ This directory contains modular game mechanic skills that are concatenated into 
 
 ## Overview
 
-Skills decompose the narrator's game logic into 8 focused instruction sets. Each skill handles a specific game mechanic, allowing Claude to apply relevant rules based on player actions.
+Skills decompose the narrator's game logic into 9 focused instruction sets. Each skill handles a specific game mechanic, allowing Claude to apply relevant rules based on player actions.
 
 When `SKILLS_ENABLED=true`, all SKILL.md files are loaded and appended to the narrator prompt at runtime.
 
@@ -20,6 +20,7 @@ When `SKILLS_ENABLED=true`, all SKILL.md files are loaded and appended to the na
 | `victory-and-trophy` | Trophy case deposits, treasure tracking, victory sequence |
 | `darkness-and-grue` | Light sources, requires_light locations, grue death |
 | `written-materials` | Verbatim quoting of written content |
+| `gas-room-hazard` | Coal gas explosion, electric light switches |
 
 ## File Structure
 
@@ -29,6 +30,8 @@ skills/
 ├── movement-resolution/
 │   └── SKILL.md
 ├── inventory-management/
+│   └── SKILL.md
+├── gas-room-hazard/
 │   └── SKILL.md
 └── ... (6 more skill directories)
 ```

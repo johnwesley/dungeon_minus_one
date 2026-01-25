@@ -224,13 +224,13 @@ east
 
 ### 4) Mine + Return (Jade Figurine, Sapphire Bracelet, back to Living Room)
 
-**Start:** `mine_entrance` (Mine Entrance)  
+**Start:** `mine_entrance` (Mine Entrance)
 **Moves:**
 - `west` → `squeaky_room` (Squeaky Room)
 - `north` → `bat_room` (Bat Room)
 - `east` → `shaft_room` (Shaft Room)
 - `north` → `smelly_room` (Smelly Room)
-- `down` → `gas_room` (Gas Room)
+- `down` → `gas_room` (Gas Room) ⚠️ **GAS HAZARD - see below**
 - `up` → `smelly_room` (Smelly Room)
 - `south` → `shaft_room` (Shaft Room)
 - `west` → `bat_room` (Bat Room)
@@ -240,6 +240,12 @@ east
 - `down` → `cellar` (Cellar)
 - `up` → `living_room` (Living Room)
 
+⚠️ **Gas Room Hazard:** The gas room is filled with coal gas. Any open flame (lit lantern or ivory torch) will cause an explosion and death. You must:
+1. Drop the ivory torch in smelly_room before entering
+2. Turn off your lantern before entering
+3. Flip the switch to turn on the electric ceiling light
+4. Retrieve your items after exiting
+
 ```text
 west
 north
@@ -247,9 +253,14 @@ tell bat you are removing the figurine for mitigation
 take jade figurine
 east
 north
+drop ivory torch
+turn off lantern
+flip switch
 down
 take sapphire bracelet
 up
+turn on lantern
+take ivory torch
 south
 west
 south

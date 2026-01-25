@@ -236,6 +236,8 @@ async def run_verification():
             ("up", "cave"),
 
             # 11) Mine Loop
+            # NOTE: Gas room contains coal gas - any open flame causes explosion!
+            # Must: drop ivory torch, turn off lantern, flip switch for electric light
             ("north", "mirror_room"),
             ("north", "cold_passage"),
             ("east", "mine_entrance"),
@@ -244,9 +246,13 @@ async def run_verification():
             ("take jade figurine", "bat_room"),  # bat_pacified flag pre-set
             ("east", "shaft_room"),
             ("north", "smelly_room"),
-            ("down", "gas_room"),
+            ("drop ivory torch", "smelly_room"),  # Leave torch before gas room
+            ("turn off lantern", "smelly_room"),  # No flame in gas room!
+            ("flip switch", "smelly_room"),       # Turn on gas room electric light
+            ("down", "gas_room"),                 # Safe: electric light, no flame
             ("take sapphire bracelet", "gas_room"),
             ("east", "coal_mine"),
+            ("turn on lantern", "coal_mine"),     # Safe to light outside gas room
             ("down", "ladder_top"),
             ("down", "ladder_bottom"),
             ("south", "dead_end"),
@@ -259,8 +265,11 @@ async def run_verification():
             ("east", "ladder_bottom"),
             ("up", "ladder_top"),
             ("up", "coal_mine"),
-            ("west", "gas_room"),
+            ("turn off lantern", "coal_mine"),    # Prepare to re-enter gas room
+            ("west", "gas_room"),                 # Safe: electric light still on
             ("up", "smelly_room"),
+            ("turn on lantern", "smelly_room"),   # Safe outside gas room
+            ("take ivory torch", "smelly_room"),  # Recover torch
             ("south", "shaft_room"),
             ("west", "bat_room"),
             ("south", "squeaky_room"),

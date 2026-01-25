@@ -1,8 +1,11 @@
 {
   "id": "smelly_room",
   "name": "Smelly Room",
-  "description": "You are in a small room. The air here is stale and carries a faint, unpleasant odor. To the south, the passage widens towards a larger shaft, while a narrow opening leads downward into what looks like a gas-filled chamber.",
-  "interactables": [],
+  "description": "You are in a small room. The air here is stale and carries a faint, unpleasant odor that grows stronger near the downward passage. A faded warning sign has been bolted to the wall beside a narrow opening that leads down into what smells distinctly like a gas-filled chamber. An unlabeled switch is mounted on the wall nearby.",
+  "interactables": [
+    "warning_sign",
+    "light_switch"
+  ],
   "npcs": [],
   "exits": {
     "down": "gas_room",

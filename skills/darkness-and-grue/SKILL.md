@@ -66,12 +66,11 @@ When the player says "turn on lantern", "light lantern", etc.:
 
 When the player says "turn off lantern", "extinguish lantern", etc.:
 
-1. If in a dark location (`requires_light: true`):
-   - Warn: "Turning off your light here would be... inadvisable."
-2. If they insist or do it anyway:
-   - Set `flags.lantern_lit = false`
+1. Set `flags.lantern_lit = false` via `update_game_state`
+2. If in a dark location (`requires_light: true`):
    - Set `flags.in_darkness = true`
    - They will be eaten by a grue on their next action
+3. If in a lit location: Simply confirm the lantern is off
 
 ## Grue Behavior
 

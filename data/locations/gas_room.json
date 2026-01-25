@@ -1,15 +1,16 @@
 {
   "id": "gas_room",
   "name": "Gas Room",
-  "description": "This is a small enclosed chamber filled with the sharp, unmistakable smell of coal gas. The air here feels managed rather than safe, as though containment was prioritized over comfort. A short set of stairs leads upward, away from the worst of it, while a narrow tunnel runs east into darker workings. Lying exposed on the floor is a sapphire-encrusted bracelet, left behind in a place where lingering was clearly discouraged.",
+  "description": "This is a small enclosed chamber filled with the sharp, unmistakable smell of coal gas. The air here feels managed rather than safe, as though containment was prioritized over comfort. An electric light fixture hangs from the low ceiling, installed after whatever made this place hazardous. A short set of stairs leads upward, away from the worst of it, while a narrow tunnel runs east into darker workings. Lying exposed on the floor is a sapphire-encrusted bracelet, left behind in a place where lingering was clearly discouraged.",
   "interactables": [
     "sapphire_bracelet",
-    "stairs"
+    "stairs",
+    "electric_light"
   ],
   "npcs": [],
   "exits": {
     "up": "smelly_room",
     "east": "coal_mine"
   },
-  "requires_light": true
+  "requires_light": false
 }

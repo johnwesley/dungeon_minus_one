@@ -371,7 +371,7 @@ up
 
 ### 11) Mine Loop (Jade Figurine + Bracelet + Every Mine Location) + Slide Back Home
 
-**Start:** `cave` (Cave)  
+**Start:** `cave` (Cave)
 **Moves:**
 - `north` → `mirror_room` (Mirror Room)
 - `north` → `cold_passage` (Cold Passage)
@@ -380,7 +380,7 @@ up
 - `north` → `bat_room` (Bat Room)
 - `east` → `shaft_room` (Shaft Room)
 - `north` → `smelly_room` (Smelly Room)
-- `down` → `gas_room` (Gas Room)
+- `down` → `gas_room` (Gas Room) ⚠️ **GAS HAZARD - see below**
 - `east` → `coal_mine` (Coal Mine)
 - `down` → `ladder_top` (Ladder Top)
 - `down` → `ladder_bottom` (Ladder Bottom)
@@ -394,7 +394,7 @@ up
 - `east` → `ladder_bottom` (Ladder Bottom)
 - `up` → `ladder_top` (Ladder Top)
 - `up` → `coal_mine` (Coal Mine)
-- `west` → `gas_room` (Gas Room)
+- `west` → `gas_room` (Gas Room) ⚠️ **GAS HAZARD - lantern must be off**
 - `up` → `smelly_room` (Smelly Room)
 - `south` → `shaft_room` (Shaft Room)
 - `west` → `bat_room` (Bat Room)
@@ -403,6 +403,13 @@ up
 - `south` → `slide_room` (Slide Room)
 - `down` → `cellar` (Cellar)
 - `up` → `living_room` (Living Room)
+
+⚠️ **Gas Room Hazard:** The gas room is filled with coal gas. Any open flame (lit lantern or ivory torch) will cause an explosion and death. You must:
+1. Drop the ivory torch in smelly_room before entering
+2. Turn off your lantern before entering
+3. Flip the switch in smelly_room to turn on the electric ceiling light
+4. Turn the lantern back on only after reaching coal_mine (east of gas room)
+5. Turn the lantern off again before returning west through gas_room
 
 ```text
 north
@@ -414,9 +421,13 @@ tell bat you're removing the jade figurine for mitigation
 take jade figurine
 east
 north
+drop ivory torch
+turn off lantern
+flip switch
 down
 take sapphire bracelet
 east
+turn on lantern
 down
 down
 south
@@ -429,8 +440,11 @@ east
 east
 up
 up
+turn off lantern
 west
 up
+turn on lantern
+take ivory torch
 south
 west
 south

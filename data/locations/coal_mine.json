@@ -1,10 +1,12 @@
 {
   "id": "coal_mine",
   "name": "Coal Mine",
-  "description": "This section of the mine is functionally anonymous, distinguished only by the amount of coal dust clinging to every surface. The walls are blackened, the air thick with fine particles that make each breath feel like a concession. Visibility is poor even with light, and the space offers no indication of how long it was meant to be occupied. Passages branch off through the darkness, none of them labeled, all of them equally unconcerned with safety.",
+  "description": "This section of the mine is functionally anonymous, distinguished only by the amount of coal dust clinging to every surface. The walls are blackened, the air thick with fine particles that make each breath feel like a concession. A weathered warning sign has been affixed to a support beam near the western passage, where the smell of gas becomes unmistakable. An unlabeled switch protrudes from the same beam. Passages branch off through the darkness, none of them labeled, all of them equally unconcerned with safety.",
   "interactables": [
     "coal_walls",
-    "coal_dust"
+    "coal_dust",
+    "warning_sign",
+    "light_switch"
   ],
   "npcs": [],
   "exits": {
