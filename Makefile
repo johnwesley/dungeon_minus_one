@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite auth-reset frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup k8s-deploy k8s-monitoring k8s-status k8s-logs k8s-restart k8s-shell k8s-db-migrate k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-auth-reset k8s-create-admin k8s-notify test
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite auth-reset frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup-staging k8s-setup-prod k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-db-migrate k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-auth-reset k8s-create-admin k8s-notify test
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -151,14 +151,14 @@ release-staging:  ## Build+publish assets, push image, and deploy to staging
 	ASSET_ENV=staging \
 	ASSET_CDN_DOMAIN=$${ASSET_CDN_DOMAIN:-$${ASSET_CDN_DOMAIN_STAGING:-$(ASSET_CDN_DOMAIN_STAGING)}} \
 	$(MAKE) docker-release TAG=$(TAG) ASSET_ENV=staging ASSET_CDN_DOMAIN=$${ASSET_CDN_DOMAIN:-$${ASSET_CDN_DOMAIN_STAGING:-$(ASSET_CDN_DOMAIN_STAGING)}}; \
-	$(MAKE) k8s-deploy TAG=$(TAG)
+	$(MAKE) k8s-deploy K8S_ENV=staging TAG=$(TAG)
 
 release-prod:  ## Build+publish assets, push image, and deploy to production
 	@set -a; [ -f $(DEPLOY_ENV) ] && . ./$(DEPLOY_ENV); set +a; \
 	ASSET_ENV=prod \
 	ASSET_CDN_DOMAIN=$${ASSET_CDN_DOMAIN:-$${ASSET_CDN_DOMAIN_PROD:-$(ASSET_CDN_DOMAIN_PROD)}} \
 	$(MAKE) docker-release TAG=$(TAG) ASSET_ENV=prod ASSET_CDN_DOMAIN=$${ASSET_CDN_DOMAIN:-$${ASSET_CDN_DOMAIN_PROD:-$(ASSET_CDN_DOMAIN_PROD)}}; \
-	$(MAKE) k8s-deploy TAG=$(TAG)
+	$(MAKE) k8s-deploy K8S_ENV=prod TAG=$(TAG)
 
 # --- Infrastructure (OpenTofu) ---
 
@@ -208,48 +208,60 @@ infra-destroy:  ## Destroy all infrastructure (DANGEROUS)
 
 # --- Kubernetes (DOKS) ---
 
-K8S_NAMESPACE := dungeon
+# Environment selection: staging (default) or prod
+K8S_ENV ?= staging
+K8S_NAMESPACE := $(if $(filter prod,$(K8S_ENV)),prod-dungeon,staging-dungeon)
+K8S_DIR := k8s/$(K8S_ENV)
 KUBECONFIG_FILE := ~/.kube/doks-dungeon
 
 k8s-kubeconfig:  ## Refresh kubeconfig for DOKS cluster via doctl
 	@doctl kubernetes cluster kubeconfig save dungeon-k8s
 	@echo "Kubeconfig refreshed for dungeon-k8s cluster"
 
-k8s-setup:  ## One-time cluster setup (Doppler operator + namespace)
+k8s-setup-staging:  ## One-time staging cluster setup (Doppler operator + namespace)
 	@echo "==> Installing Doppler Kubernetes Operator..."
 	helm repo add doppler https://helm.doppler.com || true
 	helm repo update
 	helm upgrade --install doppler-operator doppler/doppler-kubernetes-operator \
 		-n doppler-operator --create-namespace
 	@echo ""
-	@echo "==> Creating namespace..."
-	kubectl apply -f k8s/namespace.yaml
+	@echo "==> Creating staging namespace..."
+	kubectl apply -f k8s/staging/namespace.yaml
 	@echo ""
 	@echo "==> Next steps:"
 	@echo "  1. Create a Doppler service token: doppler configs tokens create stg --name k8s-operator"
-	@echo "  2. Create the secret: kubectl create secret generic doppler-token -n $(K8S_NAMESPACE) --from-literal=serviceToken=YOUR_TOKEN"
-	@echo "  3. Deploy the app: make k8s-deploy"
+	@echo "  2. Create the secret: kubectl create secret generic doppler-token -n staging-dungeon --from-literal=serviceToken=YOUR_TOKEN"
+	@echo "  3. Deploy the app: make k8s-deploy K8S_ENV=staging"
 
-k8s-deploy:  ## Deploy/update app to DOKS (optional: TAG=v1.0.0)
+k8s-setup-prod:  ## One-time production cluster setup (namespace only, assumes Doppler already installed)
+	@echo "==> Creating production namespace..."
+	kubectl apply -f k8s/prod/namespace.yaml
+	@echo ""
+	@echo "==> Next steps:"
+	@echo "  1. Create a Doppler service token: doppler configs tokens create prd --name k8s-operator"
+	@echo "  2. Create the secret: kubectl create secret generic doppler-token -n prod-dungeon --from-literal=serviceToken=YOUR_TOKEN"
+	@echo "  3. Deploy the app: make k8s-deploy K8S_ENV=prod"
+
+k8s-deploy:  ## Deploy/update app to DOKS (K8S_ENV=staging|prod, optional: TAG=v1.0.0)
+	@echo "==> Deploying to $(K8S_ENV) (namespace: $(K8S_NAMESPACE))"
 	@if [ -n "$(TAG)" ]; then \
-		CURRENT_TAG=$$(grep 'newTag:' k8s/kustomization.yaml | awk '{print $$2}'); \
+		CURRENT_TAG=$$(grep 'newTag:' k8s/base/kustomization.yaml | awk '{print $$2}'); \
 		if [ "$$CURRENT_TAG" = "$(TAG)" ]; then \
 			echo "==> Tag already set to $(TAG)"; \
 		else \
 			echo "==> Updating image tag: $$CURRENT_TAG -> $(TAG)"; \
-			sed -i.bak 's/newTag: .*/newTag: $(TAG)/' k8s/kustomization.yaml && rm -f k8s/kustomization.yaml.bak; \
+			sed -i.bak 's/newTag: .*/newTag: $(TAG)/' k8s/base/kustomization.yaml && rm -f k8s/base/kustomization.yaml.bak; \
 		fi; \
 	fi
-	kubectl apply -k k8s/
+	kubectl apply -k $(K8S_DIR)/
 	@echo ""
 	@echo "==> Waiting for rollout to complete..."
 	kubectl rollout status deployment/dungeon-app -n $(K8S_NAMESPACE) --timeout=300s
-	$(MAKE) k8s-db-migrate
+	$(MAKE) k8s-db-migrate K8S_ENV=$(K8S_ENV)
 
-k8s-monitoring:  ## Deploy monitoring resources (Grafana dashboard + PodMonitor)
-	kubectl apply -k k8s/monitoring
-
-k8s-status:  ## Show pods, services, and secrets
+k8s-status:  ## Show pods, services, and secrets (K8S_ENV=staging|prod)
+	@echo "==> Environment: $(K8S_ENV) (namespace: $(K8S_NAMESPACE))"
+	@echo ""
 	@echo "==> Pods:"
 	kubectl get pods -n $(K8S_NAMESPACE) -o wide
 	@echo ""
@@ -259,22 +271,22 @@ k8s-status:  ## Show pods, services, and secrets
 	@echo "==> Doppler Secrets:"
 	kubectl get dopplersecret -n $(K8S_NAMESPACE) 2>/dev/null || echo "(none)"
 
-k8s-logs:  ## Stream pod logs
+k8s-logs:  ## Stream pod logs (K8S_ENV=staging|prod)
 	kubectl logs -f -l app=dungeon-app -n $(K8S_NAMESPACE) --all-containers
 
-k8s-restart:  ## Restart deployment (rolling)
+k8s-restart:  ## Restart deployment (K8S_ENV=staging|prod)
 	kubectl rollout restart deployment/dungeon-app -n $(K8S_NAMESPACE)
 	kubectl rollout status deployment/dungeon-app -n $(K8S_NAMESPACE)
 
-k8s-rollback:  ## Rollback to previous deployment revision
+k8s-rollback:  ## Rollback to previous deployment revision (K8S_ENV=staging|prod)
 	kubectl rollout undo deployment/dungeon-app -n $(K8S_NAMESPACE)
 	kubectl rollout status deployment/dungeon-app -n $(K8S_NAMESPACE)
 
-k8s-shell:  ## Open shell in running pod
+k8s-shell:  ## Open shell in running pod (K8S_ENV=staging|prod)
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- /bin/bash
 
-k8s-db-migrate:  ## Run Alembic DB schema migrations in k8s
-	@IMAGE_TAG=$${TAG:-$$(grep 'newTag:' k8s/kustomization.yaml | awk '{print $$2}')}; \
+k8s-db-migrate:  ## Run Alembic DB schema migrations (K8S_ENV=staging|prod)
+	@IMAGE_TAG=$${TAG:-$$(grep 'newTag:' k8s/base/kustomization.yaml | awk '{print $$2}')}; \
 	POD=""; \
 	for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do \
 		POD=$$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app \
@@ -291,23 +303,23 @@ k8s-db-migrate:  ## Run Alembic DB schema migrations in k8s
 	echo "==> Running migrations in $$POD (tag $$IMAGE_TAG)"; \
 	kubectl exec -it $$POD -n $(K8S_NAMESPACE) -c app -- alembic upgrade head
 
-k8s-seed:  ## Sync location fixtures to k8s database
+k8s-seed:  ## Sync location fixtures to k8s database (K8S_ENV=staging|prod)
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/sync_locations.py
 
-k8s-seed-prune:  ## Sync + prune location fixtures in k8s database
+k8s-seed-prune:  ## Sync + prune location fixtures (K8S_ENV=staging|prod)
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/sync_locations.py --prune
 
-k8s-invite:  ## Generate invite token in k8s (usage: make k8s-invite EMAIL="user@example.com")
+k8s-invite:  ## Generate invite token (K8S_ENV=staging|prod, EMAIL="user@example.com")
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/generate_invite.py $(EMAIL)
 
-k8s-reset:  ## Reset game sessions in k8s (keeps users)
+k8s-reset:  ## Reset game sessions (K8S_ENV=staging|prod)
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/reset_game_state.py
 
-k8s-auth-reset:  ## Reset auth tables in k8s (dangerous; add FORCE=true)
+k8s-auth-reset:  ## Reset auth tables (K8S_ENV=staging|prod, dangerous; add FORCE=true)
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/reset_auth.py $(if $(FORCE),--force,)
 
-k8s-create-admin:  ## Create admin user in k8s (usage: make k8s-create-admin USERNAME="admin" PASSWORD="pass" EMAIL="admin@example.com")
+k8s-create-admin:  ## Create admin user (K8S_ENV=staging|prod, USERNAME="admin" PASSWORD="pass" EMAIL="admin@example.com")
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/create_admin.py $(USERNAME) $(PASSWORD) $(if $(EMAIL),--email $(EMAIL),)
 
-k8s-notify:  ## Create notification in k8s (usage: make k8s-notify TITLE="title" MSG="message")
+k8s-notify:  ## Create notification (K8S_ENV=staging|prod, TITLE="title" MSG="message")
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)
