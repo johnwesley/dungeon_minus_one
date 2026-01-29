@@ -54,15 +54,21 @@ Trigger from GitHub UI: **Actions → Build and Push Docker Image → Run workfl
 
 After the workflow completes, follow the **Deployment Flow** above.
 
+### Environments
+
+| Environment | Namespace | Doppler Config | Domain |
+|-------------|-----------|----------------|--------|
+| Staging | `staging-dungeon` | `stg` | `staging.dungeonminusone.com` |
+| Production | `prod-dungeon` | `prd` | `dungeonminusone.com` |
+
+All k8s commands accept `K8S_ENV=staging` (default) or `K8S_ENV=prod`.
+
 ### Manual Deployment (Alternative)
 
 Requires `infra/.env.deploy` with Spaces credentials:
 
 ```bash
-# Staging
 make release-staging TAG=v0.9.2
-
-# Production
 make release-prod TAG=v0.9.2
 ```
 
@@ -99,13 +105,12 @@ export KUBECONFIG=~/.kube/doks-dungeon
 
 ### 3. Setup Doppler (Secrets)
 
-1. Create Doppler project: `staging-deployment` with config `stg`
+1. Create Doppler project `dungeon-minus-one` with configs `stg` and `prd`
 2. Add secrets: `ANTHROPIC_API_KEY`, `AUTH_SECRET_KEY`, `DATABASE_URL`, etc.
-3. Generate service token for k8s operator
 
 ```bash
-make k8s-setup  # Installs Doppler operator
-kubectl create secret generic doppler-token -n dungeon --from-literal=serviceToken=YOUR_TOKEN
+make k8s-setup-staging  # Installs Doppler operator, creates namespace + secrets
+make k8s-setup-prod     # Creates namespace + secrets (operator already installed)
 ```
 
 ### 4. Setup CDN Assets
@@ -120,6 +125,8 @@ kubectl create secret generic doppler-token -n dungeon --from-literal=serviceTok
 ---
 
 ## Cluster Management
+
+All commands default to staging. Add `K8S_ENV=prod` for production.
 
 | Command | Description |
 |---------|-------------|
@@ -137,6 +144,24 @@ kubectl create secret generic doppler-token -n dungeon --from-literal=serviceTok
 | `make k8s-seed` | Sync location fixtures |
 | `make k8s-reset` | Reset game sessions |
 | `make k8s-notify TITLE="..." MSG="..."` | Create notification |
+
+## Staging Lifecycle
+
+Staging is kept down when not in use. Bring it up for testing, tear it down when done.
+
+**Bring up:**
+```bash
+make k8s-setup-staging
+make k8s-deploy K8S_ENV=staging
+make k8s-seed K8S_ENV=staging
+```
+
+**Tear down:**
+```bash
+kubectl delete ns staging-dungeon
+```
+
+The setup target is idempotent — it creates the namespace, Doppler service token, and registry pull secret. The Doppler operator syncs app secrets automatically once the token is in place.
 
 ## Admin Pages
 

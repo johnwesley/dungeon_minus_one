@@ -218,29 +218,58 @@ k8s-kubeconfig:  ## Refresh kubeconfig for DOKS cluster via doctl
 	@doctl kubernetes cluster kubeconfig save dungeon-k8s
 	@echo "Kubeconfig refreshed for dungeon-k8s cluster"
 
-k8s-setup-staging:  ## One-time staging cluster setup (Doppler operator + namespace)
+k8s-setup-staging:  ## One-time staging setup (Doppler operator, namespace, secrets)
 	@echo "==> Installing Doppler Kubernetes Operator..."
 	helm repo add doppler https://helm.doppler.com || true
 	helm repo update
 	helm upgrade --install doppler-operator doppler/doppler-kubernetes-operator \
 		-n doppler-operator --create-namespace
 	@echo ""
-	@echo "==> Creating staging namespace..."
-	kubectl apply -f k8s/staging/namespace.yaml
-	@echo ""
-	@echo "==> Next steps:"
-	@echo "  1. Create a Doppler service token: doppler configs tokens create stg --name k8s-operator"
-	@echo "  2. Create the secret: kubectl create secret generic doppler-token -n staging-dungeon --from-literal=serviceToken=YOUR_TOKEN"
-	@echo "  3. Deploy the app: make k8s-deploy K8S_ENV=staging"
+	$(MAKE) _k8s-setup-env K8S_ENV=staging
 
-k8s-setup-prod:  ## One-time production cluster setup (namespace only, assumes Doppler already installed)
-	@echo "==> Creating production namespace..."
-	kubectl apply -f k8s/prod/namespace.yaml
+k8s-setup-prod:  ## One-time production setup (namespace, secrets)
+	$(MAKE) _k8s-setup-env K8S_ENV=prod
+
+DOPPLER_PROJECT := dungeon-minus-one
+DOPPLER_CONFIG = $(if $(filter prod,$(K8S_ENV)),prd,stg)
+DOPPLER_TOKEN_NAME = k8s-operator-$(K8S_ENV)
+
+_k8s-setup-env:  ## Internal: setup namespace, doppler token, and registry secret for K8S_ENV
+	@echo "==> Creating $(K8S_ENV) namespace..."
+	kubectl apply -f k8s/$(K8S_ENV)/namespace.yaml
 	@echo ""
-	@echo "==> Next steps:"
-	@echo "  1. Create a Doppler service token: doppler configs tokens create prd --name k8s-operator"
-	@echo "  2. Create the secret: kubectl create secret generic doppler-token -n prod-dungeon --from-literal=serviceToken=YOUR_TOKEN"
-	@echo "  3. Deploy the app: make k8s-deploy K8S_ENV=prod"
+	@echo "==> Setting up doppler-token in $(K8S_NAMESPACE)..."
+	@if kubectl get secret doppler-token -n $(K8S_NAMESPACE) >/dev/null 2>&1; then \
+		echo "    doppler-token already exists, skipping"; \
+	elif kubectl get secret doppler-token -n dungeon >/dev/null 2>&1; then \
+		echo "    Copying doppler-token from dungeon namespace..."; \
+		kubectl get secret doppler-token -n dungeon -o json \
+			| jq 'del(.metadata.namespace, .metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.managedFields)' \
+			| kubectl apply -n $(K8S_NAMESPACE) -f -; \
+	else \
+		echo "    Creating new Doppler service token ($(DOPPLER_CONFIG))..."; \
+		TOKEN=$$(doppler configs tokens create $(DOPPLER_CONFIG) \
+			--project $(DOPPLER_PROJECT) \
+			--name $(DOPPLER_TOKEN_NAME) \
+			--max-age 0 --plain) || \
+			{ echo "ERROR: Failed to create Doppler token."; exit 1; }; \
+		kubectl create secret generic doppler-token \
+			-n $(K8S_NAMESPACE) \
+			--from-literal=serviceToken=$$TOKEN; \
+	fi
+	@echo ""
+	@echo "==> Setting up registry pull secret in $(K8S_NAMESPACE)..."
+	@if kubectl get secret registry-dungeon-minus-one -n $(K8S_NAMESPACE) >/dev/null 2>&1; then \
+		echo "    registry-dungeon-minus-one already exists, skipping"; \
+	else \
+		DOCKER_CONFIG=$$(doppler secrets get REGISTRY_DOCKER_CONFIG_B64 \
+			--project $(DOPPLER_PROJECT) --config $(DOPPLER_CONFIG) --plain); \
+		kubectl create secret docker-registry registry-dungeon-minus-one \
+			-n $(K8S_NAMESPACE) \
+			--from-file=.dockerconfigjson=<(echo "$$DOCKER_CONFIG" | base64 -d); \
+	fi
+	@echo ""
+	@echo "==> $(K8S_ENV) setup complete. Deploy with: make k8s-deploy K8S_ENV=$(K8S_ENV)"
 
 k8s-deploy:  ## Deploy/update app to DOKS (K8S_ENV=staging|prod, optional: TAG=v1.0.0)
 	@echo "==> Deploying to $(K8S_ENV) (namespace: $(K8S_NAMESPACE))"
