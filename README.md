@@ -163,6 +163,31 @@ kubectl delete ns staging-dungeon
 
 The setup target is idempotent — it creates the namespace, Doppler service token, and registry pull secret. The Doppler operator syncs app secrets automatically once the token is in place.
 
+## Production Lifecycle
+
+Production stays up. Deployments go through GitHub Actions.
+
+**Deploy a new version:**
+1. Trigger workflow: **Actions → Build and Push Docker Image** with `tag` and `asset_env=prod`
+2. After build completes:
+   ```bash
+   make k8s-deploy K8S_ENV=prod
+   make k8s-seed K8S_ENV=prod        # if location data changed
+   ```
+
+**Rollback:**
+```bash
+make k8s-rollback K8S_ENV=prod
+```
+
+**First-time setup** (already done, for reference):
+```bash
+make k8s-setup-prod
+make k8s-deploy K8S_ENV=prod
+make k8s-seed K8S_ENV=prod
+make k8s-create-admin K8S_ENV=prod USERNAME="admin" PASSWORD="..." EMAIL="..."
+```
+
 ## Admin Pages
 
 | URL | Description |
