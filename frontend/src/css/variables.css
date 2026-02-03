@@ -16,6 +16,8 @@
   --text-dim: var(--phosphor-green-dim);
   --text-bright: var(--phosphor-green-bright);
   --text-muted: #446644;
+  --text-medium: #21a621;  /* ~65% brightness of phosphor-green */
+  --text-subdued: #1a801a; /* ~50% brightness of phosphor-green */
 
   /* Accent */
   --accent: #ff6600;

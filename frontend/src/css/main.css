@@ -350,8 +350,22 @@
 .auth-title {
   font-size: 1.5rem;
   color: var(--text-bright);
-  margin-bottom: var(--space-lg);
+  margin-bottom: var(--space-sm);
   text-align: center;
+}
+
+.auth-tagline {
+  font-size: 0.9rem;
+  color: var(--text-medium);
+  text-align: center;
+  margin-bottom: var(--space-sm);
+}
+
+.auth-tagline-note {
+  font-size: 0.85rem;
+  color: var(--text-subdued);
+  text-align: center;
+  margin-bottom: var(--space-lg);
 }
 
 .auth-form {
