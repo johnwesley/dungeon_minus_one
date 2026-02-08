@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite auth-reset frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup-staging k8s-setup-prod k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-db-migrate k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-auth-reset k8s-create-admin k8s-notify test
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite auth-reset frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup-staging k8s-setup-prod k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-db-migrate k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-auth-reset k8s-create-admin k8s-notify k8s-dns-upsert k8s-dns-delete k8s-teardown-staging test
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -218,7 +218,7 @@ k8s-kubeconfig:  ## Refresh kubeconfig for DOKS cluster via doctl
 	@doctl kubernetes cluster kubeconfig save dungeon-k8s
 	@echo "Kubeconfig refreshed for dungeon-k8s cluster"
 
-k8s-setup-staging:  ## One-time staging setup (Doppler operator, namespace, secrets)
+k8s-setup-staging:  ## One-time staging setup (Doppler, namespace, secrets, manifests, DNS)
 	@echo "==> Installing Doppler Kubernetes Operator..."
 	helm repo add doppler https://helm.doppler.com || true
 	helm repo update
@@ -226,6 +226,28 @@ k8s-setup-staging:  ## One-time staging setup (Doppler operator, namespace, secr
 		-n doppler-operator --create-namespace
 	@echo ""
 	$(MAKE) _k8s-setup-env K8S_ENV=staging
+	@echo ""
+	@echo "==> Applying staging manifests..."
+	kubectl apply -k k8s/staging/
+	@echo ""
+	@echo "==> Waiting for Load Balancer external IP (up to 5 min)..."
+	@IP=""; \
+	for i in $$(seq 1 30); do \
+		IP=$$(kubectl get svc dungeon-app-lb -n staging-dungeon -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null); \
+		if [ -n "$$IP" ]; then break; fi; \
+		echo "    Attempt $$i/30: waiting for external IP..."; \
+		sleep 10; \
+	done; \
+	if [ -z "$$IP" ]; then \
+		echo "ERROR: Timed out waiting for Load Balancer IP."; \
+		kubectl get svc dungeon-app-lb -n staging-dungeon; \
+		exit 1; \
+	fi; \
+	echo "==> Load Balancer IP: $$IP"; \
+	echo ""; \
+	echo "==> Creating DNS record..."; \
+	set -a; [ -f $(DEPLOY_ENV) ] && . ./$(DEPLOY_ENV); set +a; \
+	$(PYTHON) scripts/manage_dns.py upsert --ip $$IP
 
 k8s-setup-prod:  ## One-time production setup (namespace, secrets)
 	$(MAKE) _k8s-setup-env K8S_ENV=prod
@@ -352,3 +374,35 @@ k8s-create-admin:  ## Create admin user (K8S_ENV=staging|prod, USERNAME="admin" 
 
 k8s-notify:  ## Create notification (K8S_ENV=staging|prod, TITLE="title" MSG="message")
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)
+
+# --- DNS ---
+
+k8s-dns-upsert:  ## Create/update staging DNS A record from current LB IP
+	@echo "==> Resolving Load Balancer IP..."
+	@IP=""; \
+	for i in $$(seq 1 30); do \
+		IP=$$(kubectl get svc dungeon-app-lb -n staging-dungeon -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null); \
+		if [ -n "$$IP" ]; then break; fi; \
+		echo "    Attempt $$i/30: waiting for external IP..."; \
+		sleep 10; \
+	done; \
+	if [ -z "$$IP" ]; then \
+		echo "ERROR: Timed out waiting for Load Balancer IP."; \
+		kubectl get svc dungeon-app-lb -n staging-dungeon; \
+		exit 1; \
+	fi; \
+	echo "==> Load Balancer IP: $$IP"; \
+	set -a; [ -f $(DEPLOY_ENV) ] && . ./$(DEPLOY_ENV); set +a; \
+	$(PYTHON) scripts/manage_dns.py upsert --ip $$IP
+
+k8s-dns-delete:  ## Delete staging DNS A record
+	@set -a; [ -f $(DEPLOY_ENV) ] && . ./$(DEPLOY_ENV); set +a; \
+	$(PYTHON) scripts/manage_dns.py delete
+
+k8s-teardown-staging:  ## Tear down staging environment (DNS + namespace)
+	@echo "==> Deleting staging DNS record..."
+	$(MAKE) k8s-dns-delete
+	@echo ""
+	@echo "==> Deleting staging namespace..."
+	kubectl delete namespace staging-dungeon --ignore-not-found
+	@echo "==> Staging teardown complete."
