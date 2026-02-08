@@ -25,14 +25,6 @@ from app.repositories.game_repository import GameRepository
 from app.clients.llm_client import LLMClient
 from app.models.database import Conversation, Message, GameState
 from app.services.game_tools import GameToolHandlers
-from app.config import get_settings
-from app.metrics import (
-    LLM_SESSIONS_TOTAL,
-    GAME_SESSION_DURATION_SECONDS,
-    GAME_VICTORIES_TOTAL,
-    GAME_RESTARTS_TOTAL,
-    GAME_DEATHS_TOTAL,
-)
 from app.utils.message_sanitizer import strip_internal_markers
 from app.utils.input_guard import evaluate_player_input
 
@@ -592,9 +584,6 @@ class ConversationService:
                 user_id=user_id,
                 title=self._generate_title(message),
             )
-            # Track new game session
-            settings = get_settings()
-            LLM_SESSIONS_TOTAL.labels(model=settings.model_name).inc()
 
         # App-enforced victory/game-over handling (hard stop).
         # This guarantees deterministic output and prevents the LLM from mutating state post-victory.
@@ -808,7 +797,6 @@ class ConversationService:
             return
         if npc_limit_result and npc_limit_result.kill_player:
             force_restart_after_stream = True
-            restart_reason = "death_npc"
             if npc_limit_result.note:
                 if state_summary:
                     state_summary = f"{state_summary}\n\nNPC OVERRIDE:\n{npc_limit_result.note}"
@@ -837,8 +825,6 @@ class ConversationService:
         
         # Track if restart was triggered during this request
         restart_triggered = False
-        # Track restart reason for analytics: "explicit", "death_grue", "death_npc"
-        restart_reason: str | None = None
 
         # Track location lookups for desync detection
         locations_looked_up = []
@@ -850,7 +836,7 @@ class ConversationService:
 
         for name, handler in base_handlers.items():
             async def wrapped_handler(input_data: dict, handler=handler, tool_name=name):
-                nonlocal restart_triggered, restart_reason
+                nonlocal restart_triggered
                 # Inject/Overwrite conversation_id if the tool expects it
                 # get_game_state, update_game_state, and restart_game all require it.
                 # get_location_data does not (it uses location_id).
@@ -862,17 +848,6 @@ class ConversationService:
                     loc_id = input_data.get("location_id")
                     if loc_id and loc_id != location_before:
                         locations_looked_up.append(loc_id)
-
-                # Detect restart reason before the handler resets state
-                if tool_name == "restart_game" and restart_reason is None:
-                    # Check if this is a grue death (player in darkness)
-                    pre_restart_state = await self.game_repo.get_state(conversation.id)
-                    if pre_restart_state:
-                        pre_flags = pre_restart_state.flags or {}
-                        if pre_flags.get("in_darkness"):
-                            restart_reason = "death_grue"
-                        else:
-                            restart_reason = "explicit"
 
                 result = await handler(input_data)
 
@@ -956,13 +931,6 @@ class ConversationService:
         if state_after and state_after.current_location == "victory":
             flags_after = state_after.flags or {}
             if not flags_after.get("game_over"):
-                # First-time victory - record metrics
-                GAME_VICTORIES_TOTAL.inc()
-                # Calculate session duration from game state creation
-                from datetime import datetime
-                if state_after.created_at:
-                    session_duration = (datetime.utcnow() - state_after.created_at).total_seconds()
-                    GAME_SESSION_DURATION_SECONDS.observe(session_duration)
                 state_after = await self.game_repo.update_state(
                     conversation.id,
                     {"flags": {"game_over": True}},
@@ -988,20 +956,6 @@ class ConversationService:
         # Location change
         if location_before != location_after:
             changes.append(f"{location_before} → {location_after}")
-
-            from datetime import datetime
-            from app.metrics import LOCATION_DWELL_SECONDS
-
-            # Record dwell time metric
-            if location_before and state and state.location_entered_at:
-                dwell_seconds = (datetime.utcnow() - state.location_entered_at).total_seconds()
-                LOCATION_DWELL_SECONDS.labels(location_id=location_before).observe(dwell_seconds)
-
-            # Update entry timestamp for new location
-            await self.game_repo.update_state(
-                conversation.id,
-                {"location_entered_at": datetime.utcnow()}
-            )
 
         # Inventory changes
         added = inventory_after - inventory_before
@@ -1048,24 +1002,6 @@ class ConversationService:
 
         # If restart was triggered, emit restart event after done
         if restart_triggered or force_restart_after_stream:
-            # Record session duration (use state captured before streaming)
-            from datetime import datetime
-            if state and state.created_at:
-                session_duration = (datetime.utcnow() - state.created_at).total_seconds()
-                GAME_SESSION_DURATION_SECONDS.observe(session_duration)
-
-            # Determine final restart reason
-            final_reason = restart_reason or "explicit"
-
-            # Increment restart counter
-            GAME_RESTARTS_TOTAL.labels(reason=final_reason).inc()
-
-            # Increment death counter for death cases
-            if final_reason == "death_grue":
-                GAME_DEATHS_TOTAL.labels(death_type="grue").inc()
-            elif final_reason == "death_npc":
-                GAME_DEATHS_TOTAL.labels(death_type="npc").inc()
-
             yield StreamEvent(
                 type="restart",
                 data={"conversation_id": conversation.id},

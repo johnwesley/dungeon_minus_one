@@ -83,10 +83,6 @@ class Settings(BaseSettings):
     # Debug logging (LLM)
     debug_llm: bool = False
 
-    # Billing / Admin
-    digitalocean_token: Optional[str] = None
-    anthropic_admin_api_key: Optional[str] = None
-
     model_config = ConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

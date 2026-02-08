@@ -8,17 +8,6 @@ import os
 from app.config import get_settings
 from prompts import load_prompt, NARRATOR_PROMPT
 from app.clients.tools import GAME_TOOLS
-from app.metrics import (
-    LLM_API_REQUESTS_TOTAL,
-    LLM_API_DURATION_SECONDS,
-    LLM_TOKENS_INPUT_TOTAL,
-    LLM_TOKENS_OUTPUT_TOTAL,
-    LLM_TOKENS_CACHE_READ_TOTAL,
-    LLM_TOKENS_CACHE_CREATION_TOTAL,
-    LLM_TOOL_CALLS_TOTAL,
-    LLM_ERRORS_TOTAL,
-    LLM_THINKING_REQUESTS_TOTAL,
-)
 
 # Debug flag - set DEBUG_LLM=true in .env to log detailed API payloads
 DEBUG_LLM = get_settings().debug_llm
@@ -138,19 +127,6 @@ class AnthropicClient(LLMClient):
             str(getattr(block, "type", "unknown"))
             for block in content
         ]
-
-    def _record_token_usage(self, usage: Any) -> None:
-        """Record token usage metrics from an API response."""
-        if not usage:
-            return
-        if hasattr(usage, "input_tokens") and usage.input_tokens:
-            LLM_TOKENS_INPUT_TOTAL.labels(model=self.model).inc(usage.input_tokens)
-        if hasattr(usage, "output_tokens") and usage.output_tokens:
-            LLM_TOKENS_OUTPUT_TOTAL.labels(model=self.model).inc(usage.output_tokens)
-        if hasattr(usage, "cache_read_input_tokens") and usage.cache_read_input_tokens:
-            LLM_TOKENS_CACHE_READ_TOTAL.labels(model=self.model).inc(usage.cache_read_input_tokens)
-        if hasattr(usage, "cache_creation_input_tokens") and usage.cache_creation_input_tokens:
-            LLM_TOKENS_CACHE_CREATION_TOTAL.labels(model=self.model).inc(usage.cache_creation_input_tokens)
 
     async def chat(
         self,
@@ -375,10 +351,6 @@ class AnthropicClient(LLMClient):
                 "working_messages_count": len(working_messages),
             })
 
-            # Track API request and timing
-            LLM_API_REQUESTS_TOTAL.labels(model=self.model, has_tools="true").inc()
-            iteration_start_time = time.time()
-
             # Track current content block type to filter thinking blocks
             current_block_type = None
 
@@ -421,19 +393,9 @@ class AnthropicClient(LLMClient):
                     # Get the complete message from the stream accumulator
                     final_message = await stream.get_final_message()
 
-                # Record latency and token usage
-                iteration_duration = time.time() - iteration_start_time
-                LLM_API_DURATION_SECONDS.labels(
-                    model=self.model,
-                    tool_loop_iteration=str(iteration),
-                ).observe(iteration_duration)
-                self._record_token_usage(getattr(final_message, "usage", None))
-
             except anthropic.APIError as e:
-                LLM_ERRORS_TOTAL.labels(model=self.model, error_type="api_error").inc()
                 raise
             except Exception as e:
-                LLM_ERRORS_TOTAL.labels(model=self.model, error_type="unknown").inc()
                 raise
 
             log_llm_debug({
@@ -444,10 +406,7 @@ class AnthropicClient(LLMClient):
                 "content_blocks": len(final_message.content),
             })
 
-            # Check for thinking blocks and record metric
             block_types = self._content_block_types(final_message.content)
-            if "thinking" in block_types:
-                LLM_THINKING_REQUESTS_TOTAL.labels(model=self.model).inc()
 
             if DEBUG_LLM:
                 log_llm_debug({
@@ -494,7 +453,6 @@ class AnthropicClient(LLMClient):
                 if tool_name in tool_handlers:
                     try:
                         result = await tool_handlers[tool_name](tool_input)
-                        LLM_TOOL_CALLS_TOTAL.labels(tool_name=tool_name, status="success").inc()
                         log_llm_debug({
                             "event": "tool_execution_success",
                             "timestamp": int(time.time() * 1000),
@@ -503,7 +461,6 @@ class AnthropicClient(LLMClient):
                         })
                     except Exception as e:
                         result = f"Error: {str(e)}"
-                        LLM_TOOL_CALLS_TOTAL.labels(tool_name=tool_name, status="error").inc()
                         log_llm_debug({
                             "event": "tool_execution_error",
                             "timestamp": int(time.time() * 1000),
@@ -519,7 +476,6 @@ class AnthropicClient(LLMClient):
                         continue
                 else:
                     result = f"Tool {tool_name} not implemented"
-                    LLM_TOOL_CALLS_TOTAL.labels(tool_name=tool_name, status="not_implemented").inc()
                     tool_results.append({
                         "type": "tool_result",
                         "tool_use_id": tool_id,

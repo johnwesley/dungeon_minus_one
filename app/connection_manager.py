@@ -2,8 +2,6 @@
 
 import asyncio
 
-from app.metrics import LLM_SESSION_ACTIVE
-
 
 class ConnectionManager:
     """Manages active SSE connections for graceful shutdown."""
@@ -16,12 +14,10 @@ class ConnectionManager:
     async def register(self, connection_id: str):
         async with self._lock:
             self.active_connections.add(connection_id)
-            LLM_SESSION_ACTIVE.inc()
 
     async def unregister(self, connection_id: str):
         async with self._lock:
             self.active_connections.discard(connection_id)
-            LLM_SESSION_ACTIVE.dec()
 
     def is_shutting_down(self) -> bool:
         return self.shutdown_event.is_set()
