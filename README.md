@@ -90,7 +90,7 @@ Then follow the **Deployment Flow** above.
 
 ```bash
 cp infra/.env.deploy.example infra/.env.deploy
-# Edit with DO_TOKEN, SPACES_ACCESS_KEY, SPACES_SECRET_KEY
+# Edit with DO_TOKEN, SPACES_ACCESS_KEY, SPACES_SECRET_KEY, DNSIMPLE_TOKEN, DNSIMPLE_ACCOUNT_ID
 ```
 
 ### 2. Provision Infrastructure
@@ -109,7 +109,7 @@ export KUBECONFIG=~/.kube/doks-dungeon
 2. Add secrets: `ANTHROPIC_API_KEY`, `AUTH_SECRET_KEY`, `DATABASE_URL`, etc.
 
 ```bash
-make k8s-setup-staging  # Installs Doppler operator, creates namespace + secrets
+make k8s-setup-staging  # Installs Doppler operator, namespace, secrets, manifests, DNS
 make k8s-setup-prod     # Creates namespace + secrets (operator already installed)
 ```
 
@@ -151,17 +151,17 @@ Staging is kept down when not in use. Bring it up for testing, tear it down when
 
 **Bring up:**
 ```bash
-make k8s-setup-staging
+make k8s-setup-staging    # Secrets + apply manifests + wait for LB + create DNS
 make k8s-deploy K8S_ENV=staging
 make k8s-seed K8S_ENV=staging
 ```
 
 **Tear down:**
 ```bash
-kubectl delete ns staging-dungeon
+make k8s-teardown-staging  # Delete DNS + delete namespace
 ```
 
-The setup target is idempotent — it creates the namespace, Doppler service token, and registry pull secret. The Doppler operator syncs app secrets automatically once the token is in place.
+The setup target is idempotent — it creates the namespace, Doppler service token, registry pull secret, applies k8s manifests, waits for the Load Balancer IP, and creates the `staging.dungeonminusone.com` DNS A record via DNSimple. Use `make k8s-dns-upsert` to re-sync DNS if the LB IP changes.
 
 ## Production Lifecycle
 
