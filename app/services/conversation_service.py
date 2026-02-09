@@ -1,8 +1,11 @@
 from typing import AsyncIterator, Optional
 from dataclasses import dataclass
+from datetime import datetime
 import os
 import json
 import time
+
+from app.metrics import LOCATION_ENTRIES, LOCATION_DWELL_SECONDS, VICTORIES
 from app.repositories.conversation_repository import ConversationRepository
 
 # Debug flag for state injection logging
@@ -592,6 +595,7 @@ class ConversationService:
 
         # Capture state BEFORE streaming for diff generation
         location_before = state.current_location if state else None
+        location_entered_at_before = state.location_entered_at if state else None
         inventory_before = set(i['id'] for i in (state.inventory or []) if isinstance(i, dict) and 'id' in i) if state else set()
 
         # Inject current game state into system prompt for context refreshment
@@ -931,6 +935,7 @@ class ConversationService:
         if state_after and state_after.current_location == "victory":
             flags_after = state_after.flags or {}
             if not flags_after.get("game_over"):
+                VICTORIES.inc()
                 state_after = await self.game_repo.update_state(
                     conversation.id,
                     {"flags": {"game_over": True}},
@@ -956,6 +961,12 @@ class ConversationService:
         # Location change
         if location_before != location_after:
             changes.append(f"{location_before} → {location_after}")
+            if location_after:
+                LOCATION_ENTRIES.labels(location=location_after).inc()
+            if location_before and location_entered_at_before:
+                dwell = (datetime.utcnow() - location_entered_at_before).total_seconds()
+                if dwell >= 0:
+                    LOCATION_DWELL_SECONDS.labels(location=location_before).observe(dwell)
 
         # Inventory changes
         added = inventory_after - inventory_before

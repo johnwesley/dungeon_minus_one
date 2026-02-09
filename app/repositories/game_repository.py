@@ -62,6 +62,8 @@ class GameRepository:
         if not state:
             return None
 
+        previous_location = state.current_location
+
         # Update allowed fields
         allowed_fields = {
             "current_location",
@@ -83,6 +85,10 @@ class GameRepository:
                     setattr(state, field, existing_flags)
                 else:
                     setattr(state, field, value)
+
+        # Auto-update location_entered_at when current_location changes
+        if "current_location" in changes and changes["current_location"] != previous_location:
+            state.location_entered_at = datetime.utcnow()
 
         await self.session.flush()
         return state
