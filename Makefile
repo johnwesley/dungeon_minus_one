@@ -270,8 +270,8 @@ _k8s-setup-env:  ## Internal: setup namespace, doppler token, and registry secre
 			| kubectl apply -n $(K8S_NAMESPACE) -f -; \
 	else \
 		echo "    Creating new Doppler service token ($(DOPPLER_CONFIG))..."; \
-		TOKEN=$$(doppler configs tokens create $(DOPPLER_CONFIG) \
-			--project $(DOPPLER_PROJECT) \
+		TOKEN=$$(doppler configs tokens create \
+			--project $(DOPPLER_PROJECT) --config $(DOPPLER_CONFIG) \
 			--name $(DOPPLER_TOKEN_NAME) \
 			--max-age 0 --plain) || \
 			{ echo "ERROR: Failed to create Doppler token."; exit 1; }; \
@@ -285,10 +285,11 @@ _k8s-setup-env:  ## Internal: setup namespace, doppler token, and registry secre
 		echo "    registry-dungeon-minus-one already exists, skipping"; \
 	else \
 		DOCKER_CONFIG=$$(doppler secrets get REGISTRY_DOCKER_CONFIG_B64 \
-			--project $(DOPPLER_PROJECT) --config $(DOPPLER_CONFIG) --plain); \
-		kubectl create secret docker-registry registry-dungeon-minus-one \
+			--project $(DOPPLER_PROJECT) --config $(DOPPLER_CONFIG) --plain | base64 -d); \
+		kubectl create secret generic registry-dungeon-minus-one \
 			-n $(K8S_NAMESPACE) \
-			--from-file=.dockerconfigjson=<(echo "$$DOCKER_CONFIG" | base64 -d); \
+			--type=kubernetes.io/dockerconfigjson \
+			--from-literal=.dockerconfigjson="$$DOCKER_CONFIG"; \
 	fi
 	@echo ""
 	@echo "==> $(K8S_ENV) setup complete. Deploy with: make k8s-deploy K8S_ENV=$(K8S_ENV)"
