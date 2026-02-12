@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite auth-reset frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup-staging k8s-setup-prod k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-db-migrate k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-auth-reset k8s-create-admin k8s-notify k8s-dns-upsert k8s-dns-delete k8s-teardown-staging test
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite auth-reset frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup-staging k8s-setup-prod k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-db-migrate k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-auth-reset k8s-create-admin k8s-notify k8s-dns-upsert k8s-dns-delete k8s-teardown-staging k8s-monitoring test
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -399,6 +399,9 @@ k8s-dns-upsert:  ## Create/update staging DNS A record from current LB IP
 k8s-dns-delete:  ## Delete staging DNS A record
 	@set -a; [ -f $(DEPLOY_ENV) ] && . ./$(DEPLOY_ENV); set +a; \
 	$(PYTHON) scripts/manage_dns.py delete
+
+k8s-monitoring:  ## Apply monitoring manifests (dashboards, PodMonitor)
+	kubectl apply -k k8s/monitoring/ -n monitoring
 
 k8s-teardown-staging:  ## Tear down staging environment (DNS + namespace)
 	@echo "==> Deleting staging DNS record..."
