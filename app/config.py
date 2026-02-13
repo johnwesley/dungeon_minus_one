@@ -10,10 +10,9 @@ class Settings(BaseSettings):
     environment: str = "dev"
     anthropic_api_key: str
     database_url: str = "postgresql+asyncpg://dungeon:password@localhost:5432/dungeon"
-    model_name: str = "claude-sonnet-4-5-20250929"
+    model_name: str = "claude-opus-4-6"
     llm_max_tokens: int = 16000
-    thinking_enabled: bool = True
-    thinking_budget_tokens: int = 10000
+    thinking_effort: str = "max"
 
     # Default tenant/user for single-tenant POC
     default_tenant_id: str = "default"

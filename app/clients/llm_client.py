@@ -82,11 +82,7 @@ class AnthropicClient(LLMClient):
         )
         self.model = model or settings.model_name
         self.max_tokens = settings.llm_max_tokens
-        self.thinking_enabled = settings.thinking_enabled
-        self.thinking_budget_tokens = settings.thinking_budget_tokens
-        if self.thinking_enabled and self.thinking_budget_tokens >= self.max_tokens:
-            # Keep budget below max_tokens to satisfy API constraints.
-            self.thinking_budget_tokens = max(1, self.max_tokens - 1)
+        self.thinking_effort = settings.thinking_effort
         
         # Load prompts and combine them
         narrator_prompt = load_prompt(NARRATOR_PROMPT)
@@ -105,14 +101,17 @@ class AnthropicClient(LLMClient):
             }
         ]
 
-    def _thinking_param(self) -> Optional[dict[str, int | str]]:
-        """Build the thinking parameter when enabled."""
-        if not self.thinking_enabled:
+    def _thinking_param(self) -> Optional[dict[str, str]]:
+        """Build the thinking parameter for adaptive thinking."""
+        if not self.thinking_effort:
             return None
-        return {
-            "type": "enabled",
-            "budget_tokens": self.thinking_budget_tokens,
-        }
+        return {"type": "adaptive"}
+
+    def _output_config(self) -> Optional[dict[str, str]]:
+        """Build the output_config parameter with effort level."""
+        if not self.thinking_effort:
+            return None
+        return {"effort": self.thinking_effort}
 
     def _extract_text(self, content: list[Any]) -> str:
         """Return the first text block from a Claude response."""
@@ -143,6 +142,9 @@ class AnthropicClient(LLMClient):
         thinking = self._thinking_param()
         if thinking:
             params["thinking"] = thinking
+        output_config = self._output_config()
+        if output_config:
+            params["output_config"] = output_config
 
         response = await self.client.messages.create(**params)
         if DEBUG_LLM:
@@ -154,6 +156,8 @@ class AnthropicClient(LLMClient):
                 "block_types": block_types,
                 "thinking_present": "thinking" in block_types,
             })
+        if response.stop_reason == "refusal":
+            return "I'm unable to respond to that request. Please try something else."
         return self._extract_text(response.content)
 
     async def chat_stream(
@@ -175,6 +179,9 @@ class AnthropicClient(LLMClient):
         thinking = self._thinking_param()
         if thinking:
             params["thinking"] = thinking
+        output_config = self._output_config()
+        if output_config:
+            params["output_config"] = output_config
 
         # Track current block type to filter thinking content
         current_block_type = None
@@ -229,6 +236,9 @@ class AnthropicClient(LLMClient):
         thinking = self._thinking_param()
         if thinking:
             params["thinking"] = thinking
+        output_config = self._output_config()
+        if output_config:
+            params["output_config"] = output_config
 
         response = await self.client.messages.create(**params)
 
@@ -291,6 +301,8 @@ class AnthropicClient(LLMClient):
                 "block_types": block_types,
                 "thinking_present": "thinking" in block_types,
             })
+        if response.stop_reason == "refusal":
+            return "I'm unable to respond to that request. Please try something else."
         return self._extract_text(response.content)
 
     async def chat_stream_with_tools(
@@ -341,6 +353,9 @@ class AnthropicClient(LLMClient):
         thinking = self._thinking_param()
         if thinking:
             base_params["thinking"] = thinking
+        output_config = self._output_config()
+        if output_config:
+            base_params["output_config"] = output_config
 
         while True:
             iteration += 1
@@ -428,6 +443,8 @@ class AnthropicClient(LLMClient):
                     "iterations": iteration,
                     "final_stop_reason": final_message.stop_reason,
                 })
+                if final_message.stop_reason == "refusal":
+                    yield {"type": "text", "content": "I'm unable to respond to that request. Please try something else."}
                 break
 
             # Extract tool uses
