@@ -64,15 +64,10 @@ async def run_verification():
         user = result.scalar_one_or_none()
         
         if not user:
-            print(f"User '{target_username}' not found. Falling back to first available user.")
-            result = await session.execute(select(User).limit(1))
-            user = result.scalar_one_or_none()
-            
-        if not user:
-            print("No users found in database. Creating test user...")
+            print(f"User '{target_username}' not found. Creating dedicated test user...")
             user = User(
                 id=str(uuid.uuid4()),
-                username="test_runner",
+                username=target_username,
                 hashed_password="dummy_password_hash",
                 is_active=True
             )
