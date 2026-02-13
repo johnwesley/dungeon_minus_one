@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite auth-reset frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup-staging k8s-setup-prod k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-db-migrate k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-auth-reset k8s-create-admin k8s-notify k8s-dns-upsert k8s-dns-delete k8s-teardown-staging k8s-monitoring test
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite auth-reset frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup-staging k8s-setup-prod k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-db-migrate k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-auth-reset k8s-create-admin k8s-notify k8s-test-unit k8s-verify-movement k8s-test k8s-dns-upsert k8s-dns-delete k8s-teardown-staging k8s-monitoring test
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -375,6 +375,26 @@ k8s-create-admin:  ## Create admin user (K8S_ENV=staging|prod, USERNAME="admin" 
 
 k8s-notify:  ## Create notification (K8S_ENV=staging|prod, TITLE="title" MSG="message")
 	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python scripts/create_notification.py "$(TITLE)" "$(MSG)" $(if $(TTL),--ttl $(TTL),) $(if $(TYPE),--type $(TYPE),)
+
+# --- Staging/Prod Tests ---
+
+k8s-test-unit:  ## Run pytest unit tests in staging/prod pod (K8S_ENV=staging|prod)
+	kubectl exec -it $$(kubectl get pod -n $(K8S_NAMESPACE) -l app=dungeon-app -o jsonpath='{.items[0].metadata.name}') -n $(K8S_NAMESPACE) -- python -m pytest app/tests -v
+
+k8s-verify-movement:  ## Run 288-step movement verification as K8s Job (staging only)
+	@echo "==> Cleaning up previous test-movement job (if any)..."
+	kubectl delete job test-movement -n staging-dungeon --ignore-not-found
+	@IMAGE_TAG=$$(grep 'newTag:' k8s/base/kustomization.yaml | awk '{print $$2}'); \
+	echo "==> Launching movement verification job (image tag: $$IMAGE_TAG)..."; \
+	sed "s|IMAGE_TAG|$$IMAGE_TAG|" k8s/staging/test-movement-job.yaml | kubectl apply -f -; \
+	echo "==> Waiting for test pod to start..."; \
+	kubectl wait --for=condition=ready pod -l app=dungeon-app-test -n staging-dungeon --timeout=120s 2>/dev/null || true; \
+	echo "==> Streaming logs (Ctrl+C to detach; job keeps running)..."; \
+	kubectl logs -f job/test-movement -n staging-dungeon
+
+k8s-test:  ## Run all tests in staging (unit + movement)
+	$(MAKE) k8s-test-unit K8S_ENV=staging
+	$(MAKE) k8s-verify-movement
 
 # --- DNS ---
 
