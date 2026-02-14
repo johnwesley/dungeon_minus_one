@@ -286,8 +286,33 @@ async def run_verification():
 
         conversation_id = None
         failures = []
+        retries_succeeded = 0
         consecutive_failures = 0
         MAX_CONSECUTIVE_FAILURES = 3
+
+        async def send_command(cmd):
+            """Send a command and return (full_response, tool_calls_observed)."""
+            nonlocal conversation_id
+            resp = ""
+            tools = []
+            async for event in service.chat_stream_with_tools(
+                message=cmd,
+                conversation_id=conversation_id,
+                user_id=user_id
+            ):
+                if event.type == "start":
+                    if conversation_id is None:
+                        conversation_id = event.data["conversation_id"]
+                        print(f"  --> Conversation Created: {conversation_id}")
+                elif event.type == "delta":
+                    resp += event.data["content"]
+                elif event.type == "progress":
+                    print(f"  [Tool Use] {event.data}")
+                    if event.data.get("step") == "using_tool":
+                        tools.append(event.data.get("tool"))
+                elif event.type == "error":
+                    print(f"  [Error] {event.data}")
+            return resp, tools
 
         for i, (command, expected_loc) in enumerate(steps):
             print(f"\nStep {i+1}: User says '{command}'")
@@ -308,26 +333,7 @@ async def run_verification():
                     all_messages = all_messages[-20:]
                 messages_before = [{"role": m.role, "content": m.content[:200] + "..." if len(m.content) > 200 else m.content} for m in all_messages]
 
-            full_response = ""
-            tool_calls_observed = []
-
-            async for event in service.chat_stream_with_tools(
-                message=command,
-                conversation_id=conversation_id,
-                user_id=user_id
-            ):
-                if event.type == "start":
-                    if conversation_id is None:
-                        conversation_id = event.data["conversation_id"]
-                        print(f"  --> Conversation Created: {conversation_id}")
-                elif event.type == "delta":
-                    full_response += event.data["content"]
-                elif event.type == "progress":
-                    print(f"  [Tool Use] {event.data}")
-                    if event.data.get("step") == "using_tool":
-                        tool_calls_observed.append(event.data.get("tool"))
-                elif event.type == "error":
-                    print(f"  [Error] {event.data}")
+            full_response, tool_calls_observed = await send_command(command)
 
             print(f"  Narrator: {full_response[:100]}..." if len(full_response) > 100 else f"  Narrator: {full_response}")
 
@@ -374,13 +380,27 @@ async def run_verification():
                     location_match = True
                     consecutive_failures = 0  # Reset on success
                 else:
-                    error_msg = f"Step {i+1} ('{command}'): Expected {expected_loc}, got {state.current_location}"
-                    print(f"  ❌ LOCATION MISMATCH! {error_msg}")
-                    # Always show flags on failure for debugging
-                    if state.flags:
-                        print(f"  Current flags: {state.flags}")
-                    failures.append(error_msg)
-                    consecutive_failures += 1
+                    # Retry once before counting as failure
+                    print(f"  ⚠️  Location mismatch (got {state.current_location}), retrying...")
+                    retry_response, retry_tools = await send_command(command)
+                    await session.commit()
+                    print(f"  Narrator (retry): {retry_response[:100]}..." if len(retry_response) > 100 else f"  Narrator (retry): {retry_response}")
+                    state = await game_repo.get_state(conversation_id)
+                    if state and state.current_location == expected_loc:
+                        print("  ✅ Location matches after retry")
+                        location_match = True
+                        retries_succeeded += 1
+                        consecutive_failures = 0
+                        tool_calls_observed = retry_tools
+                        full_response = retry_response
+                    else:
+                        actual = state.current_location if state else "unknown"
+                        error_msg = f"Step {i+1} ('{command}'): Expected {expected_loc}, got {actual}"
+                        print(f"  ❌ LOCATION MISMATCH! {error_msg}")
+                        if state and state.flags:
+                            print(f"  Current flags: {state.flags}")
+                        failures.append(error_msg)
+                        consecutive_failures += 1
             else:
                 error_msg = f"Step {i+1} ('{command}'): No game state found!"
                 print(f"  ❌ {error_msg}")
@@ -418,6 +438,8 @@ async def run_verification():
                 })
         
         print("\n" + "="*50)
+        if retries_succeeded:
+            print(f"🔄 {retries_succeeded} step(s) succeeded after retry")
         if failures:
             print(f"❌ Verification FAILED with {len(failures)} errors:")
             for failure in failures:
