@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import secrets
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
@@ -23,6 +24,14 @@ class SessionService:
     def _hash_token(token: str) -> str:
         return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
+    def compute_csrf_token(self, session_id: str) -> str:
+        """Derive a stable CSRF token from the session ID via HMAC."""
+        return hmac.new(
+            self.settings.auth_secret_key.encode(),
+            session_id.encode(),
+            hashlib.sha256,
+        ).hexdigest()
+
     async def create_session(
         self,
         user_id: str,
@@ -31,7 +40,7 @@ class SessionService:
     ) -> Tuple[str, str, UserSession]:
         now = datetime.utcnow()
         session_id = secrets.token_urlsafe(32)
-        csrf_token = secrets.token_urlsafe(32)
+        csrf_token = self.compute_csrf_token(session_id)
         expires_at = None
 
         if self.settings.session_absolute_ttl_days:
@@ -98,17 +107,8 @@ class SessionService:
     def verify_csrf(self, session: UserSession, csrf_token: str) -> bool:
         if not csrf_token:
             return False
-        return session.csrf_token_hash == self._hash_token(csrf_token)
-
-    async def rotate_csrf_token(self, session_id: str) -> str:
-        new_token = secrets.token_urlsafe(32)
-        new_hash = self._hash_token(new_token)
-        await self.db.execute(
-            update(UserSession)
-            .where(UserSession.id == session_id)
-            .values(csrf_token_hash=new_hash)
-        )
-        return new_token
+        expected = self.compute_csrf_token(session.id)
+        return hmac.compare_digest(expected, csrf_token)
 
     async def get_session(self, session_id: str) -> Optional[UserSession]:
         return await self.db.get(UserSession, session_id)

@@ -268,7 +268,7 @@ async def session_info(request: Request, response: Response, db: AsyncSession = 
         return AuthSessionResponse(authenticated=False)
 
     await _enforce_user_status(user, session_id, session_service, response)
-    csrf_token = await session_service.rotate_csrf_token(session_id)
+    csrf_token = session_service.compute_csrf_token(session_id)
 
     return AuthSessionResponse(
         authenticated=True,
@@ -294,7 +294,7 @@ async def csrf_token(request: Request, response: Response, db: AsyncSession = De
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
 
     await _enforce_user_status(user, session_id, session_service, response)
-    csrf_token = await session_service.rotate_csrf_token(session_id)
+    csrf_token = session_service.compute_csrf_token(session_id)
     return {"csrf_token": csrf_token}
 
 
