@@ -98,8 +98,20 @@ export async function fetchWithAuth(url, options = {}) {
   }
 
   if (response.status === 403 && isUnsafeMethod(options.method)) {
-    // Attempt to refresh CSRF token once
+    // CSRF token is stale — refresh and retry once
     await refreshCsrfToken();
+    const retryHeaders = {
+      ...options.headers,
+    };
+    const newCsrfToken = getCsrfToken();
+    if (newCsrfToken) {
+      retryHeaders['X-CSRF-Token'] = newCsrfToken;
+    }
+    return fetch(url, {
+      ...options,
+      headers: retryHeaders,
+      credentials: 'same-origin',
+    });
   }
 
   return response;

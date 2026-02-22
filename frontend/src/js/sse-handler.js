@@ -1,6 +1,6 @@
 // SSE Handler for Chat Streaming with Reconnection Support
 
-import { getCsrfToken, clearSession } from './auth.js';
+import { getCsrfToken, clearSession, refreshCsrfToken } from './auth.js';
 
 // Retry configuration
 const RETRY_CONFIG = {
@@ -85,6 +85,12 @@ export class SSEHandler {
           clearSession();
           window.location.href = '/login.html';
           throw new Error('Session expired');
+        }
+
+        if (response.status === 403) {
+          // CSRF token is stale (e.g. rotated by another tab) — refresh before retry
+          await refreshCsrfToken();
+          throw new Error('CSRF token refreshed, retrying');
         }
 
         if (!response.ok) {
