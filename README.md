@@ -1,6 +1,30 @@
 # Dungeon Minus One
 
-A conversational text-adventure game powered by Claude.
+A text-adventure game narrated by Claude. Explore an underground facility, recover forgotten treasures, and try not to get eaten by a grue.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink)](https://github.com/sponsors/johnwesley)
+
+**[Play Now at dungeonminusone.com](https://dungeonminusone.com)**
+
+## The Game
+
+The game is live and playable right now. You type commands, Claude narrates what happens — with a blunt, mildly cynical voice that guides you through a forgotten underground facility. The UI is a retro CRT terminal with phosphor green text, scanline effects, and a three-panel layout: game chat in the center, location and inventory on the right, controls on the left.
+
+The premise: an underground facility was built to preserve cultural artifacts indefinitely, but funding vanished and its original purpose was forgotten. You're not a hero — you're just present. Your task is to explore below, recover items of residual value, and deposit them in the trophy case in the house above.
+
+The world is based on the classic Zork map — 72 locations, 13 treasures, NPCs, locks, a dam, dark rooms, and a grue — so development could focus on the mechanics of an AI-narrated game rather than world building. There are NPCs who guard passages, locks that need keys, a dam that controls water levels, dark rooms where a grue waits, and a narrator who understands every parser command you throw at it.
+
+## Quick Start
+
+```bash
+git clone https://github.com/johnwesley/dungeon_minus_one.git
+cd dungeon_minus_one
+make setup
+make db-up
+cp .env.example .env  # Add your ANTHROPIC_API_KEY
+make dev-full          # http://localhost:5173
+```
 
 ## Architecture
 
@@ -18,252 +42,70 @@ A conversational text-adventure game powered by Claude.
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Quick Start (Local)
+- **Backend**: FastAPI with streaming SSE responses, SQLAlchemy + Alembic, Postgres
+- **Frontend**: Vite + HTMX with a CRT terminal aesthetic
+- **AI**: Anthropic Claude with tool use for game state management
+- **Infrastructure**: DigitalOcean Kubernetes (DOKS), Doppler secrets, Prometheus + Grafana
+- **Observability**: Per-location dwell time tracking, victory counts, API latency percentiles, active session gauges, and a Grafana dashboard
 
-```bash
-make setup
-make db-up
-cp .env.example .env  # Add ANTHROPIC_API_KEY
-make dev-full
+For detailed architecture docs, see [app/CLAUDE.md](app/CLAUDE.md) and [k8s/CLAUDE.md](k8s/CLAUDE.md).
+
+## Game Features
+
+- **72 interconnected locations** with rich descriptions and interactable elements
+- **13 collectible treasures** to find and deposit in the trophy case
+- **Darkness and grue** — ~22 underground locations require a light source or you die
+- **NPC guards** that block passages until you defeat, persuade, or distract them
+- **Locks and keys** — grating, dam controls, and environmental puzzles
+- **Environmental mechanics** — water levels, gas room hazards, written materials to read
+- **Skills system** — 10 modular game mechanics loaded as prompt instructions at runtime
+- **Tool use** — Claude manages game state through structured tool calls, not free-form text
+- **Observability** — Prometheus metrics track location entries, dwell time per location, victories, API latency, and active sessions; Grafana dashboard included
+
+## Project Structure
+
+```
+app/               # Python backend (FastAPI, services, repositories)
+frontend/          # Vite + HTMX frontend
+prompts/           # System prompt markdown files
+skills/            # Game mechanic skill files
+data/locations/    # Location fixture JSON files (72 files)
+k8s/               # Kubernetes manifests (staging + prod)
+infra/             # OpenTofu infrastructure
+scripts/           # Utility scripts
+alembic/           # Database migrations
 ```
 
-Access at `http://localhost:5173`. Runs backend + frontend with hot reload.
-
----
-
-## Deployment
-
-### Deployment Flow
-
-This is the single source of truth for keeping the app and DB in sync with `data/`:
-
-1. Build and push a unique image tag (GitHub Actions or manual release).
-2. Deploy the new image: `make k8s-deploy TAG=vX.Y.Z` (rollout + `k8s-db-migrate`).
-3. Sync location fixtures: `make k8s-seed`.
-4. If you removed locations from `data/locations`, run `make k8s-seed-prune` (destructive to stale locations and may reset affected game states).
-5. Smoke test (e.g., read the leaflet or move between rooms).
-
-### GitHub Actions (Recommended)
-
-Trigger from GitHub UI: **Actions → Build and Push Docker Image → Run workflow**
-
-| Input | Description |
-|-------|-------------|
-| `tag` | Version tag (e.g., `v0.9.2`) |
-| `asset_env` | `staging` or `prod` (selects CDN domain) |
-
-After the workflow completes, follow the **Deployment Flow** above.
-
-### Environments
-
-| Environment | Namespace | Doppler Config | Domain |
-|-------------|-----------|----------------|--------|
-| Staging | `staging-dungeon` | `stg` | `staging.dungeonminusone.com` |
-| Production | `prod-dungeon` | `prd` | `dungeonminusone.com` |
-
-All k8s commands accept `K8S_ENV=staging` (default) or `K8S_ENV=prod`.
-
-### Manual Deployment (Alternative)
-
-Requires `infra/.env.deploy` with Spaces credentials:
-
-```bash
-make release-staging TAG=v0.9.2
-make release-prod TAG=v0.9.2
-```
-
-Then follow the **Deployment Flow** above.
-
----
-
-## Infrastructure Setup (One-Time)
-
-### Prerequisites
-
-- [OpenTofu](https://opentofu.org/) installed
-- [kubectl](https://kubernetes.io/docs/tasks/tools/) installed
-- [Helm](https://helm.sh/) installed
-- DigitalOcean API token
-- SSL certificate uploaded to DO (name: `dungeon-cert`)
-
-### 1. Create Environment File
-
-```bash
-cp infra/.env.deploy.example infra/.env.deploy
-# Edit with DO_TOKEN, SPACES_ACCESS_KEY, SPACES_SECRET_KEY, DNSIMPLE_TOKEN, DNSIMPLE_ACCOUNT_ID
-```
-
-### 2. Provision Infrastructure
-
-```bash
-make infra-init
-make infra-plan
-make infra-apply
-make k8s-kubeconfig
-export KUBECONFIG=~/.kube/doks-dungeon
-```
-
-### 3. Setup Doppler (Secrets)
-
-1. Create Doppler project `dungeon-minus-one` with configs `stg` and `prd`
-2. Add secrets: `ANTHROPIC_API_KEY`, `AUTH_SECRET_KEY`, `DATABASE_URL`, etc.
-
-```bash
-make k8s-setup-staging  # Installs Doppler operator, namespace, secrets, manifests, DNS
-make k8s-setup-prod     # Creates namespace + secrets (operator already installed)
-```
-
-### 4. Setup CDN Assets
-
-1. Create Space: `dungeon-minus-one-assets` in `nyc3`, enable CDN
-2. Add CDN domains:
-   - `assets-staging.dungeonminusone.com`
-   - `assets.dungeonminusone.com`
-3. Configure CORS for your app domains
-4. Add GitHub secrets: `SPACES_ACCESS_KEY`, `SPACES_SECRET_KEY`, `DIGITALOCEAN_ACCESS_TOKEN`
-
----
-
-## Cluster Management
-
-All commands default to staging. Add `K8S_ENV=prod` for production.
-
-| Command | Description |
-|---------|-------------|
-| `make k8s-status` | Show pods, services, secrets |
-| `make k8s-logs` | Stream pod logs |
-| `make k8s-restart` | Rolling restart deployment |
-| `make k8s-rollback` | Rollback to previous revision |
-| `make k8s-shell` | Open shell in running pod |
-
-## Application Management
-
-| Command | Description |
-|---------|-------------|
-| `make k8s-invite` | Generate invite code |
-| `make k8s-seed` | Sync location fixtures |
-| `make k8s-reset` | Reset game sessions |
-| `make k8s-notify TITLE="..." MSG="..."` | Create notification |
-
-## Staging Lifecycle
-
-Staging is kept down when not in use. Bring it up for testing, tear it down when done.
-
-**Bring up:**
-```bash
-make k8s-setup-staging    # Secrets + apply manifests + wait for LB + create DNS
-make k8s-deploy K8S_ENV=staging
-make k8s-seed K8S_ENV=staging
-```
-
-**Tear down:**
-```bash
-make k8s-teardown-staging  # Delete DNS + delete namespace
-```
-
-The setup target is idempotent — it creates the namespace, Doppler service token, registry pull secret, applies k8s manifests, waits for the Load Balancer IP, and creates the `staging.dungeonminusone.com` DNS A record via DNSimple. Use `make k8s-dns-upsert` to re-sync DNS if the LB IP changes.
-
-## Production Lifecycle
-
-Production stays up. Deployments go through GitHub Actions.
-
-**Deploy a new version:**
-1. Trigger workflow: **Actions → Build and Push Docker Image** with `tag` and `asset_env=prod`
-2. After build completes:
-   ```bash
-   make k8s-deploy K8S_ENV=prod
-   make k8s-seed K8S_ENV=prod        # if location data changed
-   ```
-
-**Rollback:**
-```bash
-make k8s-rollback K8S_ENV=prod
-```
-
-**First-time setup** (already done, for reference):
-```bash
-make k8s-setup-prod
-make k8s-deploy K8S_ENV=prod
-make k8s-seed K8S_ENV=prod
-make k8s-create-admin K8S_ENV=prod USERNAME="admin" PASSWORD="..." EMAIL="..."
-```
-
-## Admin Pages
-
-| URL | Description |
-|-----|-------------|
-| `/admin/invites` | Manage invite requests (approve/reject) |
-
-## Local Commands
+## Useful Commands
 
 | Command | Description |
 |---------|-------------|
 | `make dev-full` | Start backend + frontend with hot reload |
+| `make setup` | Create venv and install dependencies |
+| `make db-up` / `make db-down` | Start / stop local Postgres |
+| `make db-migrate` | Run database migrations |
 | `make reset` | Clear game state (keep locations) |
-| `make hard-reset` | Wipe DB and re-seed |
-| `make invite` | Generate invite code |
+| `make hard-reset` | Wipe DB and re-seed locations |
+| `make sync-locations` | Sync location fixtures from `data/locations/` |
 | `make verify-movement` | Run movement regression test |
+| `make invite` | Generate an invite code |
+| `make frontend-build` | Build frontend for production |
 | `make validate-config` | Validate configuration |
 
----
+See [CLAUDE.md](CLAUDE.md) for the full command reference.
 
-## Debug Logging
+## Deployment
 
-| Variable | Description |
-|----------|-------------|
-| `DEBUG_LLM=true` | LLM context logging → `.cursor/llm_debug.log` |
-| `DEBUG_GAME_TOOLS=true` | Tool handler logging → `.cursor/debug.log` |
-| `DEBUG_SERVICE=true` | Service logging → `.cursor/service_debug.log` |
+Production runs on DigitalOcean Kubernetes with Doppler for secrets management. The staging environment is optional — it's used for testing deploys before production but isn't required for local development or contributing. See [k8s/CLAUDE.md](k8s/CLAUDE.md) for deployment workflows, manifest structure, and infrastructure setup.
 
----
+## Contributing
 
-## Observability
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions and guidelines.
 
-The application includes Prometheus metrics and a Grafana dashboard deployed via kube-prometheus-stack.
+## Sponsors
 
-### Access Grafana
+If you enjoy the game, consider [sponsoring the project](https://github.com/sponsors/johnwesley).
 
-```bash
-kubectl port-forward -n monitoring svc/prometheus-grafana 3000:80
-```
+## License
 
-Open `http://localhost:3000` (credentials: `admin` / `prom-operator`)
-
-Dashboard: **Dungeon Minus One - LLM Metrics**
-
-### Metrics Reference
-
-| Metric | Type | Description |
-|--------|------|-------------|
-| `llm_sessions_total` | Counter | Total game sessions started |
-| `llm_session_active` | Gauge | Currently active SSE connections (mid-conversation) |
-| `llm_api_requests_total` | Counter | Total Anthropic API calls |
-| `llm_api_duration_seconds` | Histogram | API call latency (P50/P95/P99) |
-| `llm_tokens_input_total` | Counter | Input tokens consumed (cost driver) |
-| `llm_tokens_output_total` | Counter | Output tokens generated |
-| `llm_tokens_cache_read_total` | Counter | Tokens served from prompt cache (savings) |
-| `llm_tool_calls_total` | Counter | Tool executions by name and status |
-| `llm_errors_total` | Counter | API errors by type |
-| `llm_thinking_requests_total` | Counter | Requests using extended thinking |
-
-### Dashboard Panels
-
-| Panel | What It Shows |
-|-------|---------------|
-| **API Latency (P50/P95/P99)** | Response time distribution - high P95 = slow |
-| **Request Rate** | API calls per minute |
-| **Error Rate %** | Failures as percentage of requests |
-| **Active Sessions** | Players currently mid-conversation |
-| **Token Usage** | Input/output/cache tokens per minute |
-| **Tool Calls by Status** | Game tool success/failure rates |
-| **Total Registered Players** | All-time registered users (from PostgreSQL) |
-| **Active Last 24h** | Unique players with activity in last 24 hours |
-| **Thinking Usage** | Extended thinking feature usage over time |
-
-### Interpreting the Data
-
-**"Is the dungeon scary, or just slow and broken?"**
-
-- **Slow** = High P95 latency in API Latency panel
-- **Broken** = High Error Rate % or red bars in Tool Calls
-- **Scary** = Low latency + low errors (working as intended)
+[MIT](LICENSE)
