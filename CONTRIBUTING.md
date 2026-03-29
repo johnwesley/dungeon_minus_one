@@ -35,7 +35,7 @@ Access at `http://localhost:5173`.
 
 - Follow existing patterns in the codebase
 - Keep changes focused — one concern per PR
-- See `CLAUDE.md` and `app/CLAUDE.md` for architecture details
+- See `docs/auth.md` for authentication architecture
 
 ## Code of Conduct
 

@@ -8,7 +8,6 @@ assignees: ''
 
 ## Environment
 
-- [ ] Hosted (dungeonminusone.com)
 - [ ] Self-hosted (describe your setup)
 
 ## Description

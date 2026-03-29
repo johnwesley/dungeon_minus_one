@@ -30,25 +30,15 @@ make dev-full          # http://localhost:5173
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Local Development                                          │
 │  Browser ↔ FastAPI :8000 ↔ Postgres                         │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│  Production (DOKS)                                          │
-│  Browser → DO Load Balancer :443 → App Pods → Postgres      │
-│                                        ↓                    │
-│                          Anthropic API (Claude)             │
+│                 ↓                                           │
+│           Anthropic API (Claude)                            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 - **Backend**: FastAPI with streaming SSE responses, SQLAlchemy + Alembic, Postgres
 - **Frontend**: Vite + HTMX with a CRT terminal aesthetic
 - **AI**: Anthropic Claude with tool use for game state management
-- **Infrastructure**: DigitalOcean Kubernetes (DOKS), Doppler secrets, Prometheus + Grafana
-- **Observability**: Per-location dwell time tracking, victory counts, API latency percentiles, active session gauges, and a Grafana dashboard
-
-For detailed architecture docs, see [app/CLAUDE.md](app/CLAUDE.md) and [k8s/CLAUDE.md](k8s/CLAUDE.md).
 
 ## Game Features
 
@@ -60,8 +50,6 @@ For detailed architecture docs, see [app/CLAUDE.md](app/CLAUDE.md) and [k8s/CLAU
 - **Environmental mechanics** — water levels, gas room hazards, written materials to read
 - **Skills system** — 10 modular game mechanics loaded as prompt instructions at runtime
 - **Tool use** — Claude manages game state through structured tool calls, not free-form text
-- **Observability** — Prometheus metrics track location entries, dwell time per location, victories, API latency, and active sessions; Grafana dashboard included
-
 ## Project Structure
 
 ```
@@ -70,8 +58,6 @@ frontend/          # Vite + HTMX frontend
 prompts/           # System prompt markdown files
 skills/            # Game mechanic skill files
 data/locations/    # Location fixture JSON files (72 files)
-k8s/               # Kubernetes manifests (staging + prod)
-infra/             # OpenTofu infrastructure
 scripts/           # Utility scripts
 alembic/           # Database migrations
 ```
@@ -92,11 +78,17 @@ alembic/           # Database migrations
 | `make frontend-build` | Build frontend for production |
 | `make validate-config` | Validate configuration |
 
-See [CLAUDE.md](CLAUDE.md) for the full command reference.
-
 ## Deployment
 
-Production runs on DigitalOcean Kubernetes with Doppler for secrets management. The staging environment is optional — it's used for testing deploys before production but isn't required for local development or contributing. See [k8s/CLAUDE.md](k8s/CLAUDE.md) for deployment workflows, manifest structure, and infrastructure setup.
+The app can be deployed with Docker. Build the image and provide a `DATABASE_URL` and `ANTHROPIC_API_KEY` as environment variables:
+
+```bash
+docker build -t dungeon-minus-one .
+docker run -p 8000:8000 \
+  -e DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/dungeon \
+  -e ANTHROPIC_API_KEY=sk-... \
+  dungeon-minus-one
+```
 
 ## Contributing
 
