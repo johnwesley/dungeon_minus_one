@@ -51,7 +51,7 @@ required configuration for Turnstile + Postmark.
 ENVIRONMENT=staging
 AUTH_SECRET_KEY=...
 SESSION_COOKIE_SECURE=true
-PUBLIC_APP_URL=https://your-domain.com
+PUBLIC_APP_URL=https://staging.dungeonminusone.com
 
 TURNSTILE_SITE_KEY=...
 TURNSTILE_SECRET_KEY=...
@@ -73,7 +73,7 @@ DEFAULT_ACCOUNT_EXPIRES=true
 
 ## Turnstile Setup (Cloudflare)
 1) Create a new Turnstile site in Cloudflare.
-2) Add your production domain (and staging domain if applicable).
+2) Add the production domain (`dungeonminusone.com`) and staging domain (`staging.dungeonminusone.com`).
 3) Choose “Managed” widget type (recommended default).
 4) Copy **Site Key** and **Secret Key** into env vars:
    - `TURNSTILE_SITE_KEY`
@@ -114,3 +114,10 @@ make invite EMAIL="player@example.com"
 4) Player can log in with **email or username**.
 
 Note: In staging/prod, Turnstile keys are still required because captcha enforcement is enabled.
+
+## Staging Reset (after deployment)
+```
+make k8s-auth-reset FORCE=true
+make k8s-create-admin USERNAME="admin" PASSWORD="pass" EMAIL="admin@example.com"
+make k8s-invite EMAIL="player@example.com"
+```

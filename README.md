@@ -60,6 +60,9 @@ skills/            # Game mechanic skill files
 data/locations/    # Location fixture JSON files (72 files)
 scripts/           # Utility scripts
 alembic/           # Database migrations
+infra/             # OpenTofu (Terraform) — DigitalOcean cluster, Spaces, networking
+k8s/               # Kubernetes manifests (base + staging + prod overlays)
+docs/              # Architecture docs (auth, etc.); spoilers/ holds walkthroughs
 ```
 
 ## Useful Commands
@@ -80,7 +83,9 @@ alembic/           # Database migrations
 
 ## Deployment
 
-The app can be deployed with Docker. Build the image and provide a `DATABASE_URL` and `ANTHROPIC_API_KEY` as environment variables:
+The repo includes a full reference deployment for DigitalOcean Kubernetes (DOKS) under `infra/` (OpenTofu) and `k8s/` (Kustomize overlays). The same Docker image runs locally, in staging, and in production; runtime secrets are pulled at startup via Doppler.
+
+### Docker (any host)
 
 ```bash
 docker build -t dungeon-minus-one .
@@ -89,6 +94,17 @@ docker run -p 8000:8000 \
   -e ANTHROPIC_API_KEY=sk-... \
   dungeon-minus-one
 ```
+
+### DigitalOcean Kubernetes (reference)
+
+```bash
+make infra-init && make infra-apply        # Provision DOKS, Spaces, networking
+make k8s-setup-staging                     # Namespace + Doppler + DNS bootstrap
+make docker-release                        # Build + push image to DOCR
+make k8s-deploy K8S_ENV=staging            # Apply manifests, roll out
+```
+
+See `infra/README.md` and `k8s/CLAUDE.md` for the long-form runbooks.
 
 ## Contributing
 

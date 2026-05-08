@@ -1,0 +1,14 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: dungeon-app
+  labels:
+    release: prometheus  # Must match Prometheus selector
+spec:
+  selector:
+    matchLabels:
+      app: dungeon-app
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

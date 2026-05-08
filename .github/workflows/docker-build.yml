@@ -1,0 +1,163 @@
+name: Build and Push Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag (e.g., v0.8.0)'
+        required: true
+      asset_env:
+        description: 'Asset environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - prod
+
+permissions:
+  contents: write
+
+env:
+  ASSET_REGION: nyc3
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install boto3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+
+      - name: Set asset variables
+        id: assets
+        run: |
+          set -e
+          if [ "${{ inputs.asset_env }}" = "prod" ]; then
+            CDN_DOMAIN="assets.dungeonminusone.com"
+            ASSET_SPACE="dungeon-minus-one-assets-prod"
+          else
+            CDN_DOMAIN="assets-staging.dungeonminusone.com"
+            ASSET_SPACE="dungeon-minus-one-assets"
+          fi
+          echo "space=${ASSET_SPACE}" >> $GITHUB_OUTPUT
+          ASSET_PREFIX="${{ inputs.tag }}"
+          ASSET_BASE_URL="https://${CDN_DOMAIN}/${ASSET_PREFIX}/"
+          echo "prefix=${ASSET_PREFIX}" >> $GITHUB_OUTPUT
+          echo "base_url=${ASSET_BASE_URL}" >> $GITHUB_OUTPUT
+          echo "cdn_domain=${CDN_DOMAIN}" >> $GITHUB_OUTPUT
+          echo "CDN domain: ${CDN_DOMAIN}"
+          echo "Asset prefix: ${ASSET_PREFIX}"
+          echo "Asset base URL: ${ASSET_BASE_URL}"
+
+      - name: Build frontend
+        run: cd frontend && ASSET_BASE_URL=${{ steps.assets.outputs.base_url }} npm run build
+
+      - name: Validate frontend build
+        run: |
+          set -e
+          if [ ! -d frontend/dist/assets ]; then
+            echo "::error::Frontend build failed: no assets directory"
+            exit 1
+          fi
+          ASSET_COUNT=$(find frontend/dist/assets -type f | wc -l | tr -d ' ')
+          echo "Found $ASSET_COUNT asset files in frontend/dist/assets"
+          if [ "$ASSET_COUNT" -eq 0 ]; then
+            echo "::error::Frontend build produced no assets"
+            exit 1
+          fi
+
+      - name: Publish assets to Spaces
+        env:
+          SPACES_ACCESS_KEY: ${{ secrets.SPACES_ACCESS_KEY }}
+          SPACES_SECRET_KEY: ${{ secrets.SPACES_SECRET_KEY }}
+        run: |
+          set -e
+          python scripts/publish_frontend_assets.py \
+            --dist frontend/dist \
+            --space ${{ steps.assets.outputs.space }} \
+            --region ${{ env.ASSET_REGION }} \
+            --prefix ${{ steps.assets.outputs.prefix }} \
+            --cache-control "public, max-age=31536000, immutable"
+
+      - name: Verify assets accessible on CDN
+        run: |
+          set -e
+          echo "Waiting for CDN propagation..."
+          sleep 5
+          # Try to fetch one of the known asset paths
+          FIRST_ASSET=$(find frontend/dist/assets -type f -name "*.css" -o -name "*.js" | head -1 | sed 's|frontend/dist/||')
+          if [ -n "$FIRST_ASSET" ]; then
+            TEST_URL="${{ steps.assets.outputs.base_url }}${FIRST_ASSET}"
+            echo "Testing: $TEST_URL"
+            curl -sSf --head "$TEST_URL" > /dev/null || {
+              echo "::error::Assets not accessible at CDN: $TEST_URL"
+              exit 1
+            }
+            echo "CDN verification passed"
+          else
+            echo "::warning::No CSS/JS assets to verify"
+          fi
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Log in to DO Container Registry
+        run: doctl registry login --expiry-seconds 1200
+
+      - name: Build and push Docker image
+        run: |
+          set -e
+          docker build --platform linux/amd64 \
+            --build-arg ASSET_BASE_URL=${{ steps.assets.outputs.base_url }} \
+            -t registry.digitalocean.com/dungeon-minus-one/dungeon-minus-one:${{ inputs.tag }} .
+          docker push registry.digitalocean.com/dungeon-minus-one/dungeon-minus-one:${{ inputs.tag }}
+
+      - name: Update kustomization.yaml
+        run: |
+          set -e
+          sed -i 's/newTag: .*/newTag: ${{ inputs.tag }}/' k8s/base/kustomization.yaml
+          echo "Updated k8s/base/kustomization.yaml to tag: ${{ inputs.tag }}"
+
+      - name: Commit version bump
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add k8s/base/kustomization.yaml
+          if git diff --cached --quiet; then
+            echo "No changes to commit (tag already up to date)"
+          else
+            git commit -m "chore: bump k8s image tag to ${{ inputs.tag }}"
+            git push
+            echo "Committed and pushed version bump"
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: ${{ inputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Asset Environment**: ${{ inputs.asset_env }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Asset URL**: ${{ steps.assets.outputs.base_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.asset_env }}" = "prod" ]; then
+            echo "Deploy with: \`make k8s-deploy K8S_ENV=prod TAG=${{ inputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Deploy with: \`make k8s-deploy K8S_ENV=staging TAG=${{ inputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
