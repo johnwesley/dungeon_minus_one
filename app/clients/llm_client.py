@@ -102,10 +102,15 @@ class AnthropicClient(LLMClient):
         ]
 
     def _thinking_param(self) -> Optional[dict[str, str]]:
-        """Build the thinking parameter for adaptive thinking."""
+        """Build the thinking parameter for adaptive thinking.
+
+        On Opus 4.7 the default for `display` is "omitted"; on 4.6 it was
+        "summarized". Setting it explicitly keeps behavior identical across
+        models — we filter thinking blocks from user output regardless.
+        """
         if not self.thinking_effort:
             return None
-        return {"type": "adaptive"}
+        return {"type": "adaptive", "display": "omitted"}
 
     def _output_config(self) -> Optional[dict[str, str]]:
         """Build the output_config parameter with effort level."""
