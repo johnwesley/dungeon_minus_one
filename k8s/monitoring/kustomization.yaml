@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+resources:
+  - podmonitor.yaml
+
+commonLabels:
+  app.kubernetes.io/name: dungeon
+  app.kubernetes.io/part-of: dungeon-minus-one
+
+configMapGenerator:
+  - name: dungeon-grafana-dashboard
+    files:
+      - dashboards/dungeon-game-metrics.json
+    options:
+      labels:
+        grafana_dashboard: "1"
+      disableNameSuffixHash: true

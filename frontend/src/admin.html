@@ -142,6 +142,16 @@
 
   <script>
     (function () {
+      function escapeHtml(s) {
+        if (s == null) return '';
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
       const CSRF_KEY = 'csrf_token';
 
       // DOM Elements
@@ -163,7 +173,7 @@
 
       // Utility functions
       function showStatus(message, ok = true) {
-        statusMsg.innerHTML = `<div class="${ok ? 'bbs-success' : 'bbs-error'}">${message}</div>`;
+        statusMsg.innerHTML = `<div class="${ok ? 'bbs-success' : 'bbs-error'}">${escapeHtml(message)}</div>`;
         setTimeout(() => { statusMsg.innerHTML = ''; }, 5000);
       }
 
@@ -231,22 +241,22 @@
         }
 
         inviteRequestsEl.innerHTML = requests.map(req => `
-          <div class="notification" data-id="${req.id}">
+          <div class="notification" data-id="${escapeHtml(req.id)}">
             <div class="notification-header">
-              <span class="notification-title">${req.email}</span>
-              <span class="auth-link">${req.status}</span>
+              <span class="notification-title">${escapeHtml(req.email)}</span>
+              <span class="auth-link">${escapeHtml(req.status)}</span>
             </div>
-            <div class="notification-message">Requested: ${formatDate(req.requested_at)}</div>
-            <div class="notification-message">Notes: ${req.notes || '-'}</div>
+            <div class="notification-message">Requested: ${escapeHtml(formatDate(req.requested_at))}</div>
+            <div class="notification-message">Notes: ${escapeHtml(req.notes || '-')}</div>
             ${req.status === 'pending' ? `
               <div style="margin-top: var(--space-sm); display: flex; gap: var(--space-sm);">
-                <button class="bbs-btn approve-btn" data-id="${req.id}">Approve</button>
-                <button class="bbs-btn-danger reject-btn" data-id="${req.id}">Reject</button>
+                <button class="bbs-btn approve-btn" data-id="${escapeHtml(req.id)}">Approve</button>
+                <button class="bbs-btn-danger reject-btn" data-id="${escapeHtml(req.id)}">Reject</button>
               </div>
             ` : ''}
             ${req.status === 'approved' ? `
               <div style="margin-top: var(--space-sm);">
-                <button class="bbs-btn regenerate-btn" data-id="${req.id}">Regenerate Token</button>
+                <button class="bbs-btn regenerate-btn" data-id="${escapeHtml(req.id)}">Regenerate Token</button>
               </div>
             ` : ''}
           </div>
@@ -379,28 +389,28 @@
           const isSuspended = !!user.suspended_at;
 
           return `
-            <div class="user-card" data-id="${user.id}">
+            <div class="user-card" data-id="${escapeHtml(user.id)}">
               <div class="user-card-header">
-                <span class="user-card-username">${user.username}</span>
+                <span class="user-card-username">${escapeHtml(user.username)}</span>
                 <span class="user-card-status ${status.class}">
-                  ${status.text}${user.is_admin ? ' <span class="status-admin">[Admin]</span>' : ''}
+                  ${escapeHtml(status.text)}${user.is_admin ? ' <span class="status-admin">[Admin]</span>' : ''}
                 </span>
               </div>
               <div class="user-card-details">
-                <div>Email: ${user.email || '-'}</div>
-                <div>Created: ${formatDate(user.created_at)}</div>
-                <div>Expires: ${user.expires_at ? formatDate(user.expires_at) : 'Never'}</div>
-                ${user.suspended_at ? `<div>Suspended: ${formatDate(user.suspended_at)}${user.suspended_reason ? ` - ${user.suspended_reason}` : ''}</div>` : ''}
-                ${user.deleted_at ? `<div>Deleted: ${formatDate(user.deleted_at)}</div>` : ''}
+                <div>Email: ${escapeHtml(user.email || '-')}</div>
+                <div>Created: ${escapeHtml(formatDate(user.created_at))}</div>
+                <div>Expires: ${user.expires_at ? escapeHtml(formatDate(user.expires_at)) : 'Never'}</div>
+                ${user.suspended_at ? `<div>Suspended: ${escapeHtml(formatDate(user.suspended_at))}${user.suspended_reason ? ` - ${escapeHtml(user.suspended_reason)}` : ''}</div>` : ''}
+                ${user.deleted_at ? `<div>Deleted: ${escapeHtml(formatDate(user.deleted_at))}</div>` : ''}
               </div>
               ${!isDeleted ? `
                 <div class="user-card-actions">
                   ${isSuspended
-                    ? `<button class="bbs-btn unsuspend-btn" data-id="${user.id}">Unsuspend</button>`
-                    : `<button class="bbs-btn suspend-btn" data-id="${user.id}">Suspend</button>`
+                    ? `<button class="bbs-btn unsuspend-btn" data-id="${escapeHtml(user.id)}">Unsuspend</button>`
+                    : `<button class="bbs-btn suspend-btn" data-id="${escapeHtml(user.id)}">Suspend</button>`
                   }
-                  <button class="bbs-btn extend-btn" data-id="${user.id}">Extend</button>
-                  <button class="bbs-btn-danger delete-btn" data-id="${user.id}">Delete</button>
+                  <button class="bbs-btn extend-btn" data-id="${escapeHtml(user.id)}">Extend</button>
+                  <button class="bbs-btn-danger delete-btn" data-id="${escapeHtml(user.id)}">Delete</button>
                 </div>
               ` : ''}
             </div>

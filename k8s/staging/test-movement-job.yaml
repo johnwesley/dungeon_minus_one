@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-movement
+  namespace: staging-dungeon
+  labels:
+    app: dungeon-app-test
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 3600
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: dungeon-app-test
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+      - name: registry-dungeon-minus-one
+      containers:
+      - name: test-movement
+        image: registry.digitalocean.com/dungeon-minus-one/dungeon-minus-one:IMAGE_TAG
+        imagePullPolicy: Always
+        command: ["python", "scripts/verify_movement.py"]
+        env:
+        - name: TARGET_USER
+          value: "test_runner"
+        envFrom:
+        - secretRef:
+            name: dungeon-app-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"

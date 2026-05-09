@@ -55,6 +55,16 @@
 
   <script>
     (function () {
+      function escapeHtml(s) {
+        if (s == null) return '';
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
       const CSRF_KEY = 'csrf_token';
       const form = document.getElementById('register-form');
       const errorMsg = document.getElementById('error-msg');
@@ -79,7 +89,7 @@
       }
 
       function showError(message) {
-        errorMsg.innerHTML = `<div class="bbs-error">${message}</div>`;
+        errorMsg.innerHTML = `<div class="bbs-error">${escapeHtml(message)}</div>`;
       }
 
       function prefillInviteToken() {

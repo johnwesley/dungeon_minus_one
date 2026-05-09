@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prod-dungeon
+  labels:
+    app.kubernetes.io/name: dungeon
+    app.kubernetes.io/part-of: dungeon-minus-one
+    environment: production
