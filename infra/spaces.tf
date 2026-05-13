@@ -29,15 +29,19 @@ resource "digitalocean_spaces_bucket_cors_configuration" "assets" {
 }
 
 # CORS configuration for production
+# This bucket is the canonical/unified asset host (assets.dungeonminusone.com).
+# Both staging and production pods read from it; tag-prefix isolation keeps
+# releases distinct, so allowed_origins lists both app domains.
 resource "digitalocean_spaces_bucket_cors_configuration" "assets_prod" {
   bucket = digitalocean_spaces_bucket.assets_prod.name
   region = var.region
 
   cors_rule {
     allowed_headers = ["*"]
-    allowed_methods = ["GET"]
+    allowed_methods = ["GET", "HEAD"]
     allowed_origins = [
-      "https://dungeonminusone.com"
+      "https://dungeonminusone.com",
+      "https://staging.dungeonminusone.com",
     ]
     max_age_seconds = 3600
   }

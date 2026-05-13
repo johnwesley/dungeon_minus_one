@@ -6,14 +6,6 @@ on:
       tag:
         description: 'Image tag (e.g., v0.8.0)'
         required: true
-      asset_env:
-        description: 'Asset environment'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-          - staging
-          - prod
 
 permissions:
   contents: write
@@ -47,16 +39,14 @@ jobs:
         id: assets
         run: |
           set -e
-          if [ "${{ inputs.asset_env }}" = "prod" ]; then
-            CDN_DOMAIN="assets.dungeonminusone.com"
-            ASSET_SPACE="dungeon-minus-one-assets-prod"
-          else
-            CDN_DOMAIN="assets-staging.dungeonminusone.com"
-            ASSET_SPACE="dungeon-minus-one-assets"
-          fi
-          echo "space=${ASSET_SPACE}" >> $GITHUB_OUTPUT
+          # Single unified CDN/bucket for both staging and production.
+          # Tag-prefix isolation (/v1.5.0/, ...) keeps releases distinct so the
+          # same image can be promoted across environments without re-building.
+          CDN_DOMAIN="assets.dungeonminusone.com"
+          ASSET_SPACE="dungeon-minus-one-assets-prod"
           ASSET_PREFIX="${{ inputs.tag }}"
           ASSET_BASE_URL="https://${CDN_DOMAIN}/${ASSET_PREFIX}/"
+          echo "space=${ASSET_SPACE}" >> $GITHUB_OUTPUT
           echo "prefix=${ASSET_PREFIX}" >> $GITHUB_OUTPUT
           echo "base_url=${ASSET_BASE_URL}" >> $GITHUB_OUTPUT
           echo "cdn_domain=${CDN_DOMAIN}" >> $GITHUB_OUTPUT
@@ -153,11 +143,9 @@ jobs:
         run: |
           echo "## Build Complete" >> $GITHUB_STEP_SUMMARY
           echo "- **Tag**: ${{ inputs.tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Asset Environment**: ${{ inputs.asset_env }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Asset URL**: ${{ steps.assets.outputs.base_url }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ inputs.asset_env }}" = "prod" ]; then
-            echo "Deploy with: \`make k8s-deploy K8S_ENV=prod TAG=${{ inputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Deploy with: \`make k8s-deploy K8S_ENV=staging TAG=${{ inputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "Promote the same image:" >> $GITHUB_STEP_SUMMARY
+          echo "  1. \`make k8s-deploy K8S_ENV=staging TAG=${{ inputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "  2. \`make k8s-test K8S_ENV=staging\`" >> $GITHUB_STEP_SUMMARY
+          echo "  3. \`make k8s-deploy K8S_ENV=prod TAG=${{ inputs.tag }}\`" >> $GITHUB_STEP_SUMMARY

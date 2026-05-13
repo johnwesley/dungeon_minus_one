@@ -108,31 +108,37 @@ make k8s-setup-staging  # Creates doppler-token + registry secrets, applies mani
 
 ## Deployment Workflows
 
+Releases are **built once and promoted**. The same image SHA is rolled to staging, smoke-tested, then rolled to prod — no rebuild between environments. Assets live in a single unified CDN (`assets.dungeonminusone.com`, fronting the `dungeon-minus-one-assets-prod` Space), isolated per release via tag prefix (e.g. `/v1.5.0/`).
+
 ### GitHub Actions (Primary)
 
-The `.github/workflows/docker-build.yml` workflow handles builds and asset publishing:
+The `.github/workflows/docker-build.yml` workflow handles the build:
 
 1. Trigger from GitHub UI: **Actions > Build and Push Docker Image > Run workflow**
-2. Inputs: `tag` (e.g., `v0.9.2`) and `asset_env` (`staging` or `prod`)
+2. Input: `tag` (e.g., `v1.5.0`). No asset-env switch — there is one canonical CDN.
 3. Workflow steps:
-   - Builds frontend with correct CDN URL (based on `asset_env`)
+   - Builds frontend with `ASSET_BASE_URL=https://assets.dungeonminusone.com/<tag>/`
    - Validates frontend build output
-   - Publishes assets to DO Spaces
-   - Verifies assets accessible on CDN
-   - Builds and pushes Docker image
-   - Updates and commits `k8s/base/kustomization.yaml` with new tag
+   - Publishes assets to `dungeon-minus-one-assets-prod` at prefix `<tag>/`
+   - Verifies one asset is reachable on the CDN
+   - Builds and pushes Docker image `:<tag>`
+   - Updates and commits `k8s/base/kustomization.yaml` with the new tag
 
-After workflow completes, deploy with:
+After the workflow completes, promote the same image:
 ```bash
-make k8s-deploy K8S_ENV=staging  # or K8S_ENV=prod
+git pull
+make k8s-deploy K8S_ENV=staging         # roll v1.5.0 onto staging
+make k8s-test   K8S_ENV=staging         # unit tests + 288-step movement gate
+make k8s-deploy K8S_ENV=prod            # promote the same image to prod
 ```
 
-### Manual Deployment (Alternative)
+### Manual release (alternative)
 
-Requires `infra/.env.deploy` with Spaces credentials:
+Requires `infra/.env.deploy` with Spaces credentials. One command builds + publishes + pushes:
 ```bash
-make release-staging TAG=v0.9.2  # or release-prod
+make docker-release TAG=v1.5.0
 ```
+Then run the same `k8s-deploy` / `k8s-test` / `k8s-deploy` sequence above.
 
 ## Infrastructure (OpenTofu)
 

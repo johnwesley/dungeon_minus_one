@@ -1,4 +1,4 @@
-.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite auth-reset frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish release-staging release-prod infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup-staging k8s-setup-prod k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-db-migrate k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-auth-reset k8s-create-admin k8s-notify k8s-test-unit k8s-verify-movement k8s-test k8s-dns-upsert k8s-dns-delete k8s-teardown-staging k8s-monitoring test
+.PHONY: setup install run clean reset hard-reset sync-locations sync-locations-prune sync-locations-check help validate-config invite auth-reset frontend-install frontend-dev frontend-build dev-full notify docker-build docker-push docker-release assets-publish infra-init infra-plan infra-apply infra-destroy k8s-kubeconfig k8s-setup-staging k8s-setup-prod k8s-deploy k8s-status k8s-logs k8s-restart k8s-shell k8s-db-migrate k8s-seed k8s-seed-prune k8s-invite k8s-reset k8s-auth-reset k8s-create-admin k8s-notify k8s-test-unit k8s-verify-movement k8s-test k8s-dns-upsert k8s-dns-delete k8s-teardown-staging k8s-monitoring test
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -109,17 +109,15 @@ TAG ?= $(DEFAULT_TAG)
 
 # --- Frontend Assets (Spaces) ---
 
+# Single unified CDN/bucket. Both staging and production read from this
+# bucket, isolated by per-release tag prefix (e.g. /v1.5.0/). See
+# infra/spaces.tf for the CORS + CDN config.
 ASSET_REGION ?= nyc3
-ASSET_SPACE ?= dungeon-minus-one-assets
-ASSET_ENV ?= staging
-ASSET_PREFIX ?= $(ASSET_ENV)/$(TAG)
-ASSET_CDN_DOMAIN ?=
-ASSET_BASE_URL ?= $(if $(ASSET_CDN_DOMAIN),https://$(ASSET_CDN_DOMAIN)/$(ASSET_PREFIX)/,)
+ASSET_CDN_DOMAIN ?= assets.dungeonminusone.com
+ASSET_SPACE ?= dungeon-minus-one-assets-prod
+ASSET_PREFIX ?= $(TAG)
+ASSET_BASE_URL ?= https://$(ASSET_CDN_DOMAIN)/$(ASSET_PREFIX)/
 ASSET_CACHE_CONTROL ?= public, max-age=31536000, immutable
-
-# Default CDN hostnames (override via env or .env.deploy)
-ASSET_CDN_DOMAIN_STAGING ?= assets-staging.dungeonminusone.com
-ASSET_CDN_DOMAIN_PROD ?= assets.dungeonminusone.com
 
 # Deployment environment file
 DEPLOY_ENV := infra/.env.deploy
@@ -144,21 +142,11 @@ assets-publish:  ## Build and upload frontend assets to Spaces
 	$(MAKE) frontend-build ASSET_BASE_URL="$(ASSET_BASE_URL)"; \
 	$(PYTHON) scripts/publish_frontend_assets.py --dist $(FRONTEND)/dist --space $(ASSET_SPACE) --region $(ASSET_REGION) --prefix $(ASSET_PREFIX) --cache-control "$(ASSET_CACHE_CONTROL)"
 
-# --- One-command release helpers ---
-
-release-staging:  ## Build+publish assets, push image, and deploy to staging
-	@set -a; [ -f $(DEPLOY_ENV) ] && . ./$(DEPLOY_ENV); set +a; \
-	ASSET_ENV=staging \
-	ASSET_CDN_DOMAIN=$${ASSET_CDN_DOMAIN:-$${ASSET_CDN_DOMAIN_STAGING:-$(ASSET_CDN_DOMAIN_STAGING)}} \
-	$(MAKE) docker-release TAG=$(TAG) ASSET_ENV=staging ASSET_CDN_DOMAIN=$${ASSET_CDN_DOMAIN:-$${ASSET_CDN_DOMAIN_STAGING:-$(ASSET_CDN_DOMAIN_STAGING)}}; \
-	$(MAKE) k8s-deploy K8S_ENV=staging TAG=$(TAG)
-
-release-prod:  ## Build+publish assets, push image, and deploy to production
-	@set -a; [ -f $(DEPLOY_ENV) ] && . ./$(DEPLOY_ENV); set +a; \
-	ASSET_ENV=prod \
-	ASSET_CDN_DOMAIN=$${ASSET_CDN_DOMAIN:-$${ASSET_CDN_DOMAIN_PROD:-$(ASSET_CDN_DOMAIN_PROD)}} \
-	$(MAKE) docker-release TAG=$(TAG) ASSET_ENV=prod ASSET_CDN_DOMAIN=$${ASSET_CDN_DOMAIN:-$${ASSET_CDN_DOMAIN_PROD:-$(ASSET_CDN_DOMAIN_PROD)}}; \
-	$(MAKE) k8s-deploy K8S_ENV=prod TAG=$(TAG)
+# Releasing
+#   make docker-release TAG=v1.5.0     # build once, publish assets + push image
+#   make k8s-deploy K8S_ENV=staging    # roll the same image onto staging
+#   make k8s-test   K8S_ENV=staging    # gate
+#   make k8s-deploy K8S_ENV=prod       # promote to prod (no rebuild)
 
 # --- Infrastructure (OpenTofu) ---
 
